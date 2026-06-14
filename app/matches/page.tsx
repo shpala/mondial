@@ -15,7 +15,9 @@ export default async function MatchesPage({
 
   return (
     <div className="animate-fade-up">
-      <AutoRefresh seconds={60} />
+      <AutoRefresh
+        seconds={fixtures.some((f) => f.status === "live") ? 20 : 60}
+      />
       <SampleDataBanner />
       <h1 className="mb-1 font-display text-2xl font-extrabold">Matches</h1>
       <p className="mb-6 text-sm text-ink-400">

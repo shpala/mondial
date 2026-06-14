@@ -7,7 +7,7 @@ function Chip({ c }: { c: Candidate }) {
     <Link
       href={`/teams/${c.team.id}`}
       title={`${c.team.name} — ${c.place} in Group ${c.group}, ${c.points} pts from ${c.played} game(s)`}
-      className={`flex flex-col gap-0.5 rounded-lg border px-2 py-1.5 text-xs transition hover:bg-ink-700/60 ${
+      className={`flex flex-col gap-0.5 rounded-lg border px-2 py-1.5 text-xs transition hover:bg-ink-700/60 active:bg-ink-700/60 ${
         c.confirmed
           ? "border-emerald-600/40 bg-emerald-700/10"
           : "border-dashed border-ink-600"

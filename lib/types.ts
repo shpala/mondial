@@ -71,6 +71,8 @@ export interface Fixture {
   away: Team;
   homeGoals: number | null;
   awayGoals: number | null;
+  /** Live match clock (e.g. "70'") when in play, else null. */
+  minute: string | null;
   /** Goal timeline (scorer + minute), when the source provides it. */
   goals: Goal[];
 }

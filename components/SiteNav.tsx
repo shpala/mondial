@@ -25,7 +25,7 @@ export function SiteNav() {
             Mondial<span className="text-accent-gold">26</span>
           </span>
         </Link>
-        <div className="flex items-center gap-1 overflow-x-auto scroll-slim">
+        <div className="hidden items-center gap-1 overflow-x-auto scroll-slim md:flex">
           {LINKS.map((link) => {
             const active =
               link.href === "/"

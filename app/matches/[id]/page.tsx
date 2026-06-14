@@ -70,7 +70,10 @@ export default async function MatchPage({
       : null;
 
   const badge = live
-    ? { text: "● Live", cls: "bg-red-500/15 text-red-300" }
+    ? {
+        text: fixture.minute ? `● Live · ${fixture.minute}` : "● Live",
+        cls: "bg-red-500/15 text-red-300",
+      }
     : played
       ? { text: "✓ Full-time · result", cls: "bg-emerald-500/15 text-emerald-300" }
       : { text: "◆ Upcoming · predicted", cls: "bg-accent-gold/15 text-amber-300" };
@@ -143,11 +146,23 @@ export default async function MatchPage({
         </div>
       </header>
 
-      <GoalList home={fixture.home} away={fixture.away} goals={fixture.goals} />
-
-      <Suspense fallback={<LineupSkeleton />}>
-        <LineupSection fixtureId={fixtureId} />
-      </Suspense>
+      {/* Goals above the pitch on phone; goals as a left sidebar on desktop. */}
+      <div className="lg:flex lg:items-start lg:gap-6">
+        {fixture.goals.length > 0 && (
+          <div className="lg:order-1 lg:w-80 lg:shrink-0">
+            <GoalList
+              home={fixture.home}
+              away={fixture.away}
+              goals={fixture.goals}
+            />
+          </div>
+        )}
+        <div className="lg:order-2 lg:min-w-0 lg:flex-1">
+          <Suspense fallback={<LineupSkeleton />}>
+            <LineupSection fixtureId={fixtureId} />
+          </Suspense>
+        </div>
+      </div>
     </div>
   );
 }

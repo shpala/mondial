@@ -118,6 +118,7 @@ function mapMatch(m: OfMatch, index: number): Fixture {
     away,
     homeGoals: finished ? ft![0] : null,
     awayGoals: finished ? ft![1] : null,
+    minute: null,
     goals: parseGoals(m),
   };
 }

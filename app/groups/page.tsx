@@ -15,7 +15,7 @@ export default async function GroupsPage() {
         Top two of each group plus the eight best third-placed teams advance to
         the Round of 32. Qualifying spots marked in green.
       </p>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         {groups.map((group) => (
           <GroupTable key={group.name} group={group} />
         ))}

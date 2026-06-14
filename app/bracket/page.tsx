@@ -62,12 +62,20 @@ export default async function BracketPage() {
         <strong>Your picks</strong> to override any result. As real knockout
         matches are played they replace the prediction and lock in green.
       </p>
-      <CandidatesPanel
-        winners={breakdown.winners}
-        runnersUp={breakdown.runnersUp}
-        bestThirds={breakdown.bestThirds}
-      />
-      <BracketTree qualified={qualified} results={results} />
+      {/* Phone: bracket first (the centerpiece), candidates below it.
+          Desktop: candidates context first, then the tree. */}
+      <div className="flex flex-col">
+        <div className="order-2 lg:order-1">
+          <CandidatesPanel
+            winners={breakdown.winners}
+            runnersUp={breakdown.runnersUp}
+            bestThirds={breakdown.bestThirds}
+          />
+        </div>
+        <div className="order-1 lg:order-2">
+          <BracketTree qualified={qualified} results={results} />
+        </div>
+      </div>
     </div>
   );
 }

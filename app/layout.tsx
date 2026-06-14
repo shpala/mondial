@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { SiteNav } from "@/components/SiteNav";
+import { MobileTabBar } from "@/components/MobileTabBar";
 
 // Distinctive display face for headings, scores and stats (body stays system sans).
 const display = Space_Grotesk({
@@ -26,13 +27,14 @@ export default function RootLayout({
     <html lang="en" className={display.variable}>
       <body className="min-h-screen">
         <SiteNav />
-        <main className="mx-auto w-full max-w-6xl px-4 pb-20 pt-6 sm:px-6">
+        <main className="mx-auto w-full max-w-6xl px-4 pt-6 pb-24 sm:px-6 md:pb-20">
           {children}
         </main>
-        <footer className="border-t border-ink-700 py-6 text-center text-xs text-ink-400">
+        <footer className="border-t border-ink-700 py-6 pb-24 text-center text-xs text-ink-400 md:pb-6">
           Mondial · unofficial 2026 World Cup companion · data via openfootball
           &amp; TheSportsDB
         </footer>
+        <MobileTabBar />
       </body>
     </html>
   );

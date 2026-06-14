@@ -11,7 +11,7 @@ const DATE_FMT = new Intl.DateTimeFormat("en-GB", {
   month: "long",
 });
 
-type StatusFilter = "all" | "upcoming" | "results";
+type StatusFilter = "all" | "today" | "upcoming" | "results";
 
 const GROUPS = "ABCDEFGHIJKL".split("");
 
@@ -30,6 +30,7 @@ export function MatchesBrowser({
   const filtered = useMemo(() => {
     return fixtures.filter((f) => {
       if (group && f.group !== group) return false;
+      if (status === "today" && localDateKey(f.kickoff) !== todayStr) return false;
       if (status === "upcoming" && f.status !== "scheduled") return false;
       if (status === "results" && f.status === "scheduled") return false;
       return true;
@@ -48,8 +49,8 @@ export function MatchesBrowser({
   }, [filtered]);
 
   const chip = (active: boolean) =>
-    `whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-      active ? "bg-ink-700 text-white" : "text-ink-400 hover:bg-ink-800"
+    `inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition md:min-h-0 ${
+      active ? "bg-ink-700 text-white" : "text-ink-400 hover:bg-ink-800 active:bg-ink-800"
     }`;
 
   return (
@@ -60,13 +61,13 @@ export function MatchesBrowser({
           role="group"
           aria-label="Filter by status"
         >
-          {(["all", "upcoming", "results"] as StatusFilter[]).map((s) => (
+          {(["all", "today", "upcoming", "results"] as StatusFilter[]).map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => setStatus(s)}
               aria-pressed={status === s}
-              className={`rounded-md px-3 py-1 text-sm font-medium capitalize transition ${
+              className={`inline-flex min-h-11 items-center justify-center rounded-md px-3 py-1 text-sm font-medium capitalize transition md:min-h-0 ${
                 status === s ? "bg-ink-700 text-white" : "text-ink-400"
               }`}
             >
@@ -75,26 +76,32 @@ export function MatchesBrowser({
           ))}
         </div>
 
-        <div className="scroll-slim flex items-center gap-1 overflow-x-auto">
-          <button
-            type="button"
-            onClick={() => setGroup("")}
-            aria-pressed={group === ""}
-            className={chip(group === "")}
-          >
-            All groups
-          </button>
-          {GROUPS.map((g) => (
+        <div className="relative">
+          <div className="scroll-slim flex items-center gap-1 overflow-x-auto">
             <button
-              key={g}
               type="button"
-              onClick={() => setGroup(g)}
-              aria-pressed={group === g}
-              className={chip(group === g)}
+              onClick={() => setGroup("")}
+              aria-pressed={group === ""}
+              className={chip(group === "")}
             >
-              {g}
+              All groups
             </button>
-          ))}
+            {GROUPS.map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGroup(g)}
+                aria-pressed={group === g}
+                className={chip(group === g)}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+          <div
+            className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-ink-900 to-transparent sm:hidden"
+            aria-hidden
+          />
         </div>
       </div>
 
@@ -112,7 +119,7 @@ export function MatchesBrowser({
                   </span>
                 )}
               </h2>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {games.map((f) => (
                   <MatchCard key={f.id} fixture={f} />
                 ))}

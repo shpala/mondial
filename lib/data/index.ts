@@ -12,6 +12,7 @@ import "server-only";
 import type { Fixture, Group, MatchLineups, Squad, Team } from "@/lib/types";
 import { isToday } from "@/lib/format";
 import { fetchOpenfootball } from "@/lib/api/sources/openfootball";
+import { fetchEspnLive, pairCodeKey } from "@/lib/api/sources/espn";
 import { fetchSquadTSDB, fetchLineupsTSDB } from "@/lib/api/sources/thesportsdb";
 import { generateLineup, generateSquad } from "./generate";
 import { teamByIdRegistry } from "@/lib/teams/registry";
@@ -48,9 +49,67 @@ export async function getFixtures(): Promise<Fixture[]> {
   const fixtures = spine ? spine.fixtures : resolveFixtureStatuses(Date.now());
   // Always chronological so every consumer (dashboard, schedule, bracket) is
   // ordered by date.
-  return [...fixtures].sort(
+  const sorted = [...fixtures].sort(
     (a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff),
   );
+  return overlayLiveScores(sorted);
+}
+
+/**
+ * Overlay real in-play status + running score + minute from ESPN onto the
+ * openfootball spine (which has no live data). Best-effort: on any ESPN failure
+ * the spine fixtures are returned unchanged. Matched by canonical team code, so
+ * home/away orientation differences between sources don't matter.
+ */
+async function overlayLiveScores(fixtures: Fixture[]): Promise<Fixture[]> {
+  let liveMap: Awaited<ReturnType<typeof fetchEspnLive>>;
+  try {
+    liveMap = await fetchEspnLive();
+  } catch (err) {
+    console.warn("[data] ESPN live overlay unavailable:", err);
+    return fixtures;
+  }
+  if (!liveMap.size) return fixtures;
+
+  return fixtures.map((f) => {
+    if (f.home.id === 0 || f.away.id === 0) return f; // unresolved knockout slot
+    const live = liveMap.get(pairCodeKey(f.home.code, f.away.code));
+    if (!live) return f;
+    const home = live.scores[f.home.code] ?? null;
+    const away = live.scores[f.away.code] ?? null;
+    // Map ESPN goals (keyed by team code) to this fixture's home/away sides.
+    const goals = live.goals.map((g) => ({
+      side: g.code === f.home.code ? ("home" as const) : ("away" as const),
+      minute: g.minute,
+      scorer: g.scorer,
+      ownGoal: g.ownGoal,
+      penalty: g.penalty,
+    }));
+
+    if (live.state === "in") {
+      return {
+        ...f,
+        status: "live" as const,
+        homeGoals: home,
+        awayGoals: away,
+        minute: live.minute,
+        goals: goals.length ? goals : f.goals,
+      };
+    }
+    // ESPN says full-time but the daily spine hasn't recorded it yet: surface
+    // the final score (and scorers) immediately.
+    if (live.state === "post" && f.status !== "finished") {
+      return {
+        ...f,
+        status: "finished" as const,
+        homeGoals: home,
+        awayGoals: away,
+        minute: null,
+        goals: goals.length ? goals : f.goals,
+      };
+    }
+    return f;
+  });
 }
 
 export async function getGroups(): Promise<Group[]> {
@@ -117,16 +176,21 @@ export async function getMatchLineups(
   return { fixture, home, away };
 }
 
-/** Fixtures grouped for the dashboard: today, then next up, then recent. */
+/** Fixtures grouped for the dashboard: live, today, next up, recent. */
 export async function getDashboardFixtures(): Promise<{
+  live: Fixture[];
   today: Fixture[];
   upcoming: Fixture[];
   recent: Fixture[];
 }> {
   const fixtures = await getFixtures(); // already sorted by kickoff ascending
   const now = Date.now();
-  // Everything kicking off today (live + done + still to come), soonest first.
-  const today = fixtures.filter((f) => isToday(f.kickoff));
+  // In-play right now — surfaced on top.
+  const live = fixtures.filter((f) => f.status === "live");
+  // The rest of today's matches (live ones get their own section above).
+  const today = fixtures.filter(
+    (f) => isToday(f.kickoff) && f.status !== "live",
+  );
   // Future days only (today lives in its own section), soonest first.
   const upcoming = fixtures
     .filter(
@@ -141,5 +205,5 @@ export async function getDashboardFixtures(): Promise<{
     .filter((f) => f.status === "finished" && !isToday(f.kickoff))
     .slice(-6)
     .reverse();
-  return { today, upcoming, recent };
+  return { live, today, upcoming, recent };
 }

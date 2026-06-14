@@ -33,9 +33,10 @@ function layout(lineup: Lineup, side: "home" | "away", color: string): Token[] {
     });
 
     const depth = rowCount === 1 ? 0.5 : rowIndex / (rowCount - 1); // 0 = own goal
-    // Each team occupies its own half; GK at the back line.
+    // Each team keeps to its half with a dead zone at the halfway line so the
+    // attacking lines of the two teams don't overlap on a narrow phone pitch.
     const y =
-      side === "home" ? 0.95 - depth * 0.42 : 0.05 + depth * 0.42;
+      side === "home" ? 0.96 - depth * 0.4 : 0.04 + depth * 0.4;
 
     players.forEach((lp, i) => {
       const x = (i + 1) / (players.length + 1);
@@ -89,7 +90,7 @@ export function PitchLineup({
   const H = 150;
 
   return (
-    <div className="card overflow-hidden">
+    <div className="card mx-auto max-w-md overflow-hidden lg:mx-0">
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="block w-full"
@@ -132,8 +133,14 @@ export function PitchLineup({
           <rect x={W / 2 - 18} y={H - 24} width="36" height="20" />
         </g>
 
-        {/* players */}
-        {tokens.map((t, i) => {
+        {/* players — selected token rendered last so it wins overlaps */}
+        {[...tokens]
+          .sort(
+            (a, b) =>
+              (a.player.id === selected?.player.id ? 1 : 0) -
+              (b.player.id === selected?.player.id ? 1 : 0),
+          )
+          .map((t, i) => {
           const cx = 6 + t.x * (W - 12);
           const cy = 8 + t.y * (H - 16);
           const isSel = selected?.player.id === t.player.id;
@@ -153,6 +160,8 @@ export function PitchLineup({
                 }
               }}
             >
+              {/* ~44px transparent touch target (visible dot stays small) */}
+              <circle r={6} fill="transparent" style={{ pointerEvents: "all" }} />
               <circle
                 r={isSel ? 4.4 : 3.6}
                 fill={t.color}

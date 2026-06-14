@@ -31,23 +31,24 @@ function Section({
 }
 
 export default async function DashboardPage() {
-  const [{ today, upcoming, recent }, teams] = await Promise.all([
+  const [{ live, today, upcoming, recent }, teams] = await Promise.all([
     getDashboardFixtures(),
     getTeams(),
   ]);
-  const liveCount = today.filter((f) => f.status === "live").length;
 
   return (
     <div className="animate-fade-up">
-      <AutoRefresh seconds={60} />
+      <AutoRefresh seconds={live.length > 0 ? 20 : 60} />
       <SampleDataBanner />
 
+      {/* On a phone, surface the live score above the marketing hero. */}
+      <div className="flex flex-col">
       <section className="card mb-8 overflow-hidden">
-        <div className="relative bg-gradient-to-br from-pitch-700/50 via-ink-800 to-ink-800 px-6 py-10 sm:py-14">
+        <div className="relative bg-gradient-to-br from-pitch-700/50 via-ink-800 to-ink-800 px-6 py-6 sm:py-14">
           <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-pitch-50/80">
             <span aria-hidden>🇨🇦 🇺🇸 🇲🇽</span> FIFA World Cup
           </p>
-          <h1 className="font-display text-5xl font-extrabold leading-[0.95] tracking-tight sm:text-7xl">
+          <h1 className="font-display text-3xl font-extrabold leading-[0.95] tracking-tight sm:text-7xl">
             Mondial <span className="text-accent-gold">2026</span>
           </h1>
           <p className="mt-3 max-w-xl text-sm text-ink-300">
@@ -71,22 +72,33 @@ export default async function DashboardPage() {
         </div>
       </section>
 
+      {live.length > 0 && (
+        <section className="order-first mb-8 sm:order-none">
+          <div className="mb-3 flex items-center gap-2">
+            <h2 className="font-display text-lg font-bold">Live now</h2>
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-300">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
+              {live.length} in play
+            </span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {live.map((f) => (
+              <MatchCard key={f.id} fixture={f} />
+            ))}
+          </div>
+        </section>
+      )}
+      </div>
+
       {today.length > 0 && (
         <section className="mb-8">
           <div className="mb-3 flex items-center gap-2">
             <h2 className="font-display text-lg font-bold">Today</h2>
-            {liveCount > 0 ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-300">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
-                {liveCount} in play
-              </span>
-            ) : (
-              <span className="rounded-full bg-pitch-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-pitch-50/80">
-                {today.length} {today.length === 1 ? "match" : "matches"}
-              </span>
-            )}
+            <span className="rounded-full bg-pitch-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-pitch-50/80">
+              {today.length} {today.length === 1 ? "match" : "matches"}
+            </span>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {today.map((f) => (
               <MatchCard key={f.id} fixture={f} />
             ))}
@@ -96,7 +108,7 @@ export default async function DashboardPage() {
 
       <Section title="Upcoming" href="/matches">
         {upcoming.length ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {upcoming.map((f) => (
               <MatchCard key={f.id} fixture={f} />
             ))}
@@ -108,7 +120,7 @@ export default async function DashboardPage() {
 
       {recent.length > 0 && (
         <Section title="Recent results" href="/matches">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {recent.map((f) => (
               <MatchCard key={f.id} fixture={f} />
             ))}

@@ -28,6 +28,9 @@ function pairKey(a: number, b: number): string {
   return [a, b].sort((x, y) => x - y).join("-");
 }
 
+// Short labels for the phone round pager (one per round, R32 → Final).
+const SHORT_ROUNDS = ["R32", "R16", "QF", "SF", "Final"];
+
 type WinnerTone = "result" | "pick" | "model";
 
 const WINNER_CLASS: Record<WinnerTone, string> = {
@@ -123,6 +126,7 @@ function MatchupCard({
   result,
   interactive,
   isFinal,
+  fullWidth = false,
   onPick,
 }: {
   m: Matchup;
@@ -130,6 +134,7 @@ function MatchupCard({
   result: PlayedResult | null;
   interactive: boolean;
   isFinal: boolean;
+  fullWidth?: boolean;
   onPick: (teamId: number) => void;
 }) {
   const wp = winnerProb(m);
@@ -179,12 +184,22 @@ function MatchupCard({
       ? "border-accent-gold/60"
       : "border-dashed border-ink-600";
 
+  const widthCls = fullWidth ? "w-full" : isFinal ? "w-44" : "w-36";
+  const finalRing =
+    isFinal && !fullWidth ? "ring-1 ring-accent-gold/50 shadow-lg shadow-black/40" : "";
+
   const card = (
     <div
-      className={`overflow-hidden rounded-lg border bg-ink-800 ${border} ${
-        isFinal ? "w-44 ring-1 ring-accent-gold/50 shadow-lg shadow-black/40" : "w-36"
-      }`}
+      className={`relative overflow-hidden rounded-lg border bg-ink-800 ${border} ${widthCls} ${finalRing}`}
     >
+      {played && (
+        <span
+          className="absolute right-1 top-1 z-10 text-[10px] leading-none text-emerald-400/90"
+          aria-hidden
+        >
+          ↗
+        </span>
+      )}
       <Slot
         team={m.top}
         isWinner={m.winnerId != null && m.winnerId === m.top?.id}
@@ -244,6 +259,7 @@ export function BracketTree({
   const { overrides, pick, reset } = useBracketStore();
   const [mounted, setMounted] = useState(false);
   const [mode, setMode] = useState<"you" | "model">("you");
+  const [selectedRound, setSelectedRound] = useState(0); // phone round pager
 
   useEffect(() => setMounted(true), []);
 
@@ -384,7 +400,7 @@ export function BracketTree({
             type="button"
             onClick={() => setMode("model")}
             aria-pressed={mode === "model"}
-            className={`rounded-md px-3 py-1 font-medium transition ${
+            className={`inline-flex min-h-11 items-center justify-center rounded-md px-3 py-1 font-medium transition md:min-h-0 ${
               mode === "model" ? "bg-ink-700 text-white" : "text-ink-400"
             }`}
           >
@@ -394,7 +410,7 @@ export function BracketTree({
             type="button"
             onClick={() => setMode("you")}
             aria-pressed={mode === "you"}
-            className={`rounded-md px-3 py-1 font-medium transition ${
+            className={`inline-flex min-h-11 items-center justify-center rounded-md px-3 py-1 font-medium transition md:min-h-0 ${
               mode === "you" ? "bg-ink-700 text-white" : "text-ink-400"
             }`}
           >
@@ -430,8 +446,53 @@ export function BracketTree({
           "Tap any unplayed team to send them through; your picks recompute the rounds ahead and are saved on this device."}
       </p>
 
-      {/* horizontal scroller with a right-edge fade cue for later rounds */}
-      <div className="relative">
+      {/* PHONE: one round at a time via a sticky pager (no horizontal panning) */}
+      <div className="md:hidden">
+        <div className="sticky top-14 z-20 -mx-4 mb-3 bg-ink-900/90 px-4 py-2 backdrop-blur">
+          <div
+            className="flex gap-1 rounded-lg border border-ink-700 p-0.5"
+            role="tablist"
+            aria-label="Bracket round"
+          >
+            {resolved.rounds.map((round, ri) => (
+              <button
+                key={ri}
+                type="button"
+                role="tab"
+                aria-selected={selectedRound === ri}
+                onClick={() => setSelectedRound(ri)}
+                className={`min-h-11 flex-1 whitespace-nowrap rounded-md px-1 text-xs font-semibold transition ${
+                  selectedRound === ri
+                    ? "bg-ink-700 text-white"
+                    : "text-ink-400 active:bg-ink-800"
+                }`}
+              >
+                {SHORT_ROUNDS[ri] ?? round[0]?.round}
+              </button>
+            ))}
+          </div>
+        </div>
+        <h3 className="mb-2 text-center text-[11px] font-semibold uppercase tracking-wide text-ink-300">
+          {resolved.rounds[selectedRound]?.[0]?.round}
+        </h3>
+        <div className="space-y-3">
+          {(resolved.rounds[selectedRound] ?? []).map((m) => (
+            <MatchupCard
+              key={m.id}
+              m={m}
+              override={overrides[m.id]}
+              result={playedNodes[m.id] ?? null}
+              interactive={mode === "you"}
+              isFinal={selectedRound === lastRound}
+              fullWidth
+              onPick={(teamId) => mode === "you" && pick(m.id, teamId)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* DESKTOP: full horizontal tree with SVG connectors + right-edge fade */}
+      <div className="relative hidden md:block">
         <div className="scroll-slim overflow-x-auto pb-4">
           <div ref={contentRef} className="relative flex gap-6">
             {/* connector lines, drawn behind the cards */}

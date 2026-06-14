@@ -11,6 +11,7 @@ next-env.d.ts
 # Tooling / scratch artifacts (not part of the app)
 /.cocoindex_code
 /.playwright-mcp
+/.serena
 /*.png
 /full.md
 /bracket-refs.md

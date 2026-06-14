@@ -14,11 +14,16 @@ export function EstimatedNotice({ kind }: { kind: "squad" | "lineups" }) {
     <div className="mb-6 flex items-start gap-3 rounded-xl border border-slate-500/25 bg-slate-500/10 px-4 py-3 text-sm text-slate-300">
       <span className="text-base leading-none">≈</span>
       <p>
-        <strong>Estimated {kind === "squad" ? "squad" : "line-ups"}.</strong>{" "}
-        Our free data source hasn&apos;t published the official{" "}
-        {kind === "squad" ? "roster" : "starting elevens"} for this{" "}
-        {kind === "squad" ? "team" : "match"} yet — the player names, clubs and
-        numbers shown here are illustrative placeholders, not real call-ups.
+        <strong>Estimated {kind === "squad" ? "squad" : "line-ups"}.</strong>
+        {/* full explanation on larger screens; compact on a phone */}
+        <span className="hidden sm:inline">
+          {" "}
+          Our free data source hasn&apos;t published the official{" "}
+          {kind === "squad" ? "roster" : "starting elevens"} for this{" "}
+          {kind === "squad" ? "team" : "match"} yet — the player names, clubs and
+          numbers shown here are illustrative placeholders, not real call-ups.
+        </span>
+        <span className="sm:hidden"> Names shown are placeholders.</span>
       </p>
     </div>
   );

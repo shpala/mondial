@@ -29,7 +29,7 @@ export function SquadList({ squad }: { squad: Squad }) {
   })).filter((g) => g.players.length > 0);
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {byPosition.map((group) => (
         <section key={group.pos} className="card overflow-hidden">
           <h3 className="border-b border-ink-700 px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-ink-400">

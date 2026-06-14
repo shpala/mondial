@@ -4,12 +4,18 @@ import { TeamFlag } from "@/components/ui/TeamFlag";
 import { formatKickoff, isToday } from "@/lib/format";
 import { winProbability } from "@/lib/prediction";
 
-function StatusPill({ status }: { status: Fixture["status"] }) {
+function StatusPill({
+  status,
+  minute,
+}: {
+  status: Fixture["status"];
+  minute?: string | null;
+}) {
   if (status === "live") {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-300">
         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
-        Live
+        {minute || "Live"}
       </span>
     );
   }
@@ -31,37 +37,70 @@ function Side({
   flag,
   name,
   code,
-  goals,
   align,
   favored,
 }: {
   flag: string;
   name: string;
   code: string;
-  goals: number | null;
   align: "left" | "right";
   favored: boolean;
 }) {
+  const label = (
+    <span
+      className={`truncate text-sm ${favored ? "font-bold text-white" : "font-medium"}`}
+    >
+      <span aria-hidden className="hidden sm:inline">
+        {name}
+      </span>
+      <span aria-hidden className="sm:hidden">
+        {code}
+      </span>
+      {/* full name is always the accessible label, even when the code shows */}
+      <span className="sr-only">{name}</span>
+    </span>
+  );
+  const flagEl = <TeamFlag flag={flag} alt={name} decorative />;
   return (
     <div
       className={`flex min-w-0 flex-1 items-center gap-2 ${
-        align === "right" ? "flex-row-reverse text-right" : ""
+        align === "right" ? "justify-end text-right" : ""
       }`}
     >
-      <TeamFlag flag={flag} alt={name} decorative />
-      <span
-        className={`truncate text-sm ${favored ? "font-bold text-white" : "font-medium"}`}
-      >
-        <span className="hidden sm:inline">{name}</span>
-        <span className="sm:hidden">{code}</span>
-      </span>
-      {goals !== null && (
-        <span className="ml-auto font-display text-lg font-bold tabular-nums">
-          {goals}
-        </span>
+      {align === "right" ? (
+        <>
+          {label}
+          {flagEl}
+        </>
+      ) : (
+        <>
+          {flagEl}
+          {label}
+        </>
       )}
     </div>
   );
+}
+
+function ScoreBlock({
+  home,
+  away,
+  played,
+}: {
+  home: number | null;
+  away: number | null;
+  played: boolean;
+}) {
+  if (played && home !== null && away !== null) {
+    return (
+      <div className="flex shrink-0 items-center gap-1.5 font-display text-lg font-bold tabular-nums">
+        <span>{home}</span>
+        <span className="text-ink-400">–</span>
+        <span>{away}</span>
+      </div>
+    );
+  }
+  return <span className="shrink-0 px-1 text-xs font-semibold text-ink-400">v</span>;
 }
 
 export function MatchCard({ fixture }: { fixture: Fixture }) {
@@ -77,13 +116,17 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
   const homePct = homeProb != null ? Math.round(homeProb * 100) : 50;
   const awayPct = 100 - homePct;
   const today = isToday(fixture.kickoff);
+  const live = fixture.status === "live";
+  const ring = live
+    ? "ring-2 ring-red-500/60"
+    : today
+      ? "ring-1 ring-pitch-500/50"
+      : "";
 
   return (
     <Link
       href={`/matches/${fixture.id}`}
-      className={`group flex flex-col gap-2 rounded-2xl border bg-ink-800/70 p-3 backdrop-blur transition hover:bg-ink-700/60 ${
-        today ? "ring-1 ring-pitch-500/50" : ""
-      } ${
+      className={`group flex flex-col gap-2 rounded-2xl border bg-ink-800/70 p-3 backdrop-blur transition hover:bg-ink-700/60 active:bg-ink-700/60 ${ring} ${
         predicted
           ? "border-dashed border-accent-gold/30 hover:border-accent-gold/50"
           : "border-ink-700 hover:border-ink-500"
@@ -98,7 +141,7 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
             </span>
           )}
         </span>
-        <StatusPill status={fixture.status} />
+        <StatusPill status={fixture.status} minute={fixture.minute} />
       </div>
 
       <div className="flex items-center gap-2">
@@ -106,18 +149,18 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
           flag={fixture.home.flag}
           name={fixture.home.name}
           code={fixture.home.code}
-          goals={fixture.homeGoals}
           align="left"
           favored={homeProb != null && homeProb > 0.5}
         />
-        <span className="px-1 text-xs font-semibold text-ink-400">
-          {played ? "–" : "v"}
-        </span>
+        <ScoreBlock
+          home={fixture.homeGoals}
+          away={fixture.awayGoals}
+          played={played}
+        />
         <Side
           flag={fixture.away.flag}
           name={fixture.away.name}
           code={fixture.away.code}
-          goals={fixture.awayGoals}
           align="right"
           favored={homeProb != null && homeProb < 0.5}
         />
