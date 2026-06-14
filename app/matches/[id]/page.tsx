@@ -137,7 +137,9 @@ export default async function MatchPage({
               </div>
             )}
           </div>
-          <div className="flex flex-1 flex-col items-center gap-2 sm:flex-row sm:justify-start">
+          {/* col-reverse on phones so the away side stacks name-over-flag like
+              the home side; sm:flex-row restores the inner-flag desktop order. */}
+          <div className="flex flex-1 flex-col-reverse items-center gap-2 sm:flex-row sm:justify-start">
             <TeamFlag flag={fixture.away.flag} alt={fixture.away.name} size={36} decorative />
             <span className="text-center font-display text-lg font-bold sm:text-left">
               {fixture.away.name}
