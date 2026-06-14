@@ -77,8 +77,8 @@ function Slot({
   const metric =
     score != null
       ? `, scored ${score}`
-      : isWinner && prob != null
-        ? `, ${Math.round(prob * 100)} percent win probability`
+      : isWinner && winnerTone === "model" && prob != null
+        ? `, ${Math.round(prob * 100)} percent model win probability`
         : "";
 
   return (
@@ -133,7 +133,6 @@ function MatchupCard({
   onPick: (teamId: number) => void;
 }) {
   const wp = winnerProb(m);
-  const topPct = m.topWinProb != null ? Math.round(m.topWinProb * 100) : 50;
   const played = result != null;
   const isOverridden =
     !played &&
@@ -159,6 +158,21 @@ function MatchupCard({
       ? "pick"
       : "model";
 
+  const winnerIsTop = m.winnerId != null && m.winnerId === m.top?.id;
+  // Number shown next to the winner: a user pick is decided (100%) in your
+  // bracket; a model winner shows the model's head-to-head probability.
+  const displayProb = winnerTone === "pick" ? 1 : wp;
+  // Probability bar fills from the WINNER's side so it never contradicts the pick.
+  const winnerPct =
+    winnerTone === "model" ? (wp != null ? Math.round(wp * 100) : 50) : 100;
+  const barColor =
+    winnerTone === "result"
+      ? "bg-emerald-500/70"
+      : winnerTone === "pick"
+        ? "bg-accent-gold/70"
+        : "bg-pitch-500/70";
+  const showBar = m.winnerId != null && m.top != null && m.bottom != null;
+
   const border = played
     ? "border-emerald-600/60"
     : isOverridden
@@ -175,18 +189,18 @@ function MatchupCard({
         team={m.top}
         isWinner={m.winnerId != null && m.winnerId === m.top?.id}
         winnerTone={winnerTone}
-        prob={m.winnerId === m.top?.id ? wp : null}
+        prob={m.winnerId === m.top?.id ? displayProb : null}
         score={topScore}
         dimmed={m.winnerId != null && m.winnerId !== m.top?.id}
         locked={played}
         interactive={interactive}
         onPick={() => m.top && onPick(m.top.id)}
       />
-      <div className="h-1.5 bg-ink-700">
-        {!played && (
+      <div className="relative h-1.5 bg-ink-700">
+        {showBar && (
           <div
-            className="h-full bg-pitch-500/70"
-            style={{ width: `${topPct}%` }}
+            className={`absolute inset-y-0 ${winnerIsTop ? "left-0" : "right-0"} ${barColor}`}
+            style={{ width: `${winnerPct}%` }}
             aria-hidden
           />
         )}
@@ -195,7 +209,7 @@ function MatchupCard({
         team={m.bottom}
         isWinner={m.winnerId != null && m.winnerId === m.bottom?.id}
         winnerTone={winnerTone}
-        prob={m.winnerId === m.bottom?.id ? wp : null}
+        prob={m.winnerId === m.bottom?.id ? displayProb : null}
         score={bottomScore}
         dimmed={m.winnerId != null && m.winnerId !== m.bottom?.id}
         locked={played}
