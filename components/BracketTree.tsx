@@ -48,6 +48,7 @@ function Slot({
   dimmed,
   locked,
   interactive,
+  compact = false,
   onPick,
 }: {
   team: Team | null;
@@ -58,6 +59,7 @@ function Slot({
   dimmed: boolean;
   locked: boolean;
   interactive: boolean;
+  compact?: boolean;
   onPick: () => void;
 }) {
   if (!team) {
@@ -91,14 +93,17 @@ function Slot({
       disabled={!interactive && !locked}
       aria-disabled={locked || undefined}
       aria-label={`${team.name}, ${stateWord}${metric}`}
-      className={`flex h-11 w-full items-center gap-1.5 px-2 text-left transition sm:h-9 ${
+      className={`flex h-11 w-full items-center text-left transition sm:h-9 ${
+        compact ? "gap-1 px-1.5 sm:gap-1.5 sm:px-2" : "gap-1.5 px-2"
+      } ${
         clickable
           ? "cursor-pointer hover:bg-ink-700/60 active:bg-ink-600"
           : "cursor-default"
       } ${isWinner ? WINNER_CLASS[winnerTone] : dimmed ? "text-ink-400" : ""}`}
     >
       <TeamFlag flag={team.flag} alt={team.name} size={16} decorative />
-      <span className="truncate text-xs">{team.code}</span>
+      {/* team code is always 2-3 chars — never truncate it */}
+      <span className="shrink-0 text-xs">{team.code}</span>
       {score != null ? (
         <span
           className="ml-auto font-display text-xs font-bold tabular-nums"
@@ -184,7 +189,11 @@ function MatchupCard({
       ? "border-accent-gold/60"
       : "border-dashed border-ink-600";
 
-  const widthCls = fullWidth ? "w-full" : isFinal ? "w-44" : "w-36";
+  const widthCls = fullWidth
+    ? "w-full"
+    : isFinal
+      ? "w-32 sm:w-40 md:w-44"
+      : "w-28 sm:w-32 md:w-36";
   const finalRing =
     isFinal && !fullWidth ? "ring-1 ring-accent-gold/50 shadow-lg shadow-black/40" : "";
 
@@ -209,6 +218,7 @@ function MatchupCard({
         dimmed={m.winnerId != null && m.winnerId !== m.top?.id}
         locked={played}
         interactive={interactive}
+        compact={!fullWidth}
         onPick={() => m.top && onPick(m.top.id)}
       />
       <div className="relative h-1.5 bg-ink-700">
@@ -229,6 +239,7 @@ function MatchupCard({
         dimmed={m.winnerId != null && m.winnerId !== m.bottom?.id}
         locked={played}
         interactive={interactive}
+        compact={!fullWidth}
         onPick={() => m.bottom && onPick(m.bottom.id)}
       />
     </div>
@@ -260,6 +271,7 @@ export function BracketTree({
   const [mounted, setMounted] = useState(false);
   const [mode, setMode] = useState<"you" | "model">("you");
   const [selectedRound, setSelectedRound] = useState(0); // phone round pager
+  const [mobileView, setMobileView] = useState<"tree" | "rounds">("tree");
 
   useEffect(() => setMounted(true), []);
 
@@ -347,8 +359,11 @@ export function BracketTree({
           segs.push(`M${midX},${ty} H${tx}`); // stub into target
         }
       }
-      const w = content.offsetWidth;
-      const h = content.offsetHeight;
+      // scrollWidth/Height, not offsetWidth/Height: on a phone the tree overflows
+      // the scroller, so offsetWidth is the clipped box and would cut off the
+      // right-most connectors (into the Final).
+      const w = content.scrollWidth;
+      const h = content.scrollHeight;
       // Only update when the lines actually change — breaks the RO feedback loop.
       const sig = `${w}x${h}|${segs.join("|")}`;
       if (sig === lastSig.current) return;
@@ -370,7 +385,7 @@ export function BracketTree({
       ro.disconnect();
       window.removeEventListener("resize", schedule);
     };
-  }, [resolved, mounted]);
+  }, [resolved, mounted, mobileView]);
 
   return (
     <div>
@@ -446,8 +461,38 @@ export function BracketTree({
           "Tap any unplayed team to send them through; your picks recompute the rounds ahead and are saved on this device."}
       </p>
 
-      {/* PHONE: one round at a time via a sticky pager (no horizontal panning) */}
-      <div className="md:hidden">
+      {/* PHONE: choose the compact scrollable tree or a one-round pager */}
+      <div className="mb-3 md:hidden">
+        <div
+          className="inline-flex rounded-lg border border-ink-700 p-0.5 text-sm"
+          role="group"
+          aria-label="Bracket view"
+        >
+          <button
+            type="button"
+            onClick={() => setMobileView("tree")}
+            aria-pressed={mobileView === "tree"}
+            className={`inline-flex min-h-11 items-center justify-center rounded-md px-3 py-1 font-medium transition ${
+              mobileView === "tree" ? "bg-ink-700 text-white" : "text-ink-400"
+            }`}
+          >
+            🌳 Tree
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileView("rounds")}
+            aria-pressed={mobileView === "rounds"}
+            className={`inline-flex min-h-11 items-center justify-center rounded-md px-3 py-1 font-medium transition ${
+              mobileView === "rounds" ? "bg-ink-700 text-white" : "text-ink-400"
+            }`}
+          >
+            ☰ Rounds
+          </button>
+        </div>
+      </div>
+
+      {/* PHONE pager (Rounds view): one round at a time, no horizontal panning */}
+      <div className={mobileView === "rounds" ? "md:hidden" : "hidden"}>
         <div className="sticky top-14 z-20 -mx-4 mb-3 bg-ink-900/90 px-4 py-2 backdrop-blur">
           <div
             className="flex gap-1 rounded-lg border border-ink-700 p-0.5"
@@ -491,13 +536,15 @@ export function BracketTree({
         </div>
       </div>
 
-      {/* DESKTOP: full horizontal tree with SVG connectors + right-edge fade */}
-      <div className="relative hidden md:block">
+      {/* TREE: full horizontal connector tree (desktop always; phone in Tree view) */}
+      <div
+        className={`relative md:block ${mobileView === "tree" ? "block" : "hidden"}`}
+      >
         <div className="scroll-slim overflow-x-auto pb-4">
-          <div ref={contentRef} className="relative flex gap-6">
+          <div ref={contentRef} className="relative flex gap-4 md:gap-6">
             {/* connector lines, drawn behind the cards */}
             <svg
-              className="pointer-events-none absolute left-0 top-0 z-0 text-ink-500"
+              className="pointer-events-none absolute left-0 top-0 z-0 text-ink-400"
               width={conns.w}
               height={conns.h}
               aria-hidden
@@ -508,8 +555,8 @@ export function BracketTree({
                   d={d}
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth={1.5}
-                  strokeOpacity={0.7}
+                  strokeWidth={2}
+                  strokeLinecap="round"
                 />
               ))}
             </svg>
