@@ -9,10 +9,14 @@
 // snapshot on any error. The country registry reconciles names across origins.
 import "server-only";
 
-import type { Fixture, Group, MatchLineups, Squad, Team } from "@/lib/types";
+import type { Fixture, Group, Lineup, MatchLineups, Squad, Team } from "@/lib/types";
 import { isToday } from "@/lib/format";
 import { fetchOpenfootball } from "@/lib/api/sources/openfootball";
-import { fetchEspnLive, pairCodeKey } from "@/lib/api/sources/espn";
+import {
+  fetchEspnLineup,
+  fetchEspnLive,
+  pairCodeKey,
+} from "@/lib/api/sources/espn";
 import { fetchSquadTSDB, fetchLineupsTSDB } from "@/lib/api/sources/thesportsdb";
 import { generateLineup, generateSquad } from "./generate";
 import { teamByIdRegistry } from "@/lib/teams/registry";
@@ -156,19 +160,46 @@ export async function getMatchLineups(
     return snapshotLineups(fixtureId, Date.now());
   }
 
-  let home = null;
-  let away = null;
-  try {
-    const live = await fetchLineupsTSDB(fixture);
-    if (live) {
-      home = live.home;
-      away = live.away;
+  let home: Lineup | null = null;
+  let away: Lineup | null = null;
+
+  // Once a match has kicked off, ESPN's summary carries the REAL starting XI +
+  // formation. Prefer it for live/finished games (matched by event id from the
+  // already-cached scoreboard fetch). Upcoming games have no XI yet → estimated.
+  const kickedOff = fixture.status === "live" || fixture.status === "finished";
+  const realTeams = fixture.home.id !== 0 && fixture.away.id !== 0;
+  if (kickedOff && realTeams) {
+    try {
+      const liveMap = await fetchEspnLive();
+      const entry = liveMap.get(pairCodeKey(fixture.home.code, fixture.away.code));
+      if (entry?.eventId) {
+        const espn = await fetchEspnLineup(
+          entry.eventId,
+          fixture.home,
+          fixture.away,
+        );
+        home = espn.home;
+        away = espn.away;
+      }
+    } catch (err) {
+      console.warn("[data] ESPN line-ups unavailable:", err);
     }
-  } catch (err) {
-    console.warn("[data] TheSportsDB lineups failed, generating:", err);
   }
 
-  // Fill any missing side with a generated XI so the pitch always renders
+  // TheSportsDB fills anything ESPN didn't (a missing side, or scheduled games).
+  if (!home || !away) {
+    try {
+      const live = await fetchLineupsTSDB(fixture);
+      if (live) {
+        if (!home) home = live.home;
+        if (!away) away = live.away;
+      }
+    } catch (err) {
+      console.warn("[data] TheSportsDB lineups failed, generating:", err);
+    }
+  }
+
+  // Fill any still-missing side with a generated XI so the pitch always renders
   // (real placeholder knockout slots — id 0 — get no generated XI).
   if (!home && fixture.home.id !== 0) home = generateLineup(fixture.home);
   if (!away && fixture.away.id !== 0) away = generateLineup(fixture.away);
