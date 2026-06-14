@@ -154,6 +154,7 @@ export function groupFixtures(): Fixture[] {
           away,
           homeGoals: scoreFromRng(rng, ratingDiff),
           awayGoals: scoreFromRng(rng, -ratingDiff),
+          goals: [],
         });
       });
     });

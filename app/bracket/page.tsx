@@ -3,6 +3,7 @@ import { qualificationBreakdown, qualifiedTeams } from "@/lib/qualifiers";
 import { BracketTree, type ResultMap } from "@/components/BracketTree";
 import { CandidatesPanel } from "@/components/CandidatesPanel";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
+import { AutoRefresh } from "@/components/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,7 @@ export default async function BracketPage() {
 
   return (
     <div className="animate-fade-up">
+      <AutoRefresh seconds={60} />
       <SampleDataBanner />
       <div className="mb-1 flex flex-wrap items-center gap-2">
         <h1 className="font-display text-2xl font-extrabold">

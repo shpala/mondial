@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getFixtures, getMatchLineups } from "@/lib/data";
 import { PitchLineup } from "@/components/PitchLineup";
+import { GoalList } from "@/components/GoalList";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { EstimatedNotice, EstimatedTag } from "@/components/ui/EstimatedData";
@@ -141,6 +142,8 @@ export default async function MatchPage({
           </div>
         </div>
       </header>
+
+      <GoalList home={fixture.home} away={fixture.away} goals={fixture.goals} />
 
       <Suspense fallback={<LineupSkeleton />}>
         <LineupSection fixtureId={fixtureId} />

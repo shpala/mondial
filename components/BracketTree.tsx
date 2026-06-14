@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Team } from "@/lib/types";
 import {
@@ -268,6 +268,80 @@ export function BracketTree({
   const playedCount = Object.keys(playedNodes).length;
   const lastRound = resolved.rounds.length - 1;
 
+  // --- SVG connector lines between rounds (measured from the laid-out cards) ---
+  const contentRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[][]>([]);
+  const setCardRef =
+    (r: number, i: number) => (el: HTMLDivElement | null) => {
+      if (!cardRefs.current[r]) cardRefs.current[r] = [];
+      cardRefs.current[r][i] = el;
+    };
+  const [conns, setConns] = useState<{ segs: string[]; w: number; h: number }>({
+    segs: [],
+    w: 0,
+    h: 0,
+  });
+  const lastSig = useRef("");
+
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
+
+    const compute = () => {
+      const crect = content.getBoundingClientRect();
+      const refs = cardRefs.current;
+      const segs: string[] = [];
+      // Each matchup i in round r+1 is fed by matchups 2i and 2i+1 in round r.
+      for (let r = 0; r < refs.length - 1; r++) {
+        const cur = refs[r];
+        const nxt = refs[r + 1];
+        if (!cur || !nxt) continue;
+        for (let i = 0; i < nxt.length; i++) {
+          const A = cur[2 * i];
+          const B = cur[2 * i + 1];
+          const T = nxt[i];
+          if (!A || !B || !T) continue;
+          const a = A.getBoundingClientRect();
+          const b = B.getBoundingClientRect();
+          const t = T.getBoundingClientRect();
+          const ay = Math.round(a.top - crect.top + a.height / 2);
+          const by = Math.round(b.top - crect.top + b.height / 2);
+          const ty = Math.round(t.top - crect.top + t.height / 2);
+          const ax = Math.round(a.right - crect.left);
+          const bx = Math.round(b.right - crect.left);
+          const tx = Math.round(t.left - crect.left);
+          const midX = Math.round((Math.max(ax, bx) + tx) / 2);
+          segs.push(`M${ax},${ay} H${midX}`); // stub out of top source
+          segs.push(`M${bx},${by} H${midX}`); // stub out of bottom source
+          segs.push(`M${midX},${ay} V${by}`); // vertical join
+          segs.push(`M${midX},${ty} H${tx}`); // stub into target
+        }
+      }
+      const w = content.offsetWidth;
+      const h = content.offsetHeight;
+      // Only update when the lines actually change — breaks the RO feedback loop.
+      const sig = `${w}x${h}|${segs.join("|")}`;
+      if (sig === lastSig.current) return;
+      lastSig.current = sig;
+      setConns({ segs, w, h });
+    };
+
+    let raf = 0;
+    const schedule = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(compute);
+    };
+    schedule();
+    const ro = new ResizeObserver(schedule);
+    ro.observe(content);
+    window.addEventListener("resize", schedule);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener("resize", schedule);
+    };
+  }, [resolved, mounted]);
+
   return (
     <div>
       {/* legend */}
@@ -345,11 +419,29 @@ export function BracketTree({
       {/* horizontal scroller with a right-edge fade cue for later rounds */}
       <div className="relative">
         <div className="scroll-slim overflow-x-auto pb-4">
-          <div className="flex gap-6">
+          <div ref={contentRef} className="relative flex gap-6">
+            {/* connector lines, drawn behind the cards */}
+            <svg
+              className="pointer-events-none absolute left-0 top-0 z-0 text-ink-500"
+              width={conns.w}
+              height={conns.h}
+              aria-hidden
+            >
+              {conns.segs.map((d, i) => (
+                <path
+                  key={i}
+                  d={d}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  strokeOpacity={0.7}
+                />
+              ))}
+            </svg>
             {resolved.rounds.map((round, ri) => (
               <div
                 key={ri}
-                className="flex flex-col"
+                className="relative z-10 flex flex-col"
                 role="group"
                 aria-label={round[0]?.round}
               >
@@ -357,16 +449,17 @@ export function BracketTree({
                   {round[0]?.round}
                 </h3>
                 <div className="flex flex-1 flex-col justify-around gap-3">
-                  {round.map((m) => (
-                    <MatchupCard
-                      key={m.id}
-                      m={m}
-                      override={overrides[m.id]}
-                      result={playedNodes[m.id] ?? null}
-                      interactive={mode === "you"}
-                      isFinal={ri === lastRound}
-                      onPick={(teamId) => mode === "you" && pick(m.id, teamId)}
-                    />
+                  {round.map((m, mi) => (
+                    <div key={m.id} ref={setCardRef(ri, mi)}>
+                      <MatchupCard
+                        m={m}
+                        override={overrides[m.id]}
+                        result={playedNodes[m.id] ?? null}
+                        interactive={mode === "you"}
+                        isFinal={ri === lastRound}
+                        onPick={(teamId) => mode === "you" && pick(m.id, teamId)}
+                      />
+                    </div>
                   ))}
                 </div>
               </div>

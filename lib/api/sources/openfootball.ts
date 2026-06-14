@@ -4,7 +4,7 @@
 // come from TheSportsDB.)
 import "server-only";
 
-import type { Fixture, Group, Team } from "@/lib/types";
+import type { Fixture, Goal, Group, Team } from "@/lib/types";
 import { resolveTeam } from "@/lib/teams/registry";
 import { computeGroupStandings } from "@/lib/standings";
 
@@ -14,6 +14,8 @@ const SOURCE_URL =
 interface OfGoal {
   name: string;
   minute: string | number;
+  owngoal?: boolean;
+  penalty?: boolean;
 }
 interface OfMatch {
   round: string;
@@ -51,6 +53,27 @@ function kickoffIso(date: string, time?: string): string {
   return Number.isNaN(d.getTime()) ? `${date}T12:00:00Z` : d.toISOString();
 }
 
+// Sort key for a minute string like "9", "45+2", "90+3".
+function minuteKey(m: string): number {
+  const mm = /^(\d+)(?:\+(\d+))?/.exec(m);
+  if (!mm) return 999;
+  return parseInt(mm[1], 10) + (mm[2] ? parseInt(mm[2], 10) / 100 : 0);
+}
+
+function parseGoals(m: OfMatch): Goal[] {
+  const one = (arr: OfGoal[] | undefined, side: "home" | "away") =>
+    (arr ?? []).map((g) => ({
+      side,
+      minute: String(g.minute ?? ""),
+      scorer: g.name ?? "",
+      ownGoal: Boolean(g.owngoal),
+      penalty: Boolean(g.penalty),
+    }));
+  return [...one(m.goals1, "home"), ...one(m.goals2, "away")].sort(
+    (a, b) => minuteKey(a.minute) - minuteKey(b.minute),
+  );
+}
+
 function placeholderTeam(label: string, group: string): Team {
   return { id: 0, name: label, code: label, flag: "⚽", group, rating: 1500 };
 }
@@ -73,18 +96,29 @@ function mapMatch(m: OfMatch, index: number): Fixture {
 
   const ft = m.score?.ft;
   const finished = Array.isArray(ft) && ft.length === 2;
+  const kickoff = kickoffIso(m.date, m.time);
+
+  // openfootball has no live field, so we infer "in play": kickoff has passed,
+  // no final score yet, and we're inside a ~2.5h match window.
+  const startMs = Date.parse(kickoff);
+  const LIVE_WINDOW = 150 * 60 * 1000;
+  const now = Date.now();
+  let status: Fixture["status"] = "scheduled";
+  if (finished) status = "finished";
+  else if (now >= startMs && now <= startMs + LIVE_WINDOW) status = "live";
 
   return {
     id: index + 1,
     stage,
     group: isGroup ? groupLetter : null,
-    kickoff: kickoffIso(m.date, m.time),
-    status: finished ? "finished" : "scheduled",
+    kickoff,
+    status,
     venue: m.ground ?? null,
     home,
     away,
     homeGoals: finished ? ft![0] : null,
     awayGoals: finished ? ft![1] : null,
+    goals: parseGoals(m),
   };
 }
 

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Fixture } from "@/lib/types";
 import { MatchCard } from "@/components/MatchCard";
+import { localDateKey } from "@/lib/format";
 
 const DATE_FMT = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
@@ -13,6 +14,8 @@ const DATE_FMT = new Intl.DateTimeFormat("en-GB", {
 type StatusFilter = "all" | "upcoming" | "results";
 
 const GROUPS = "ABCDEFGHIJKL".split("");
+
+const todayStr = localDateKey(new Date());
 
 export function MatchesBrowser({
   fixtures,
@@ -37,7 +40,7 @@ export function MatchesBrowser({
   const byDate = useMemo(() => {
     const map = new Map<string, Fixture[]>();
     for (const f of filtered) {
-      const day = f.kickoff.slice(0, 10);
+      const day = localDateKey(f.kickoff);
       if (!map.has(day)) map.set(day, []);
       map.get(day)!.push(f);
     }
@@ -101,8 +104,13 @@ export function MatchesBrowser({
         <div className="space-y-6">
           {byDate.map(([day, games]) => (
             <section key={day}>
-              <h2 className="mb-2 text-sm font-semibold text-ink-300">
-                {DATE_FMT.format(new Date(`${day}T12:00:00Z`))}
+              <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink-300">
+                {DATE_FMT.format(new Date(`${day}T12:00:00`))}
+                {day === todayStr && (
+                  <span className="rounded-full bg-pitch-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pitch-50/90">
+                    Today
+                  </span>
+                )}
               </h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {games.map((f) => (

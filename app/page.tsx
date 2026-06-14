@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getDashboardFixtures, getTeams } from "@/lib/data";
 import { MatchCard } from "@/components/MatchCard";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
+import { AutoRefresh } from "@/components/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 
@@ -30,13 +31,15 @@ function Section({
 }
 
 export default async function DashboardPage() {
-  const [{ live, upcoming, recent }, teams] = await Promise.all([
+  const [{ today, upcoming, recent }, teams] = await Promise.all([
     getDashboardFixtures(),
     getTeams(),
   ]);
+  const liveCount = today.filter((f) => f.status === "live").length;
 
   return (
     <div className="animate-fade-up">
+      <AutoRefresh seconds={60} />
       <SampleDataBanner />
 
       <section className="card mb-8 overflow-hidden">
@@ -68,14 +71,27 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {live.length > 0 && (
-        <Section title="Live now">
+      {today.length > 0 && (
+        <section className="mb-8">
+          <div className="mb-3 flex items-center gap-2">
+            <h2 className="font-display text-lg font-bold">Today</h2>
+            {liveCount > 0 ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-300">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
+                {liveCount} in play
+              </span>
+            ) : (
+              <span className="rounded-full bg-pitch-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-pitch-50/80">
+                {today.length} {today.length === 1 ? "match" : "matches"}
+              </span>
+            )}
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {live.map((f) => (
+            {today.map((f) => (
               <MatchCard key={f.id} fixture={f} />
             ))}
           </div>
-        </Section>
+        </section>
       )}
 
       <Section title="Upcoming" href="/matches">

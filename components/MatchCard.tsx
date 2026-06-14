@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Fixture } from "@/lib/types";
 import { TeamFlag } from "@/components/ui/TeamFlag";
-import { formatKickoff } from "@/lib/format";
+import { formatKickoff, isToday } from "@/lib/format";
 import { winProbability } from "@/lib/prediction";
 
 function StatusPill({ status }: { status: Fixture["status"] }) {
@@ -76,18 +76,28 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
       : null;
   const homePct = homeProb != null ? Math.round(homeProb * 100) : 50;
   const awayPct = 100 - homePct;
+  const today = isToday(fixture.kickoff);
 
   return (
     <Link
       href={`/matches/${fixture.id}`}
       className={`group flex flex-col gap-2 rounded-2xl border bg-ink-800/70 p-3 backdrop-blur transition hover:bg-ink-700/60 ${
+        today ? "ring-1 ring-pitch-500/50" : ""
+      } ${
         predicted
           ? "border-dashed border-accent-gold/30 hover:border-accent-gold/50"
           : "border-ink-700 hover:border-ink-500"
       }`}
     >
       <div className="flex items-center justify-between text-[11px] text-ink-400">
-        <span>{fixture.group ? `Group ${fixture.group}` : fixture.stage}</span>
+        <span className="flex items-center gap-1.5">
+          {fixture.group ? `Group ${fixture.group}` : fixture.stage}
+          {today && (
+            <span className="rounded-full bg-pitch-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pitch-50/90">
+              Today
+            </span>
+          )}
+        </span>
         <StatusPill status={fixture.status} />
       </div>
 

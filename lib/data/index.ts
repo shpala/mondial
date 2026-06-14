@@ -10,6 +10,7 @@
 import "server-only";
 
 import type { Fixture, Group, MatchLineups, Squad, Team } from "@/lib/types";
+import { isToday } from "@/lib/format";
 import { fetchOpenfootball } from "@/lib/api/sources/openfootball";
 import { fetchSquadTSDB, fetchLineupsTSDB } from "@/lib/api/sources/thesportsdb";
 import { generateLineup, generateSquad } from "./generate";
@@ -44,8 +45,12 @@ async function trySpine() {
 
 export async function getFixtures(): Promise<Fixture[]> {
   const spine = await trySpine();
-  if (spine) return spine.fixtures;
-  return resolveFixtureStatuses(Date.now());
+  const fixtures = spine ? spine.fixtures : resolveFixtureStatuses(Date.now());
+  // Always chronological so every consumer (dashboard, schedule, bracket) is
+  // ordered by date.
+  return [...fixtures].sort(
+    (a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff),
+  );
 }
 
 export async function getGroups(): Promise<Group[]> {
@@ -112,21 +117,29 @@ export async function getMatchLineups(
   return { fixture, home, away };
 }
 
-/** Fixtures grouped for the dashboard: live now, then next up, then recent. */
+/** Fixtures grouped for the dashboard: today, then next up, then recent. */
 export async function getDashboardFixtures(): Promise<{
-  live: Fixture[];
+  today: Fixture[];
   upcoming: Fixture[];
   recent: Fixture[];
 }> {
-  const fixtures = await getFixtures();
-  const live = fixtures.filter((f) => f.status === "live");
+  const fixtures = await getFixtures(); // already sorted by kickoff ascending
   const now = Date.now();
+  // Everything kicking off today (live + done + still to come), soonest first.
+  const today = fixtures.filter((f) => isToday(f.kickoff));
+  // Future days only (today lives in its own section), soonest first.
   const upcoming = fixtures
-    .filter((f) => f.status === "scheduled" && Date.parse(f.kickoff) >= now)
+    .filter(
+      (f) =>
+        f.status === "scheduled" &&
+        Date.parse(f.kickoff) >= now &&
+        !isToday(f.kickoff),
+    )
     .slice(0, 8);
+  // Most recent first, excluding today.
   const recent = fixtures
-    .filter((f) => f.status === "finished")
+    .filter((f) => f.status === "finished" && !isToday(f.kickoff))
     .slice(-6)
     .reverse();
-  return { live, upcoming, recent };
+  return { today, upcoming, recent };
 }

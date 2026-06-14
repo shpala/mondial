@@ -1,6 +1,7 @@
 import { getFixtures } from "@/lib/data";
 import { MatchesBrowser } from "@/components/MatchesBrowser";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
+import { AutoRefresh } from "@/components/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ export default async function MatchesPage({
 
   return (
     <div className="animate-fade-up">
+      <AutoRefresh seconds={60} />
       <SampleDataBanner />
       <h1 className="mb-1 font-display text-2xl font-extrabold">Matches</h1>
       <p className="mb-6 text-sm text-ink-400">

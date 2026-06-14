@@ -52,6 +52,14 @@ export interface Group {
 
 export type FixtureStatus = "scheduled" | "live" | "finished";
 
+export interface Goal {
+  side: "home" | "away"; // which team the goal counted for
+  minute: string; // "9", "45+2", "90+3"
+  scorer: string;
+  ownGoal: boolean;
+  penalty: boolean;
+}
+
 export interface Fixture {
   id: number;
   stage: string; // "Group Stage" | "Round of 32" | ...
@@ -63,6 +71,8 @@ export interface Fixture {
   away: Team;
   homeGoals: number | null;
   awayGoals: number | null;
+  /** Goal timeline (scorer + minute), when the source provides it. */
+  goals: Goal[];
 }
 
 export interface LineupPlayer {
