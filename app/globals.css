@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-face), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+@layer base {
+  /* Visible keyboard focus across every interactive element (keyboard-only,
+     thanks to :focus-visible — mouse clicks stay ring-free). */
+  :where(a, button, [tabindex], [role="button"]):focus-visible {
+    outline: 2px solid #fbbf24; /* accent.gold */
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* Respect users who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+body {
+  @apply bg-ink-900 text-slate-100 antialiased;
+  background-image:
+    radial-gradient(1200px 600px at 80% -10%, rgba(22, 163, 74, 0.12), transparent),
+    radial-gradient(900px 500px at -10% 10%, rgba(251, 191, 36, 0.06), transparent);
+  background-attachment: fixed;
+}
+
+/* Pitch surnames collide at phone width — hide them there (numbers stay; the
+   full name shows on tap). */
+@media (max-width: 640px) {
+  .pitch-surname {
+    display: none;
+  }
+}
+
+/* Thin custom scrollbar for the horizontal bracket */
+.scroll-slim::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+.scroll-slim::-webkit-scrollbar-thumb {
+  @apply bg-ink-600 rounded-full;
+}
+.scroll-slim::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-ink-700 bg-ink-800/70 backdrop-blur;
+  }
+  .skeleton {
+    @apply relative overflow-hidden bg-ink-700/60 rounded-md;
+  }
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full animate-shimmer;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.06),
+      transparent
+    );
+  }
+}

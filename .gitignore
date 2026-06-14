@@ -1,0 +1,16 @@
+/node_modules
+/.next
+/out
+/build
+next-env.d.ts
+.env
+.env.local
+*.tsbuildinfo
+.DS_Store
+
+# Tooling / scratch artifacts (not part of the app)
+/.cocoindex_code
+/.playwright-mcp
+/*.png
+/full.md
+/bracket-refs.md
