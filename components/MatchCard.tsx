@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Fixture } from "@/lib/types";
 import { TeamFlag } from "@/components/ui/TeamFlag";
+import { Countdown } from "@/components/Countdown";
 import { formatKickoff, isToday } from "@/lib/format";
 import { winProbability } from "@/lib/prediction";
 
@@ -123,6 +124,15 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
       ? "ring-1 ring-pitch-500/50"
       : "";
 
+  // For today's upcoming games, count down to kickoff; otherwise show the date.
+  const kickoff = formatKickoff(fixture.kickoff);
+  const kickoffLabel =
+    predicted && today ? (
+      <Countdown target={fixture.kickoff} fallback={kickoff} />
+    ) : (
+      kickoff
+    );
+
   return (
     <Link
       href={`/matches/${fixture.id}`}
@@ -175,15 +185,15 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
             </div>
             <div className="mt-1 flex items-center justify-between text-[10px] text-ink-400">
               <span className="tabular-nums">{homePct}%</span>
-              <span className="uppercase tracking-wide">
-                {formatKickoff(fixture.kickoff)}
+              <span className="uppercase tracking-wide tabular-nums">
+                {kickoffLabel}
               </span>
               <span className="tabular-nums">{awayPct}%</span>
             </div>
           </div>
         ) : (
-          <div className="text-center text-[11px] text-ink-400">
-            {formatKickoff(fixture.kickoff)}
+          <div className="text-center text-[11px] text-ink-400 tabular-nums">
+            {kickoffLabel}
           </div>
         ))}
     </Link>
