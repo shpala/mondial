@@ -5,67 +5,72 @@
 import type { Fixture, Group, MatchLineups, Squad, Team } from "@/lib/types";
 import { generateLineup, generateSquad } from "./generate";
 import { computeGroupStandings } from "@/lib/standings";
+import { effectiveRating } from "@/lib/prediction";
 
 const GROUP_LETTERS = "ABCDEFGHIJKL".split(""); // 12 groups
 
 // 4 pots of 12, snake-assigned across the 12 groups. [name, code, flag, rating]
+// Ratings are World Football Elo (eloratings.net, June 2026). Pot membership is
+// the fixed draw structure (hosts seeded into Pot 1), not recomputed from rating.
 type Seed = [string, string, string, number];
 
+const HOST_CODES = new Set(["MEX", "CAN", "USA"]);
+
 const POT1: Seed[] = [
-  ["Mexico", "MEX", "🇲🇽", 1790],
-  ["Canada", "CAN", "🇨🇦", 1740],
-  ["United States", "USA", "🇺🇸", 1770],
-  ["Argentina", "ARG", "🇦🇷", 2090],
-  ["France", "FRA", "🇫🇷", 2060],
-  ["Spain", "ESP", "🇪🇸", 2050],
-  ["England", "ENG", "🏴", 2030],
-  ["Brazil", "BRA", "🇧🇷", 2020],
-  ["Portugal", "POR", "🇵🇹", 2000],
-  ["Netherlands", "NED", "🇳🇱", 1980],
-  ["Germany", "GER", "🇩🇪", 1990],
-  ["Belgium", "BEL", "🇧🇪", 1960],
+  ["Mexico", "MEX", "🇲🇽", 1881],
+  ["Canada", "CAN", "🇨🇦", 1767],
+  ["United States", "USA", "🇺🇸", 1780],
+  ["Argentina", "ARG", "🇦🇷", 2115],
+  ["France", "FRA", "🇫🇷", 2063],
+  ["Spain", "ESP", "🇪🇸", 2129],
+  ["England", "ENG", "🏴", 2024],
+  ["Brazil", "BRA", "🇧🇷", 1978],
+  ["Portugal", "POR", "🇵🇹", 1989],
+  ["Netherlands", "NED", "🇳🇱", 1944],
+  ["Germany", "GER", "🇩🇪", 1939],
+  ["Belgium", "BEL", "🇧🇪", 1894],
 ];
 const POT2: Seed[] = [
-  ["Croatia", "CRO", "🇭🇷", 1900],
-  ["Morocco", "MAR", "🇲🇦", 1880],
-  ["Japan", "JPN", "🇯🇵", 1810],
-  ["Uruguay", "URU", "🇺🇾", 1860],
-  ["Colombia", "COL", "🇨🇴", 1850],
-  ["Senegal", "SEN", "🇸🇳", 1830],
-  ["Switzerland", "SUI", "🇨🇭", 1820],
-  ["Denmark", "DEN", "🇩🇰", 1800],
-  ["Korea Republic", "KOR", "🇰🇷", 1780],
-  ["Ecuador", "ECU", "🇪🇨", 1760],
-  ["Austria", "AUT", "🇦🇹", 1790],
-  ["Australia", "AUS", "🇦🇺", 1700],
+  ["Croatia", "CRO", "🇭🇷", 1912],
+  ["Morocco", "MAR", "🇲🇦", 1840],
+  ["Japan", "JPN", "🇯🇵", 1910],
+  ["Uruguay", "URU", "🇺🇾", 1892],
+  ["Colombia", "COL", "🇨🇴", 1982],
+  ["Senegal", "SEN", "🇸🇳", 1860],
+  ["Switzerland", "SUI", "🇨🇭", 1865],
+  ["Denmark", "DEN", "🇩🇰", 1869],
+  ["Korea Republic", "KOR", "🇰🇷", 1786],
+  ["Ecuador", "ECU", "🇪🇨", 1890],
+  ["Austria", "AUT", "🇦🇹", 1830],
+  ["Australia", "AUS", "🇦🇺", 1839],
 ];
 const POT3: Seed[] = [
-  ["Nigeria", "NGA", "🇳🇬", 1740],
-  ["Norway", "NOR", "🇳🇴", 1770],
-  ["Egypt", "EGY", "🇪🇬", 1720],
-  ["Serbia", "SRB", "🇷🇸", 1730],
-  ["Sweden", "SWE", "🇸🇪", 1710],
-  ["Poland", "POL", "🇵🇱", 1700],
-  ["Ukraine", "UKR", "🇺🇦", 1690],
-  ["Wales", "WAL", "🏴", 1680],
-  ["Côte d'Ivoire", "CIV", "🇨🇮", 1670],
-  ["Tunisia", "TUN", "🇹🇳", 1640],
-  ["Iran", "IRN", "🇮🇷", 1660],
-  ["Saudi Arabia", "KSA", "🇸🇦", 1560],
+  ["Nigeria", "NGA", "🇳🇬", 1767],
+  ["Norway", "NOR", "🇳🇴", 1914],
+  ["Egypt", "EGY", "🇪🇬", 1696],
+  ["Serbia", "SRB", "🇷🇸", 1734],
+  ["Sweden", "SWE", "🇸🇪", 1755],
+  ["Poland", "POL", "🇵🇱", 1710],
+  ["Ukraine", "UKR", "🇺🇦", 1780],
+  ["Wales", "WAL", "🏴", 1682],
+  ["Côte d'Ivoire", "CIV", "🇨🇮", 1743],
+  ["Tunisia", "TUN", "🇹🇳", 1585],
+  ["Iran", "IRN", "🇮🇷", 1772],
+  ["Saudi Arabia", "KSA", "🇸🇦", 1576],
 ];
 const POT4: Seed[] = [
-  ["Ghana", "GHA", "🇬🇭", 1620],
-  ["Qatar", "QAT", "🇶🇦", 1550],
-  ["Jordan", "JOR", "🇯🇴", 1500],
-  ["New Zealand", "NZL", "🇳🇿", 1520],
-  ["Panama", "PAN", "🇵🇦", 1540],
-  ["Cape Verde", "CPV", "🇨🇻", 1530],
-  ["Uzbekistan", "UZB", "🇺🇿", 1560],
-  ["Jamaica", "JAM", "🇯🇲", 1510],
-  ["Honduras", "HON", "🇭🇳", 1490],
-  ["South Africa", "RSA", "🇿🇦", 1600],
-  ["Algeria", "ALG", "🇩🇿", 1650],
-  ["Paraguay", "PAR", "🇵🇾", 1580],
+  ["Ghana", "GHA", "🇬🇭", 1510],
+  ["Qatar", "QAT", "🇶🇦", 1447],
+  ["Jordan", "JOR", "🇯🇴", 1680],
+  ["New Zealand", "NZL", "🇳🇿", 1562],
+  ["Panama", "PAN", "🇵🇦", 1730],
+  ["Cape Verde", "CPV", "🇨🇻", 1606],
+  ["Uzbekistan", "UZB", "🇺🇿", 1714],
+  ["Jamaica", "JAM", "🇯🇲", 1527],
+  ["Honduras", "HON", "🇭🇳", 1570],
+  ["South Africa", "RSA", "🇿🇦", 1511],
+  ["Algeria", "ALG", "🇩🇿", 1772],
+  ["Paraguay", "PAR", "🇵🇾", 1780],
 ];
 
 function buildTeams(): Team[] {
@@ -82,6 +87,7 @@ function buildTeams(): Team[] {
         flag,
         rating,
         group: GROUP_LETTERS[groupIndex],
+        ...(HOST_CODES.has(code) ? { host: true } : {}),
       });
     });
   });
@@ -142,7 +148,7 @@ export function groupFixtures(): Fixture[] {
         const kickoffMs =
           GROUP_STAGE_START + (ri * 5 + gi) * (DAY / 2) + mi * (DAY / 6);
         const rng = mulberry32(fid);
-        const ratingDiff = home.rating - away.rating;
+        const ratingDiff = effectiveRating(home) - effectiveRating(away);
         fixtures.push({
           id: fid++,
           stage: "Group Stage",

@@ -3,7 +3,7 @@ import type { Fixture } from "@/lib/types";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 import { Countdown } from "@/components/Countdown";
 import { formatKickoff, isToday } from "@/lib/format";
-import { winProbability } from "@/lib/prediction";
+import { predictWinProbability } from "@/lib/prediction";
 
 function StatusPill({
   status,
@@ -112,7 +112,7 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
   const realTeams = fixture.home.id !== 0 && fixture.away.id !== 0;
   const homeProb =
     predicted && realTeams
-      ? winProbability(fixture.home.rating, fixture.away.rating)
+      ? predictWinProbability(fixture.home, fixture.away)
       : null;
   const homePct = homeProb != null ? Math.round(homeProb * 100) : 50;
   const awayPct = 100 - homePct;

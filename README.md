@@ -112,12 +112,19 @@ your picks persist on the device (`store/bracket.ts`).
 
 ### Where the ratings come from
 
-Every nation has one hand-seeded **`rating`** constant in
-`lib/teams/registry.ts` (Argentina 2090 … Curaçao 1470). These are authored
-strength estimates — **not** derived from FIFA/Elo history and **not** updated by
-results. So a 7–1 win changes a team's *qualification position* but never its
-predicted strength, and the model uses nothing but the two ratings: no current
-form, injuries, home advantage, head-to-head or live data.
+Every nation has one **`rating`** constant in `lib/teams/registry.ts` (Spain 2129
+… Curaçao 1427), seeded from **World Football Elo ratings** (eloratings.net,
+snapshot June 2026) rather than hand-authored guesses. They are **not** updated
+by results, so a 7–1 win changes a team's *qualification position* but never its
+predicted strength.
+
+**Host advantage.** The three co-hosts (USA, Mexico, Canada) carry a `host` flag
+and get a **+100 Elo home-field bump** (`HOST_ADVANTAGE` in `lib/prediction.ts`)
+applied at prediction time — eloratings.net's standard home constant, worth ~+14
+percentage points between otherwise-even sides. The stored `rating` stays the
+team's true strength; the bump is layered on only when computing a win
+probability (`predictWinProbability`). Beyond that the model uses nothing but the
+two ratings: no current form, injuries, head-to-head or live data.
 
 Two deliberate simplifications: seeding is by rating (not FIFA's fixed
 group-position → slot mapping), and the third-place tiebreak is points → GD →

@@ -12,61 +12,66 @@ interface Country {
   code: string; // canonical 3-letter key
   name: string; // display name
   flag: string; // emoji
-  rating: number; // Elo-style strength seed
+  rating: number; // World Football Elo (eloratings.net)
   aliases: string[]; // alternate spellings across sources
+  host?: boolean; // 2026 co-host (USA/Mexico/Canada)
 }
 
 // The 48 participants of the 2026 World Cup (as listed by openfootball).
-// Ratings are illustrative strength seeds, not official rankings.
+// Ratings are World Football Elo ratings sourced from eloratings.net
+// (snapshot: June 2026), ordered strongest first. They are a team's true
+// strength; the host home-field bump is applied separately at prediction time
+// (see HOST_ADVANTAGE in lib/prediction.ts), so the three co-hosts carry their
+// raw Elo here.
 const COUNTRIES: Country[] = [
-  { code: "ARG", name: "Argentina", flag: "🇦🇷", rating: 2090, aliases: [] },
-  { code: "FRA", name: "France", flag: "🇫🇷", rating: 2060, aliases: [] },
-  { code: "ESP", name: "Spain", flag: "🇪🇸", rating: 2050, aliases: [] },
-  { code: "ENG", name: "England", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", rating: 2030, aliases: [] },
-  { code: "BRA", name: "Brazil", flag: "🇧🇷", rating: 2020, aliases: [] },
-  { code: "POR", name: "Portugal", flag: "🇵🇹", rating: 2000, aliases: [] },
-  { code: "GER", name: "Germany", flag: "🇩🇪", rating: 1990, aliases: [] },
-  { code: "NED", name: "Netherlands", flag: "🇳🇱", rating: 1980, aliases: ["Holland"] },
-  { code: "BEL", name: "Belgium", flag: "🇧🇪", rating: 1960, aliases: [] },
-  { code: "CRO", name: "Croatia", flag: "🇭🇷", rating: 1900, aliases: [] },
-  { code: "MAR", name: "Morocco", flag: "🇲🇦", rating: 1880, aliases: [] },
-  { code: "URU", name: "Uruguay", flag: "🇺🇾", rating: 1860, aliases: [] },
-  { code: "COL", name: "Colombia", flag: "🇨🇴", rating: 1850, aliases: [] },
-  { code: "SEN", name: "Senegal", flag: "🇸🇳", rating: 1830, aliases: [] },
-  { code: "SUI", name: "Switzerland", flag: "🇨🇭", rating: 1820, aliases: [] },
-  { code: "JPN", name: "Japan", flag: "🇯🇵", rating: 1810, aliases: [] },
-  { code: "AUT", name: "Austria", flag: "🇦🇹", rating: 1790, aliases: [] },
-  { code: "KOR", name: "South Korea", flag: "🇰🇷", rating: 1780, aliases: ["Korea Republic", "Korea, South", "Republic of Korea"] },
-  { code: "USA", name: "USA", flag: "🇺🇸", rating: 1770, aliases: ["United States", "United States of America"] },
-  { code: "NOR", name: "Norway", flag: "🇳🇴", rating: 1770, aliases: [] },
-  { code: "ECU", name: "Ecuador", flag: "🇪🇨", rating: 1760, aliases: [] },
-  { code: "MEX", name: "Mexico", flag: "🇲🇽", rating: 1790, aliases: [] },
-  { code: "CAN", name: "Canada", flag: "🇨🇦", rating: 1740, aliases: [] },
-  { code: "TUR", name: "Turkey", flag: "🇹🇷", rating: 1740, aliases: ["Türkiye", "Turkiye"] },
-  { code: "CZE", name: "Czech Republic", flag: "🇨🇿", rating: 1730, aliases: ["Czechia"] },
-  { code: "EGY", name: "Egypt", flag: "🇪🇬", rating: 1720, aliases: [] },
-  { code: "SWE", name: "Sweden", flag: "🇸🇪", rating: 1710, aliases: [] },
-  { code: "AUS", name: "Australia", flag: "🇦🇺", rating: 1700, aliases: [] },
-  { code: "IRN", name: "Iran", flag: "🇮🇷", rating: 1700, aliases: ["IR Iran", "Iran, Islamic Republic of"] },
-  { code: "SCO", name: "Scotland", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", rating: 1700, aliases: [] },
-  { code: "CIV", name: "Ivory Coast", flag: "🇨🇮", rating: 1700, aliases: ["Côte d'Ivoire", "Cote d'Ivoire"] },
-  { code: "ALG", name: "Algeria", flag: "🇩🇿", rating: 1680, aliases: [] },
-  { code: "BIH", name: "Bosnia & Herzegovina", flag: "🇧🇦", rating: 1680, aliases: ["Bosnia and Herzegovina", "Bosnia-Herzegovina", "Bosnia"] },
-  { code: "TUN", name: "Tunisia", flag: "🇹🇳", rating: 1650, aliases: [] },
-  { code: "GHA", name: "Ghana", flag: "🇬🇭", rating: 1640, aliases: [] },
-  { code: "RSA", name: "South Africa", flag: "🇿🇦", rating: 1640, aliases: [] },
-  { code: "COD", name: "DR Congo", flag: "🇨🇩", rating: 1640, aliases: ["Congo DR", "Democratic Republic of the Congo", "DR Congo (Zaire)"] },
-  { code: "PAR", name: "Paraguay", flag: "🇵🇾", rating: 1620, aliases: [] },
-  { code: "UZB", name: "Uzbekistan", flag: "🇺🇿", rating: 1600, aliases: [] },
-  { code: "PAN", name: "Panama", flag: "🇵🇦", rating: 1560, aliases: [] },
-  { code: "KSA", name: "Saudi Arabia", flag: "🇸🇦", rating: 1560, aliases: [] },
-  { code: "IRQ", name: "Iraq", flag: "🇮🇶", rating: 1560, aliases: [] },
-  { code: "CPV", name: "Cape Verde", flag: "🇨🇻", rating: 1560, aliases: ["Cabo Verde"] },
-  { code: "QAT", name: "Qatar", flag: "🇶🇦", rating: 1550, aliases: [] },
-  { code: "NZL", name: "New Zealand", flag: "🇳🇿", rating: 1500, aliases: [] },
-  { code: "JOR", name: "Jordan", flag: "🇯🇴", rating: 1520, aliases: [] },
-  { code: "HAI", name: "Haiti", flag: "🇭🇹", rating: 1480, aliases: [] },
-  { code: "CUW", name: "Curaçao", flag: "🇨🇼", rating: 1470, aliases: ["Curacao"] },
+  { code: "ESP", name: "Spain", flag: "🇪🇸", rating: 2129, aliases: [] },
+  { code: "ARG", name: "Argentina", flag: "🇦🇷", rating: 2115, aliases: [] },
+  { code: "FRA", name: "France", flag: "🇫🇷", rating: 2063, aliases: [] },
+  { code: "ENG", name: "England", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", rating: 2024, aliases: [] },
+  { code: "POR", name: "Portugal", flag: "🇵🇹", rating: 1989, aliases: [] },
+  { code: "COL", name: "Colombia", flag: "🇨🇴", rating: 1982, aliases: [] },
+  { code: "BRA", name: "Brazil", flag: "🇧🇷", rating: 1978, aliases: [] },
+  { code: "NED", name: "Netherlands", flag: "🇳🇱", rating: 1944, aliases: ["Holland"] },
+  { code: "GER", name: "Germany", flag: "🇩🇪", rating: 1939, aliases: [] },
+  { code: "NOR", name: "Norway", flag: "🇳🇴", rating: 1914, aliases: [] },
+  { code: "CRO", name: "Croatia", flag: "🇭🇷", rating: 1912, aliases: [] },
+  { code: "JPN", name: "Japan", flag: "🇯🇵", rating: 1910, aliases: [] },
+  { code: "BEL", name: "Belgium", flag: "🇧🇪", rating: 1894, aliases: [] },
+  { code: "URU", name: "Uruguay", flag: "🇺🇾", rating: 1892, aliases: [] },
+  { code: "ECU", name: "Ecuador", flag: "🇪🇨", rating: 1890, aliases: [] },
+  { code: "MEX", name: "Mexico", flag: "🇲🇽", rating: 1881, aliases: [], host: true },
+  { code: "SUI", name: "Switzerland", flag: "🇨🇭", rating: 1865, aliases: [] },
+  { code: "SEN", name: "Senegal", flag: "🇸🇳", rating: 1860, aliases: [] },
+  { code: "TUR", name: "Turkey", flag: "🇹🇷", rating: 1849, aliases: ["Türkiye", "Turkiye"] },
+  { code: "MAR", name: "Morocco", flag: "🇲🇦", rating: 1840, aliases: [] },
+  { code: "AUS", name: "Australia", flag: "🇦🇺", rating: 1839, aliases: [] },
+  { code: "AUT", name: "Austria", flag: "🇦🇹", rating: 1830, aliases: [] },
+  { code: "SCO", name: "Scotland", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", rating: 1794, aliases: [] },
+  { code: "KOR", name: "South Korea", flag: "🇰🇷", rating: 1786, aliases: ["Korea Republic", "Korea, South", "Republic of Korea"] },
+  { code: "PAR", name: "Paraguay", flag: "🇵🇾", rating: 1780, aliases: [] },
+  { code: "USA", name: "USA", flag: "🇺🇸", rating: 1780, aliases: ["United States", "United States of America"], host: true },
+  { code: "ALG", name: "Algeria", flag: "🇩🇿", rating: 1772, aliases: [] },
+  { code: "IRN", name: "Iran", flag: "🇮🇷", rating: 1772, aliases: ["IR Iran", "Iran, Islamic Republic of"] },
+  { code: "CAN", name: "Canada", flag: "🇨🇦", rating: 1767, aliases: [], host: true },
+  { code: "SWE", name: "Sweden", flag: "🇸🇪", rating: 1755, aliases: [] },
+  { code: "CIV", name: "Ivory Coast", flag: "🇨🇮", rating: 1743, aliases: ["Côte d'Ivoire", "Cote d'Ivoire"] },
+  { code: "PAN", name: "Panama", flag: "🇵🇦", rating: 1730, aliases: [] },
+  { code: "UZB", name: "Uzbekistan", flag: "🇺🇿", rating: 1714, aliases: [] },
+  { code: "CZE", name: "Czech Republic", flag: "🇨🇿", rating: 1712, aliases: ["Czechia"] },
+  { code: "EGY", name: "Egypt", flag: "🇪🇬", rating: 1696, aliases: [] },
+  { code: "JOR", name: "Jordan", flag: "🇯🇴", rating: 1680, aliases: [] },
+  { code: "COD", name: "DR Congo", flag: "🇨🇩", rating: 1652, aliases: ["Congo DR", "Democratic Republic of the Congo", "DR Congo (Zaire)"] },
+  { code: "BIH", name: "Bosnia & Herzegovina", flag: "🇧🇦", rating: 1616, aliases: ["Bosnia and Herzegovina", "Bosnia-Herzegovina", "Bosnia"] },
+  { code: "IRQ", name: "Iraq", flag: "🇮🇶", rating: 1607, aliases: [] },
+  { code: "CPV", name: "Cape Verde", flag: "🇨🇻", rating: 1606, aliases: ["Cabo Verde"] },
+  { code: "TUN", name: "Tunisia", flag: "🇹🇳", rating: 1585, aliases: [] },
+  { code: "KSA", name: "Saudi Arabia", flag: "🇸🇦", rating: 1576, aliases: [] },
+  { code: "NZL", name: "New Zealand", flag: "🇳🇿", rating: 1562, aliases: [] },
+  { code: "HAI", name: "Haiti", flag: "🇭🇹", rating: 1536, aliases: [] },
+  { code: "RSA", name: "South Africa", flag: "🇿🇦", rating: 1511, aliases: [] },
+  { code: "GHA", name: "Ghana", flag: "🇬🇭", rating: 1510, aliases: [] },
+  { code: "QAT", name: "Qatar", flag: "🇶🇦", rating: 1447, aliases: [] },
+  { code: "CUW", name: "Curaçao", flag: "🇨🇼", rating: 1427, aliases: ["Curacao"] },
 ];
 
 function normalize(name: string): string {
@@ -99,6 +104,7 @@ function toTeam(c: Country, group: string): Team {
     flag: c.flag,
     group,
     rating: c.rating,
+    ...(c.host ? { host: true } : {}),
   };
 }
 

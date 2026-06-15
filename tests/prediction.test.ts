@@ -3,6 +3,9 @@ import type { Team } from "@/lib/types";
 import {
   bracketSeedOrder,
   buildBracket,
+  effectiveRating,
+  HOST_ADVANTAGE,
+  predictWinProbability,
   resolveBracket,
   winnerProb,
   winProbability,
@@ -35,6 +38,33 @@ describe("winProbability", () => {
   it("favours the stronger team", () => {
     expect(winProbability(2000, 1600)).toBeGreaterThan(0.85);
     expect(winProbability(1600, 2000)).toBeLessThan(0.15);
+  });
+});
+
+describe("host advantage", () => {
+  it("adds the bump only for host teams", () => {
+    expect(effectiveRating({ rating: 1800 })).toBe(1800);
+    expect(effectiveRating({ rating: 1800, host: false })).toBe(1800);
+    expect(effectiveRating({ rating: 1800, host: true })).toBe(
+      1800 + HOST_ADVANTAGE,
+    );
+  });
+
+  it("gives an evenly-matched host the edge", () => {
+    const host = { rating: 1800, host: true };
+    const visitor = { rating: 1800 };
+    expect(predictWinProbability(host, visitor)).toBeGreaterThan(0.5);
+    // ...and is exactly the mirror of the visitor's chance.
+    expect(
+      predictWinProbability(host, visitor) +
+        predictWinProbability(visitor, host),
+    ).toBeCloseTo(1, 6);
+  });
+
+  it("matches raw winProbability when neither side hosts", () => {
+    expect(predictWinProbability({ rating: 1900 }, { rating: 1700 })).toBe(
+      winProbability(1900, 1700),
+    );
   });
 });
 

@@ -8,7 +8,7 @@ import { TeamFlag } from "@/components/ui/TeamFlag";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { EstimatedNotice, EstimatedTag } from "@/components/ui/EstimatedData";
 import { formatKickoff } from "@/lib/format";
-import { winProbability } from "@/lib/prediction";
+import { predictWinProbability } from "@/lib/prediction";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +76,7 @@ export default async function MatchPage({
   const realTeams = fixture.home.id !== 0 && fixture.away.id !== 0;
   const homeProb =
     predicted && realTeams
-      ? winProbability(fixture.home.rating, fixture.away.rating)
+      ? predictWinProbability(fixture.home, fixture.away)
       : null;
 
   const badge = live
