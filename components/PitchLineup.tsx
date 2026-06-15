@@ -74,9 +74,13 @@ function XIList({ lineup, side }: { lineup: Lineup; side: string }) {
 export function PitchLineup({
   home,
   away,
+  withSidebar = false,
 }: {
   home: Lineup | null;
   away: Lineup | null;
+  /** When the goal list sits beside the pitch on desktop, left-align so the
+   *  sidebar balances it; otherwise keep the pitch centered at every width. */
+  withSidebar?: boolean;
 }) {
   const [selected, setSelected] = useState<Token | null>(null);
 
@@ -90,7 +94,11 @@ export function PitchLineup({
   const H = 150;
 
   return (
-    <div className="card mx-auto max-w-md overflow-hidden lg:mx-0">
+    <div
+      className={`card mx-auto max-w-md overflow-hidden${
+        withSidebar ? " lg:mx-0" : ""
+      }`}
+    >
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="block w-full"

@@ -14,7 +14,13 @@ export const dynamic = "force-dynamic";
 
 // Slow region: lineups come from TheSportsDB (with generated fallback). Streamed
 // under Suspense so the score header paints immediately from the spine.
-async function LineupSection({ fixtureId }: { fixtureId: number }) {
+async function LineupSection({
+  fixtureId,
+  withSidebar,
+}: {
+  fixtureId: number;
+  withSidebar: boolean;
+}) {
   const data = await getMatchLineups(fixtureId);
   const home = data?.home ?? null;
   const away = data?.away ?? null;
@@ -34,16 +40,20 @@ async function LineupSection({ fixtureId }: { fixtureId: number }) {
         {estimatedXI && <EstimatedTag />}
       </div>
       {estimatedXI && <EstimatedNotice kind="lineups" />}
-      <PitchLineup home={home} away={away} />
+      <PitchLineup home={home} away={away} withSidebar={withSidebar} />
     </>
   );
 }
 
-function LineupSkeleton() {
+function LineupSkeleton({ withSidebar }: { withSidebar: boolean }) {
   return (
     <>
       <div className="skeleton mb-2 h-5 w-32 rounded" />
-      <div className="skeleton mx-auto aspect-[2/3] w-full max-w-md rounded-2xl" />
+      <div
+        className={`skeleton mx-auto aspect-[2/3] w-full max-w-md rounded-2xl${
+          withSidebar ? " lg:mx-0" : ""
+        }`}
+      />
     </>
   );
 }
@@ -160,8 +170,13 @@ export default async function MatchPage({
           </div>
         )}
         <div className="lg:order-2 lg:min-w-0 lg:flex-1">
-          <Suspense fallback={<LineupSkeleton />}>
-            <LineupSection fixtureId={fixtureId} />
+          <Suspense
+            fallback={<LineupSkeleton withSidebar={fixture.goals.length > 0} />}
+          >
+            <LineupSection
+              fixtureId={fixtureId}
+              withSidebar={fixture.goals.length > 0}
+            />
           </Suspense>
         </div>
       </div>
