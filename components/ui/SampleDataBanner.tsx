@@ -1,0 +1,15 @@
+import { usingSampleData } from "@/lib/data";
+
+export function SampleDataBanner() {
+  if (!usingSampleData()) return null;
+  return (
+    <div className="mb-6 flex items-start gap-3 rounded-xl border border-accent-gold/30 bg-accent-gold/10 px-4 py-3 text-sm text-amber-200">
+      <span className="text-base leading-none">⚠️</span>
+      <p>
+        Showing <strong>sample data</strong> — the live feed
+        (openfootball) is unreachable right now. Fixtures, groups and results
+        normally come from it automatically; no key required.
+      </p>
+    </div>
+  );
+}
