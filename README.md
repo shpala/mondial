@@ -114,9 +114,16 @@ your picks persist on the device (`store/bracket.ts`).
 
 Every nation has one **`rating`** constant in `lib/teams/registry.ts` (Spain 2129
 … Curaçao 1427), seeded from **World Football Elo ratings** (eloratings.net,
-snapshot June 2026) rather than hand-authored guesses. They are **not** updated
-by results, so a 7–1 win changes a team's *qualification position* but never its
-predicted strength.
+snapshot June 2026) rather than hand-authored guesses — the *pre-tournament*
+strength shown on each team page.
+
+**Ratings move with results (live Elo).** As real matches finish, `lib/ratings.ts`
+folds each result back into the ratings — `R' = R + K·G·(W − We)` with `K = 60`
+(World Cup weight) and a goal-difference multiplier `G`, applied in kickoff order.
+So a 7–1 win now lifts a team's *predicted* strength too, and an upset ripples
+forward into later-round predictions and bracket seeding. The fold is computed
+from finished fixtures (`getLiveRatings`) and overlaid on the seed wherever a win
+probability is formed; the displayed pre-tournament rating is left untouched.
 
 **Host advantage.** The three co-hosts (USA, Mexico, Canada) carry a `host` flag
 and get a **+100 Elo home-field bump** (`HOST_ADVANTAGE` in `lib/prediction.ts`)

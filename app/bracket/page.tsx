@@ -1,5 +1,6 @@
-import { getFixtures, getGroups } from "@/lib/data";
+import { getFixtures, getGroups, getLiveRatings } from "@/lib/data";
 import { qualificationBreakdown, qualifiedTeams } from "@/lib/qualifiers";
+import { withLiveRating } from "@/lib/ratings";
 import { BracketTree, type ResultMap } from "@/components/BracketTree";
 import { CandidatesPanel } from "@/components/CandidatesPanel";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
@@ -39,8 +40,16 @@ function buildResultMap(
 }
 
 export default async function BracketPage() {
-  const [groups, fixtures] = await Promise.all([getGroups(), getFixtures()]);
-  const qualified = qualifiedTeams(groups);
+  const [groups, fixtures, live] = await Promise.all([
+    getGroups(),
+    getFixtures(),
+    getLiveRatings(),
+  ]);
+  // Seed and predict the bracket from results-adjusted Elo; re-sort because the
+  // seeding order (buildBracket) treats its input as strongest-first.
+  const qualified = qualifiedTeams(groups)
+    .map((t) => withLiveRating(t, live))
+    .sort((a, b) => b.rating - a.rating);
   const breakdown = qualificationBreakdown(groups);
   const results = buildResultMap(fixtures);
 
