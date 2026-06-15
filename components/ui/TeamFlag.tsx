@@ -1,4 +1,8 @@
-import { isUrl } from "@/lib/format";
+"use client";
+
+import { useEffect, useState } from "react";
+import { flagImageUrl, isUrl } from "@/lib/format";
+import { flagEmojiSupported } from "@/lib/flagSupport";
 
 export function TeamFlag({
   flag,
@@ -13,11 +17,24 @@ export function TeamFlag({
    *  assistive tech to avoid double announcements. */
   decorative?: boolean;
 }) {
-  if (isUrl(flag)) {
+  // An API-provided flag is already an image URL — always render it. An emoji
+  // flag is rendered natively (matching macOS/iOS/Android) unless the platform
+  // can't draw flag emoji (Windows), in which case we swap in a flagcdn image.
+  const directUrl = isUrl(flag) ? flag : null;
+  const cdnUrl = directUrl ? null : flagImageUrl(flag);
+  const [emojiUnsupported, setEmojiUnsupported] = useState(false);
+
+  useEffect(() => {
+    if (cdnUrl && !flagEmojiSupported()) setEmojiUnsupported(true);
+  }, [cdnUrl]);
+
+  const src = directUrl ?? (emojiUnsupported ? cdnUrl : null);
+
+  if (src) {
     // eslint-disable-next-line @next/next/no-img-element
     return (
       <img
-        src={flag}
+        src={src}
         alt={decorative ? "" : alt}
         aria-hidden={decorative || undefined}
         width={size}
@@ -27,6 +44,7 @@ export function TeamFlag({
       />
     );
   }
+
   return (
     <span
       style={{ fontSize: size * 0.9, lineHeight: 1 }}
