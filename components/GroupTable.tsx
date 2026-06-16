@@ -20,40 +20,38 @@ export function GroupTable({ group }: { group: Group }) {
       >
         <thead>
           <tr className="text-[11px] uppercase tracking-wide text-ink-400">
-            <th scope="col" className="w-2" />
+            <th scope="col" className="w-2">
+              <span className="sr-only">Qualification</span>
+            </th>
             <th scope="col" className="py-1.5 pl-3 text-left font-medium">
               Team
             </th>
             <th scope="col" className="py-1.5 text-center font-medium">
-              P
+              P<span className="sr-only"> (played)</span>
             </th>
             <th
               scope="col"
               className="hidden py-1.5 text-center font-medium sm:table-cell"
             >
-              W
+              W<span className="sr-only"> (won)</span>
             </th>
             <th
               scope="col"
               className="hidden py-1.5 text-center font-medium sm:table-cell"
             >
-              D
+              D<span className="sr-only"> (drawn)</span>
             </th>
             <th
               scope="col"
               className="hidden py-1.5 text-center font-medium sm:table-cell"
             >
-              L
+              L<span className="sr-only"> (lost)</span>
             </th>
-            <th
-              scope="col"
-              className="py-1.5 text-center font-medium"
-              title="Goal difference"
-            >
-              GD
+            <th scope="col" className="py-1.5 text-center font-medium">
+              GD<span className="sr-only"> (goal difference)</span>
             </th>
             <th scope="col" className="py-1.5 pr-4 text-right font-medium">
-              Pts
+              Pts<span className="sr-only"> (points)</span>
             </th>
           </tr>
         </thead>
@@ -68,10 +66,14 @@ export function GroupTable({ group }: { group: Group }) {
               >
                 <td className="py-2 pl-3 pr-1">
                   <span
+                    aria-hidden
                     className={`inline-block h-5 w-1 rounded-full ${
                       qualifies ? "bg-pitch-500" : "bg-transparent"
                     }`}
                   />
+                  {qualifies && (
+                    <span className="sr-only">Qualifying position</span>
+                  )}
                 </td>
                 <td className="py-2 pr-2">
                   <Link

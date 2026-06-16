@@ -2,17 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NAV_ITEMS, isNavActive } from "@/lib/nav";
 
-const TABS = [
-  { href: "/", label: "Home", icon: "🏠" },
-  { href: "/matches", label: "Matches", icon: "📅" },
-  { href: "/groups", label: "Groups", icon: "📊" },
-  { href: "/teams", label: "Teams", icon: "👥" },
-  { href: "/bracket", label: "Bracket", icon: "🏆" },
-];
-
-/** Fixed bottom tab bar for phones (hidden on md+). All destinations are
- *  thumb-reachable and always visible. */
+/** Fixed bottom tab bar for phones (hidden on md+). Shares NAV_ITEMS with the
+ *  desktop SiteNav so the two navs expose the same destinations. */
 export function MobileTabBar() {
   const pathname = usePathname();
 
@@ -23,22 +16,21 @@ export function MobileTabBar() {
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="mx-auto flex max-w-md">
-        {TABS.map((t) => {
-          const active =
-            t.href === "/" ? pathname === "/" : pathname.startsWith(t.href);
+        {NAV_ITEMS.map((t) => {
+          const active = isNavActive(pathname, t.href);
           return (
             <Link
               key={t.href}
               href={t.href}
               aria-current={active ? "page" : undefined}
               className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition ${
-                active ? "text-pitch-50" : "text-ink-400 active:text-slate-200"
+                active ? "text-pitch-50" : "text-ink-400 active:text-ink-100"
               }`}
             >
               <span className="text-lg leading-none" aria-hidden>
                 {t.icon}
               </span>
-              {t.label}
+              {t.shortLabel}
             </Link>
           );
         })}

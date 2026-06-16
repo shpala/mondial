@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getFixtures, getMatchLineups } from "@/lib/data";
 import { PitchLineup } from "@/components/PitchLineup";
 import { GoalList } from "@/components/GoalList";
 import { TeamFlag } from "@/components/ui/TeamFlag";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { EstimatedNotice, EstimatedTag } from "@/components/ui/EstimatedData";
 import { formatKickoff } from "@/lib/format";
@@ -91,12 +91,15 @@ export default async function MatchPage({
   return (
     <div className="animate-fade-up">
       <SampleDataBanner />
-      <Link
-        href={fixture.group ? `/matches?group=${fixture.group}` : "/bracket"}
-        className="mb-4 inline-block text-sm text-ink-400 hover:text-slate-200"
-      >
-        {fixture.group ? `← Group ${fixture.group} matches` : "← Bracket"}
-      </Link>
+      <Breadcrumb
+        items={[
+          { label: "Home", href: "/" },
+          fixture.group
+            ? { label: `Group ${fixture.group}`, href: `/matches?group=${fixture.group}` }
+            : { label: "Bracket", href: "/bracket" },
+          { label: `${fixture.home.name} v ${fixture.away.name}` },
+        ]}
+      />
 
       <header
         className={`mb-6 rounded-2xl border bg-ink-800/70 p-5 backdrop-blur ${

@@ -5,6 +5,7 @@ import { getFixtures, getSquad, getTeam } from "@/lib/data";
 import { simulateTournament } from "@/lib/montecarlo";
 import { SquadList } from "@/components/SquadList";
 import { TeamFlag } from "@/components/ui/TeamFlag";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { EstimatedNotice } from "@/components/ui/EstimatedData";
 
@@ -57,12 +58,13 @@ export default async function TeamPage({
   return (
     <div className="animate-fade-up">
       <SampleDataBanner />
-      <Link
-        href="/teams"
-        className="mb-4 inline-block text-sm text-ink-400 hover:text-slate-200"
-      >
-        ← All teams
-      </Link>
+      <Breadcrumb
+        items={[
+          { label: "Home", href: "/" },
+          { label: "Teams", href: "/teams" },
+          { label: team.name },
+        ]}
+      />
 
       <header className="card mb-6 flex items-center gap-4 p-5">
         <TeamFlag flag={team.flag} alt={team.name} size={44} decorative />

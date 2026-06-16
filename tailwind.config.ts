@@ -25,6 +25,11 @@ const config: Config = {
           400: "#8b93a6",
           // one intermediate step for tertiary numerals/labels
           300: "#aab1c2",
+          // near-white body/emphasis text — keeps the whole text ramp in one
+          // named scale (200/100/50 mirror the former slate-300/200/100 hexes).
+          200: "#cbd5e1",
+          100: "#e2e8f0",
+          50: "#f1f5f9",
         },
         accent: {
           gold: "#fbbf24",

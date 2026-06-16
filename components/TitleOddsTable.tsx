@@ -21,7 +21,16 @@ export function TitleOddsTable({
   limit?: number;
 }) {
   const rows = odds.filter((o) => o.champion > 0).slice(0, limit);
-  if (!rows.length) return null;
+  if (!rows.length) {
+    return (
+      <section className="card mb-6 p-4">
+        <h2 className="font-display text-sm font-bold">Title odds</h2>
+        <p className="mt-1 text-sm text-ink-400">
+          Title odds appear once the bracket can be simulated.
+        </p>
+      </section>
+    );
+  }
 
   const max = rows[0].champion || 1;
 
@@ -29,7 +38,7 @@ export function TitleOddsTable({
     <section className="card mb-6 overflow-hidden">
       <div className="flex items-center justify-between border-b border-ink-700 px-4 py-2.5">
         <h2 className="font-display text-sm font-bold">Title odds</h2>
-        <span className="text-[11px] text-ink-400">Monte Carlo · 10k runs</span>
+        <span className="text-[11px] text-ink-400">Model estimate</span>
       </div>
       <table className="w-full text-sm" aria-label="Title odds">
         <thead>
@@ -38,13 +47,13 @@ export function TitleOddsTable({
               Team
             </th>
             <th scope="col" className="py-1.5 text-right font-medium">
-              Win
+              Win cup
             </th>
             <th
               scope="col"
               className="hidden py-1.5 text-right font-medium sm:table-cell"
             >
-              Final
+              Reach final
             </th>
             <th scope="col" className="py-1.5 pr-4 text-right font-medium">
               <span className="sr-only">Win probability bar</span>
@@ -84,6 +93,10 @@ export function TitleOddsTable({
           ))}
         </tbody>
       </table>
+      <p className="border-t border-ink-700 px-4 py-2 text-[11px] leading-snug text-ink-400">
+        Chance of winning the cup / reaching the final, from simulating the rest
+        of the tournament 10,000 times — a model estimate, not betting odds.
+      </p>
     </section>
   );
 }

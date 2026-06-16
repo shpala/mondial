@@ -14,6 +14,7 @@ export function ModelReportCard({ report }: { report: OutcomeReport }) {
     );
   }
   const edge = report.baselineLogLoss - report.logLoss; // >0 = beats a coin flip
+  const smallSample = report.n < 16; // too few matches for the edge to be stable
   return (
     <Link href="/model" className="card block p-4 hover:border-accent-gold/50">
       <h3 className="text-sm font-semibold text-white">Model report card</h3>
@@ -23,8 +24,11 @@ export function ModelReportCard({ report }: { report: OutcomeReport }) {
           {report.hits} of {report.n}
         </strong>{" "}
         group results — {edge >= 0 ? "beating" : "trailing"} a blind guess by{" "}
-        <strong>{Math.abs(edge).toFixed(2)}</strong> log-loss.{" "}
-        <span className="text-pitch-500">see detail →</span>
+        <strong>{Math.abs(edge).toFixed(2)}</strong> log-loss
+        {smallSample ? (
+          <span className="text-ink-400"> (early days — small sample)</span>
+        ) : null}
+        . <span className="text-pitch-500">see detail →</span>
       </p>
     </Link>
   );

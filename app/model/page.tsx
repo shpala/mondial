@@ -83,7 +83,7 @@ export default async function ModelPage() {
           <h2 className="mb-1 font-display text-lg font-bold">
             Outcome rigour
           </h2>
-          <p className="mb-4 text-sm text-ink-400">
+          <p className="mb-1 text-sm text-ink-400">
             log-loss{" "}
             <span className="font-semibold text-white">
               {num3(report.logLoss)}
@@ -94,7 +94,20 @@ export default async function ModelPage() {
             </span>{" "}
             · lower is better.
           </p>
+          <p className="mb-4 max-w-2xl text-xs text-ink-400">
+            Log-loss and Brier both reward being confident <em>and</em> right
+            and punish being confident and wrong — lower scores mean sharper,
+            better-calibrated calls. The baseline is a no-skill guess from the
+            base rates.
+          </p>
 
+          <h3 className="mb-1 text-sm font-semibold text-ink-300">Reliability</h3>
+          <p className="mb-2 max-w-2xl text-xs text-ink-400">
+            When the model says 70%, those teams should win about 70% of the
+            time. Compare <strong>Predicted</strong> against{" "}
+            <strong>Observed</strong> in each band — the closer they track, the
+            better-calibrated the model.
+          </p>
           {/* Reliability — are 70%-calls right ~70% of the time? */}
           <div className="card mb-6 overflow-x-auto">
             <table className="w-full text-sm">

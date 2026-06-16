@@ -23,13 +23,15 @@ function StatusPill({
   if (status === "finished") {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-300">
-        ✓ Full-time
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
+        Full-time
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-accent-gold/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-300">
-      ◆ Predicted
+      <span className="h-1.5 w-1.5 rounded-full bg-accent-gold" aria-hidden />
+      Predicted
     </span>
   );
 }
@@ -136,10 +138,10 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
   return (
     <Link
       href={`/matches/${fixture.id}`}
-      className={`group flex flex-col gap-2 rounded-2xl border bg-ink-800/70 p-3 backdrop-blur transition hover:bg-ink-700/60 active:bg-ink-700/60 ${ring} ${
+      className={`card group flex flex-col gap-2 p-3 transition hover:bg-ink-700/60 active:bg-ink-700/60 ${ring} ${
         predicted
           ? "border-dashed border-accent-gold/30 hover:border-accent-gold/50"
-          : "border-ink-700 hover:border-ink-500"
+          : "hover:border-ink-500"
       }`}
     >
       <div className="flex items-center justify-between text-[11px] text-ink-400">
@@ -179,16 +181,24 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
       {predicted &&
         (homeProb != null ? (
           <div className="mt-0.5">
-            <div className="flex h-1.5 overflow-hidden rounded-full bg-ink-700">
+            {/* Probability-bar colour convention: a green/ember split = the
+                head-to-head share between two named teams (here). A single gold
+                fill = one team's standalone tournament chance (TitleOddsTable). */}
+            <div
+              role="img"
+              aria-label={`Predicted win probability: ${fixture.home.name} ${homePct} percent, ${fixture.away.name} ${awayPct} percent`}
+              className="flex h-1.5 overflow-hidden rounded-full bg-ink-700"
+            >
               <div className="bg-pitch-500/70" style={{ width: `${homePct}%` }} />
               <div className="bg-accent-ember/70" style={{ width: `${awayPct}%` }} />
             </div>
             <div className="mt-1 flex items-center justify-between text-[10px] text-ink-400">
               <span className="tabular-nums">{homePct}%</span>
-              <span className="uppercase tracking-wide tabular-nums">
-                {kickoffLabel}
-              </span>
+              <span className="uppercase tracking-wide">win prob</span>
               <span className="tabular-nums">{awayPct}%</span>
+            </div>
+            <div className="text-center text-[10px] uppercase tracking-wide text-ink-400 tabular-nums">
+              {kickoffLabel}
             </div>
           </div>
         ) : (

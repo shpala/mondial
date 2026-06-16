@@ -2,23 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const LINKS = [
-  { href: "/", label: "Dashboard" },
-  { href: "/matches", label: "Matches" },
-  { href: "/groups", label: "Groups" },
-  { href: "/teams", label: "Teams" },
-  { href: "/bracket", label: "Bracket" },
-  { href: "/model", label: "Model" },
-];
+import { NAV_ITEMS, isNavActive } from "@/lib/nav";
 
 export function SiteNav() {
   const pathname = usePathname();
 
   return (
     <header className="sticky top-0 z-40 border-b border-ink-700 bg-ink-900/80 backdrop-blur">
-      <nav className="mx-auto flex w-full max-w-6xl items-center gap-1 px-4 sm:px-6">
-        <Link href="/" className="mr-4 flex items-center gap-2 py-3">
+      <nav
+        aria-label="Primary"
+        className="mx-auto flex w-full max-w-6xl items-center gap-1 px-4 sm:px-6"
+      >
+        <Link
+          href="/"
+          aria-label="Mondial home"
+          className="mr-4 flex items-center gap-2 py-3"
+        >
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-pitch-500 to-pitch-700 text-lg">
             ⚽
           </span>
@@ -27,11 +26,8 @@ export function SiteNav() {
           </span>
         </Link>
         <div className="hidden items-center gap-1 overflow-x-auto scroll-slim md:flex">
-          {LINKS.map((link) => {
-            const active =
-              link.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(link.href);
+          {NAV_ITEMS.map((link) => {
+            const active = isNavActive(pathname, link.href);
             return (
               <Link
                 key={link.href}
@@ -40,7 +36,7 @@ export function SiteNav() {
                 className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition ${
                   active
                     ? "bg-ink-700 text-white"
-                    : "text-ink-400 hover:bg-ink-800 hover:text-slate-200"
+                    : "text-ink-400 hover:bg-ink-800 hover:text-ink-100"
                 }`}
               >
                 {link.label}

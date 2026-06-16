@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import type { Fixture } from "@/lib/types";
 import { MatchCard } from "@/components/MatchCard";
 import { localDateKey } from "@/lib/format";
@@ -20,12 +21,28 @@ const todayStr = localDateKey(new Date());
 export function MatchesBrowser({
   fixtures,
   initialGroup = "",
+  initialStatus = "all",
 }: {
   fixtures: Fixture[];
   initialGroup?: string;
+  initialStatus?: StatusFilter;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [group, setGroup] = useState(initialGroup);
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const [status, setStatus] = useState<StatusFilter>(initialStatus);
+
+  // Keep both filters in the URL so a filtered view is shareable, bookmarkable,
+  // and restored by browser back/forward. replace() avoids history spam.
+  function updateFilters(nextGroup: string, nextStatus: StatusFilter) {
+    setGroup(nextGroup);
+    setStatus(nextStatus);
+    const params = new URLSearchParams();
+    if (nextGroup) params.set("group", nextGroup);
+    if (nextStatus !== "all") params.set("status", nextStatus);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
 
   const filtered = useMemo(() => {
     return fixtures.filter((f) => {
@@ -65,7 +82,7 @@ export function MatchesBrowser({
             <button
               key={s}
               type="button"
-              onClick={() => setStatus(s)}
+              onClick={() => updateFilters(group, s)}
               aria-pressed={status === s}
               className={`inline-flex min-h-11 items-center justify-center rounded-md px-3 py-1 text-sm font-medium capitalize transition md:min-h-0 ${
                 status === s ? "bg-ink-700 text-white" : "text-ink-400"
@@ -80,7 +97,7 @@ export function MatchesBrowser({
           <div className="scroll-slim flex items-center gap-1 overflow-x-auto">
             <button
               type="button"
-              onClick={() => setGroup("")}
+              onClick={() => updateFilters("", status)}
               aria-pressed={group === ""}
               className={chip(group === "")}
             >
@@ -90,7 +107,7 @@ export function MatchesBrowser({
               <button
                 key={g}
                 type="button"
-                onClick={() => setGroup(g)}
+                onClick={() => updateFilters(g, status)}
                 aria-pressed={group === g}
                 className={chip(group === g)}
               >

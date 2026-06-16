@@ -5,13 +5,24 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 
+const STATUS_VALUES = ["all", "today", "upcoming", "results"] as const;
+type StatusFilter = (typeof STATUS_VALUES)[number];
+
 export default async function MatchesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ group?: string }>;
+  searchParams: Promise<{ group?: string; status?: string }>;
 }) {
-  const [{ group }, fixtures] = await Promise.all([searchParams, getFixtures()]);
+  const [{ group, status }, fixtures] = await Promise.all([
+    searchParams,
+    getFixtures(),
+  ]);
   const initialGroup = group && /^[A-L]$/.test(group) ? group : "";
+  const initialStatus: StatusFilter = STATUS_VALUES.includes(
+    status as StatusFilter,
+  )
+    ? (status as StatusFilter)
+    : "all";
 
   return (
     <div className="animate-fade-up">
@@ -24,7 +35,11 @@ export default async function MatchesPage({
         The full schedule — {fixtures.length} fixtures. Filter by group or
         status; tap any match for its lineups.
       </p>
-      <MatchesBrowser fixtures={fixtures} initialGroup={initialGroup} />
+      <MatchesBrowser
+        fixtures={fixtures}
+        initialGroup={initialGroup}
+        initialStatus={initialStatus}
+      />
     </div>
   );
 }
