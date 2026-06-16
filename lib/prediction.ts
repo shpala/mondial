@@ -32,14 +32,19 @@ export function winProbability(ratingA: number, ratingB: number): number {
  * Three-outcome Davidson probabilities (home / draw / away) on two ratings.
  * `nu` is the draw weight; conditional on a decisive result it collapses exactly
  * to `winProbability`. Ratings passed in are already host/home-adjusted.
+ *
+ * `scale` is the logistic spread (the Elo "400"): smaller → sharper, more
+ * confident probabilities for the same rating gap; larger → flatter. Defaults to
+ * 400 so production is unchanged; the backtest sweeps it to calibrate confidence.
  */
 export function davidsonProbs(
   ratingA: number,
   ratingB: number,
   nu: number,
+  scale = 400,
 ): { home: number; draw: number; away: number } {
-  const a = Math.pow(10, ratingA / 400);
-  const b = Math.pow(10, ratingB / 400);
+  const a = Math.pow(10, ratingA / scale);
+  const b = Math.pow(10, ratingB / scale);
   const d = nu * Math.sqrt(a * b);
   const z = a + b + d;
   return { home: a / z, draw: d / z, away: b / z };

@@ -13,4 +13,20 @@ describe("davidsonProbs", () => {
     const hi = davidsonProbs(1800, 1800, 0.9).draw;
     expect(hi).toBeGreaterThan(lo);
   });
+
+  it("defaults scale to 400", () => {
+    const def = davidsonProbs(1900, 1700, 0.63);
+    const explicit = davidsonProbs(1900, 1700, 0.63, 400);
+    expect(def).toEqual(explicit);
+  });
+
+  it("sharpens (more confident) as scale shrinks", () => {
+    // Same favourite; a smaller spread should push the favourite's win share up.
+    const flat = davidsonProbs(1900, 1700, 0.63, 600).home;
+    const sharp = davidsonProbs(1900, 1700, 0.63, 200).home;
+    expect(sharp).toBeGreaterThan(flat);
+    // still a valid distribution
+    const p = davidsonProbs(1900, 1700, 0.63, 200);
+    expect(p.home + p.draw + p.away).toBeCloseTo(1, 9);
+  });
 });

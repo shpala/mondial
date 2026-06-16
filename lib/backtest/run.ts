@@ -9,7 +9,11 @@ export interface Constants {
   nu: number;
   home: number;
   k: number;
+  /** Logistic spread (the Elo "400"). Optional; defaults to 400 when scoring. */
+  scale?: number;
 }
+
+const DEFAULT_SCALE = 400;
 
 export interface Report {
   constants: Constants;
@@ -26,8 +30,8 @@ export interface SweepResult {
   all: Report[];
 }
 
-/** The constants the app currently ships. */
-export const CURRENT: Constants = { nu: 0.63, home: 100, k: 60 };
+/** The constants the app currently ships (montecarlo ν, host bump, Elo K, scale). */
+export const CURRENT: Constants = { nu: 0.7, home: 100, k: 60, scale: 400 };
 
 const INIT = 1500; // flat starting rating for every team
 const BURN_IN = "2018-01-01"; // only score matches on/after this date
@@ -56,10 +60,11 @@ export function rollAndScore(
   const relH = new Array(10).fill(0);
   const relN = new Array(10).fill(0);
 
+  const scale = c.scale ?? DEFAULT_SCALE;
   for (const mtch of matches) {
     const effHome = at(mtch.home) + (mtch.neutral ? 0 : c.home);
     const effAway = at(mtch.away);
-    const p = davidsonProbs(effHome, effAway, c.nu);
+    const p = davidsonProbs(effHome, effAway, c.nu, scale);
 
     if (mtch.date >= burnIn) {
       const o = outcomeOf(mtch);
@@ -142,20 +147,23 @@ const COARSE = {
   nu: [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
   home: [0, 25, 50, 75, 100, 125, 150],
   k: [20, 30, 40, 50, 60, 70, 80],
+  scale: [250, 300, 350, 400, 450, 500, 600],
 };
 
-export function sweep(
-  matches: MatchRow[],
-  grid: { nu: number[]; home: number[]; k: number[] } = COARSE,
-): SweepResult {
+type Grid = { nu: number[]; home: number[]; k: number[]; scale?: number[] };
+
+export function sweep(matches: MatchRow[], grid: Grid = COARSE): SweepResult {
   let best: Report | null = null;
   const all: Report[] = [];
+  const scales = grid.scale ?? [DEFAULT_SCALE];
   for (const nu of grid.nu) {
     for (const home of grid.home) {
       for (const k of grid.k) {
-        const r = rollAndScore(matches, { nu, home, k });
-        all.push(r);
-        if (!best || r.logLoss < best.logLoss) best = r;
+        for (const scale of scales) {
+          const r = rollAndScore(matches, { nu, home, k, scale });
+          all.push(r);
+          if (!best || r.logLoss < best.logLoss) best = r;
+        }
       }
     }
   }
@@ -163,10 +171,12 @@ export function sweep(
 }
 
 /** A finer grid bracketing a coarse winner, with non-positive values dropped. */
-export function refineGrid(c: Constants): { nu: number[]; home: number[]; k: number[] } {
+export function refineGrid(c: Constants): Grid {
+  const s = c.scale ?? DEFAULT_SCALE;
   return {
     nu: [c.nu - 0.05, c.nu, c.nu + 0.05].filter((x) => x > 0),
     home: [c.home - 12.5, c.home, c.home + 12.5].filter((x) => x >= 0),
     k: [c.k - 5, c.k, c.k + 5].filter((x) => x > 0),
+    scale: [s - 25, s, s + 25].filter((x) => x > 0),
   };
 }

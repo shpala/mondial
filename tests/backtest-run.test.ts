@@ -45,8 +45,23 @@ describe("sweep", () => {
       m("2020-03-01", "B", "C", 0, 1),
     ];
     const { best, all } = sweep(games, { nu: [0.4, 0.6], home: [0, 100], k: [40, 60] });
-    expect(all).toHaveLength(8); // 2 × 2 × 2
+    expect(all).toHaveLength(8); // 2 × 2 × 2, scale defaults to a single value
     for (const r of all) expect(best.logLoss).toBeLessThanOrEqual(r.logLoss);
+  });
+
+  it("sweeps scale as a fourth dimension when given", () => {
+    const games = [
+      m("2020-01-01", "A", "B", 2, 0),
+      m("2020-02-01", "C", "D", 1, 1),
+    ];
+    const { all } = sweep(games, {
+      nu: [0.6],
+      home: [0],
+      k: [60],
+      scale: [300, 400, 500],
+    });
+    expect(all).toHaveLength(3);
+    expect(all.map((r) => r.constants.scale)).toEqual([300, 400, 500]);
   });
 });
 
@@ -56,6 +71,12 @@ describe("refineGrid", () => {
     expect(g.nu).toEqual([0.05, 0.1]); // 0 dropped (nu must be > 0)
     expect(g.home).toEqual([0, 12.5]); // negative dropped (home >= 0)
     expect(g.k).toEqual([5, 10]); // 0 dropped (k must be > 0)
+    expect(g.scale).toEqual([375, 400, 425]); // missing scale centres on 400
+  });
+
+  it("brackets and filters a low scale centre", () => {
+    const g = refineGrid({ nu: 0.6, home: 50, k: 50, scale: 20 });
+    expect(g.scale).toEqual([20, 45]); // -5 dropped (scale must be > 0)
   });
 });
 
