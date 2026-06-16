@@ -330,6 +330,11 @@ export function BracketTree({
     if (!content) return;
 
     const compute = () => {
+      // When the phone view is on the "Rounds" pager this tree is display:none,
+      // so every rect measures 0. Bail rather than clobber good lines with a
+      // degenerate 0×0 SVG — otherwise switching back to Tree can race the
+      // recompute and leave the connectors stuck invisible (mobile especially).
+      if (content.scrollWidth === 0 || content.scrollHeight === 0) return;
       const crect = content.getBoundingClientRect();
       const refs = cardRefs.current;
       const segs: string[] = [];
