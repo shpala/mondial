@@ -13,6 +13,9 @@ export interface Team {
   group: string; // "A".."L"
   /** Pre-tournament strength rating (Elo-like). Used by the prediction model. */
   rating: number;
+  /** True for the three host nations (USA/Mexico/Canada), who get a home-field
+   *  bump in the prediction model. */
+  host?: boolean;
 }
 
 export interface Player {

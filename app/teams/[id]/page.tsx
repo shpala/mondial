@@ -1,13 +1,20 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getSquad, getTeam } from "@/lib/data";
+import { getFixtures, getSquad, getTeam } from "@/lib/data";
+import { simulateTournament } from "@/lib/montecarlo";
 import { SquadList } from "@/components/SquadList";
 import { TeamFlag } from "@/components/ui/TeamFlag";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { EstimatedNotice } from "@/components/ui/EstimatedData";
 
 export const dynamic = "force-dynamic";
+
+/** Probability → sentence-friendly percentage (never a bare dash). */
+function oddsPct(p: number): string {
+  return p < 0.005 ? "<1%" : `${Math.round(p * 100)}%`;
+}
 
 // Slow region: the squad comes from TheSportsDB (with generated fallback).
 async function SquadSection({ teamId }: { teamId: number }) {
@@ -42,18 +49,22 @@ export default async function TeamPage({
   const teamId = Number(id);
   if (!Number.isFinite(teamId)) notFound();
 
-  const team = await getTeam(teamId);
+  const [team, fixtures] = await Promise.all([getTeam(teamId), getFixtures()]);
   if (!team) notFound();
+
+  // Monte Carlo title odds for this team (same simulation as /bracket).
+  const odds = simulateTournament(fixtures).find((o) => o.team.id === teamId);
 
   return (
     <div className="animate-fade-up">
       <SampleDataBanner />
-      <Link
-        href="/teams"
-        className="mb-4 inline-block text-sm text-ink-400 hover:text-slate-200"
-      >
-        ← All teams
-      </Link>
+      <Breadcrumb
+        items={[
+          { label: "Home", href: "/" },
+          { label: "Teams", href: "/teams" },
+          { label: team.name },
+        ]}
+      />
 
       <header className="card mb-6 flex items-center gap-4 p-5">
         <TeamFlag flag={team.flag} alt={team.name} size={44} decorative />
@@ -71,6 +82,15 @@ export default async function TeamPage({
               bracket
             </Link>
           </p>
+          {odds && (
+            <p className="mt-1 text-sm text-ink-300">
+              <span className="font-semibold text-amber-300">
+                {oddsPct(odds.champion)}
+              </span>{" "}
+              to win the cup · {oddsPct(odds.reachFinal)} to reach the final ·{" "}
+              {oddsPct(odds.escapeGroup)} to escape the group
+            </p>
+          )}
         </div>
       </header>
 

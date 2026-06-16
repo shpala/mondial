@@ -110,14 +110,63 @@ tree — it locks green and cascades downstream (`app/bracket/page.tsx`). In **Y
 picks** mode you can override any *unplayed* tie; the rounds ahead recompute and
 your picks persist on the device (`store/bracket.ts`).
 
+### Title odds (Monte Carlo)
+
+The deterministic tree shows the single most-likely path; the **Title odds** table
+(on `/bracket`, and per-team on each team page) answers the probabilistic question
+— *what are the chances?* `lib/montecarlo.ts` simulates the rest of the tournament
+**10,000 times** and tallies how often each team wins the cup, reaches the final,
+and escapes the group.
+
+Each run samples the **unplayed group games** with a three-outcome **Davidson**
+model — `P(home) ∝ 10^(Aᵉ/400)`, `P(away) ∝ 10^(Bᵉ/400)`, `P(draw) ∝ ν·10^((Aᵉ+Bᵉ)/800)`
+(`ν = 0.70` → ~26% draws between even sides). Conditional on a decisive result it
+collapses exactly to the Elo win prob above, so the simulation and the match-card
+win % stay consistent. Group standings rebuild via `computeGroupStandings` →
+`qualifiedTeams`, then the knockouts play out as weighted coin flips on
+`predictWinProbability` (finished real results held fixed). A seeded RNG makes the
+odds stable between renders, shifting only when results change. The draw constant
+`ν` is set from the backtest below (0.70). The **scoreline** behind each simulated
+group game — which feeds the goal-difference tiebreaks — comes from a rating-aware
+**Poisson margin** (`lib/scoreline.ts`): Davidson picks win/draw/away, then two
+independent Poisson goal rates fill in a consistent margin, so stronger sides win
+by realistically larger margins. Its `base`/`γ` were fit on pre-2022 results and
+validated out-of-sample on the 2022 World Cup (`docs/wc2022-report.md`), where
+this "Davidson outcome + Poisson margin" model beat a full-Poisson alternative on
+every metric.
+
+**Calibration.** `npm run backtest` replays ~12 years of real international
+results (`data/intl_results.csv`), rolls one Elo table forward, and scores the
+model out-of-sample (log-loss, Brier, a reliability table) against a no-skill
+base-rate baseline and a grid-search best — see `docs/backtest-report.md`. It
+confirmed the model beats the baseline by ~0.15 log-loss and that the shipping
+constants were already near-optimal; its one actionable finding — the model
+under-predicted draws — is why `ν` was nudged 0.63 → 0.70. The host bump (100) and
+K (60) tested near-optimal and are left as-is. Pass `--no-friendlies` to see the
+fit without low-intensity games.
+
 ### Where the ratings come from
 
-Every nation has one hand-seeded **`rating`** constant in
-`lib/teams/registry.ts` (Argentina 2090 … Curaçao 1470). These are authored
-strength estimates — **not** derived from FIFA/Elo history and **not** updated by
-results. So a 7–1 win changes a team's *qualification position* but never its
-predicted strength, and the model uses nothing but the two ratings: no current
-form, injuries, home advantage, head-to-head or live data.
+Every nation has one **`rating`** constant in `lib/teams/registry.ts` (Spain 2129
+… Curaçao 1427), seeded from **World Football Elo ratings** (eloratings.net,
+snapshot June 2026) rather than hand-authored guesses — the *pre-tournament*
+strength shown on each team page.
+
+**Ratings move with results (live Elo).** As real matches finish, `lib/ratings.ts`
+folds each result back into the ratings — `R' = R + K·G·(W − We)` with `K = 60`
+(World Cup weight) and a goal-difference multiplier `G`, applied in kickoff order.
+So a 7–1 win now lifts a team's *predicted* strength too, and an upset ripples
+forward into later-round predictions and bracket seeding. The fold is computed
+from finished fixtures (`getLiveRatings`) and overlaid on the seed wherever a win
+probability is formed; the displayed pre-tournament rating is left untouched.
+
+**Host advantage.** The three co-hosts (USA, Mexico, Canada) carry a `host` flag
+and get a **+100 Elo home-field bump** (`HOST_ADVANTAGE` in `lib/prediction.ts`)
+applied at prediction time — eloratings.net's standard home constant, worth ~+14
+percentage points between otherwise-even sides. The stored `rating` stays the
+team's true strength; the bump is layered on only when computing a win
+probability (`predictWinProbability`). Beyond that the model uses nothing but the
+two ratings: no current form, injuries, head-to-head or live data.
 
 Two deliberate simplifications: seeding is by rating (not FIFA's fixed
 group-position → slot mapping), and the third-place tiebreak is points → GD →

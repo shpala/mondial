@@ -23,7 +23,11 @@ export function EstimatedNotice({ kind }: { kind: "squad" | "lineups" }) {
           {kind === "squad" ? "team" : "match"} yet — the player names, clubs and
           numbers shown here are illustrative placeholders, not real call-ups.
         </span>
-        <span className="sm:hidden"> Names shown are placeholders.</span>
+        <span className="sm:hidden">
+          {" "}
+          Placeholder names — not the official{" "}
+          {kind === "squad" ? "roster" : "line-up"}.
+        </span>
       </p>
     </div>
   );

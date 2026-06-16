@@ -26,8 +26,18 @@ export default function RootLayout({
   return (
     <html lang="en" className={display.variable}>
       <body className="min-h-screen">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-ink-700 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
+        >
+          Skip to content
+        </a>
         <SiteNav />
-        <main className="mx-auto w-full max-w-6xl px-4 pt-6 pb-24 sm:px-6 md:pb-20">
+        <main
+          id="main"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-6xl px-4 pt-6 pb-24 outline-none sm:px-6 md:pb-20"
+        >
           {children}
         </main>
         <footer className="border-t border-ink-700 py-6 pb-24 text-center text-xs text-ink-400 md:pb-6">

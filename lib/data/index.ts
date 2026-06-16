@@ -19,6 +19,7 @@ import {
 } from "@/lib/api/sources/espn";
 import { fetchSquadTSDB, fetchLineupsTSDB } from "@/lib/api/sources/thesportsdb";
 import { generateLineup, generateSquad } from "./generate";
+import { computeLiveRatings, withLiveRating } from "@/lib/ratings";
 import { teamByIdRegistry } from "@/lib/teams/registry";
 import {
   TEAMS,
@@ -48,7 +49,9 @@ async function trySpine() {
   }
 }
 
-export async function getFixtures(): Promise<Fixture[]> {
+/** Chronological fixtures with real live scores overlaid, ratings untouched
+ *  (pre-tournament seeds). The basis for live-rating computation. */
+async function rawFixtures(): Promise<Fixture[]> {
   const spine = await trySpine();
   const fixtures = spine ? spine.fixtures : resolveFixtureStatuses(Date.now());
   // Always chronological so every consumer (dashboard, schedule, bracket) is
@@ -57,6 +60,33 @@ export async function getFixtures(): Promise<Fixture[]> {
     (a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff),
   );
   return overlayLiveScores(sorted);
+}
+
+/** Seed-rating fixtures (live scores overlaid, ratings = pre-tournament seeds).
+ *  The basis for model-accuracy grading, which must roll Elo from the seeds. */
+export async function getRawFixtures(): Promise<Fixture[]> {
+  return rawFixtures();
+}
+
+export async function getFixtures(): Promise<Fixture[]> {
+  const fixtures = await rawFixtures();
+  // Overlay live Elo so each fixture's win probability reflects results so far.
+  const live = computeLiveRatings(fixtures);
+  if (!live.size) return fixtures;
+  return fixtures.map((f) => ({
+    ...f,
+    home: withLiveRating(f.home, live),
+    away: withLiveRating(f.away, live),
+  }));
+}
+
+/**
+ * Current (results-adjusted) Elo per team id. Consumers that seed predictions
+ * from their own Team objects (e.g. the bracket) overlay this with
+ * `withLiveRating`. Computed from raw fixtures so it is never double-counted.
+ */
+export async function getLiveRatings(): Promise<Map<number, number>> {
+  return computeLiveRatings(await rawFixtures());
 }
 
 /**

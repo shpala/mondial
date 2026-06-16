@@ -9,6 +9,9 @@
 
 html {
   color-scheme: dark;
+  /* Single source for the sticky-header height so offsets (e.g. the bracket
+     round pager) stay aligned if the header padding/logo size changes. */
+  --header-h: 3.5rem;
 }
 
 @layer base {
@@ -34,7 +37,7 @@ html {
 }
 
 body {
-  @apply bg-ink-900 text-slate-100 antialiased;
+  @apply bg-ink-900 text-ink-50 antialiased;
   background-image:
     radial-gradient(1200px 600px at 80% -10%, rgba(22, 163, 74, 0.12), transparent),
     radial-gradient(900px 500px at -10% 10%, rgba(251, 191, 36, 0.06), transparent);

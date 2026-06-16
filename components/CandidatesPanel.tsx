@@ -7,6 +7,7 @@ function Chip({ c }: { c: Candidate }) {
     <Link
       href={`/teams/${c.team.id}`}
       title={`${c.team.name} — ${c.place} in Group ${c.group}, ${c.points} pts from ${c.played} game(s)`}
+      aria-label={`${c.team.name}, ${c.place} in Group ${c.group}, ${c.points} point${c.points === 1 ? "" : "s"} from ${c.played} game${c.played === 1 ? "" : "s"}, ${c.confirmed ? "group complete" : "provisional"}`}
       className={`flex flex-col gap-0.5 rounded-lg border px-2 py-1.5 text-xs transition hover:bg-ink-700/60 active:bg-ink-700/60 ${
         c.confirmed
           ? "border-emerald-600/40 bg-emerald-700/10"

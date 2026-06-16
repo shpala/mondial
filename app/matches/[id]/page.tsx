@@ -1,14 +1,14 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getFixtures, getMatchLineups } from "@/lib/data";
 import { PitchLineup } from "@/components/PitchLineup";
 import { GoalList } from "@/components/GoalList";
 import { TeamFlag } from "@/components/ui/TeamFlag";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { EstimatedNotice, EstimatedTag } from "@/components/ui/EstimatedData";
 import { formatKickoff } from "@/lib/format";
-import { winProbability } from "@/lib/prediction";
+import { predictWinProbability } from "@/lib/prediction";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +76,7 @@ export default async function MatchPage({
   const realTeams = fixture.home.id !== 0 && fixture.away.id !== 0;
   const homeProb =
     predicted && realTeams
-      ? winProbability(fixture.home.rating, fixture.away.rating)
+      ? predictWinProbability(fixture.home, fixture.away)
       : null;
 
   const badge = live
@@ -91,12 +91,15 @@ export default async function MatchPage({
   return (
     <div className="animate-fade-up">
       <SampleDataBanner />
-      <Link
-        href={fixture.group ? `/matches?group=${fixture.group}` : "/bracket"}
-        className="mb-4 inline-block text-sm text-ink-400 hover:text-slate-200"
-      >
-        {fixture.group ? `← Group ${fixture.group} matches` : "← Bracket"}
-      </Link>
+      <Breadcrumb
+        items={[
+          { label: "Home", href: "/" },
+          fixture.group
+            ? { label: `Group ${fixture.group}`, href: `/matches?group=${fixture.group}` }
+            : { label: "Bracket", href: "/bracket" },
+          { label: `${fixture.home.name} v ${fixture.away.name}` },
+        ]}
+      />
 
       <header
         className={`mb-6 rounded-2xl border bg-ink-800/70 p-5 backdrop-blur ${

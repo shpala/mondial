@@ -16,9 +16,54 @@ export const ROUNDS = [
 
 export type RoundName = (typeof ROUNDS)[number];
 
+/**
+ * Home-field bump (in Elo points) applied to the three 2026 co-hosts
+ * (USA/Mexico/Canada) whenever they play. 100 is eloratings.net's standard
+ * home-advantage constant — worth ~+14 percentage points between even sides.
+ */
+export const HOST_ADVANTAGE = 100;
+
 /** Probability that team A beats team B in a single knockout match. */
 export function winProbability(ratingA: number, ratingB: number): number {
   return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+}
+
+/**
+ * Three-outcome Davidson probabilities (home / draw / away) on two ratings.
+ * `nu` is the draw weight; conditional on a decisive result it collapses exactly
+ * to `winProbability`. Ratings passed in are already host/home-adjusted.
+ *
+ * `scale` is the logistic spread (the Elo "400"): smaller → sharper, more
+ * confident probabilities for the same rating gap; larger → flatter. Defaults to
+ * 400 so production is unchanged; the backtest sweeps it to calibrate confidence.
+ */
+export function davidsonProbs(
+  ratingA: number,
+  ratingB: number,
+  nu: number,
+  scale = 400,
+): { home: number; draw: number; away: number } {
+  const a = Math.pow(10, ratingA / scale);
+  const b = Math.pow(10, ratingB / scale);
+  const d = nu * Math.sqrt(a * b);
+  const z = a + b + d;
+  return { home: a / z, draw: d / z, away: b / z };
+}
+
+/** A team's rating for prediction, including the host home-field bump. */
+export function effectiveRating(team: Pick<Team, "rating" | "host">): number {
+  return team.rating + (team.host ? HOST_ADVANTAGE : 0);
+}
+
+/**
+ * Probability that `a` beats `b`, accounting for host advantage. Use this over
+ * raw `winProbability` anywhere two real teams meet (match cards, bracket).
+ */
+export function predictWinProbability(
+  a: Pick<Team, "rating" | "host">,
+  b: Pick<Team, "rating" | "host">,
+): number {
+  return winProbability(effectiveRating(a), effectiveRating(b));
 }
 
 export interface Matchup {
@@ -143,7 +188,7 @@ export function resolveBracket(bracket: Bracket, overrides: Overrides = {}): Bra
       }
 
       if (m.top && m.bottom) {
-        m.topWinProb = winProbability(m.top.rating, m.bottom.rating);
+        m.topWinProb = predictWinProbability(m.top, m.bottom);
         const override = overrides[m.id];
         if (override === m.top.id || override === m.bottom.id) {
           m.winnerId = override;

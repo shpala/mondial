@@ -1,5 +1,8 @@
-import { getFixtures, getGroups } from "@/lib/data";
+import { getFixtures, getGroups, getLiveRatings } from "@/lib/data";
 import { qualificationBreakdown, qualifiedTeams } from "@/lib/qualifiers";
+import { withLiveRating } from "@/lib/ratings";
+import { simulateTournament } from "@/lib/montecarlo";
+import { TitleOddsTable } from "@/components/TitleOddsTable";
 import { BracketTree, type ResultMap } from "@/components/BracketTree";
 import { CandidatesPanel } from "@/components/CandidatesPanel";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
@@ -39,10 +42,19 @@ function buildResultMap(
 }
 
 export default async function BracketPage() {
-  const [groups, fixtures] = await Promise.all([getGroups(), getFixtures()]);
-  const qualified = qualifiedTeams(groups);
+  const [groups, fixtures, live] = await Promise.all([
+    getGroups(),
+    getFixtures(),
+    getLiveRatings(),
+  ]);
+  // Seed and predict the bracket from results-adjusted Elo; re-sort because the
+  // seeding order (buildBracket) treats its input as strongest-first.
+  const qualified = qualifiedTeams(groups)
+    .map((t) => withLiveRating(t, live))
+    .sort((a, b) => b.rating - a.rating);
   const breakdown = qualificationBreakdown(groups);
   const results = buildResultMap(fixtures);
+  const odds = simulateTournament(fixtures);
 
   return (
     <div className="animate-fade-up">
@@ -62,6 +74,7 @@ export default async function BracketPage() {
         <strong>Your picks</strong> to override any result. As real knockout
         matches are played they replace the prediction and lock in green.
       </p>
+      <TitleOddsTable odds={odds} />
       {/* Phone: bracket first (the centerpiece), candidates below it.
           Desktop: candidates context first, then the tree. */}
       <div className="flex flex-col">

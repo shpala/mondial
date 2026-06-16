@@ -8,7 +8,11 @@ export function SampleDataBanner() {
       <p>
         Showing <strong>sample data</strong> — the live feed
         (openfootball) is unreachable right now. Fixtures, groups and results
-        normally come from it automatically; no key required.
+        normally come from it automatically; no key required.{" "}
+        <span className="text-amber-200/80">
+          Scores, standings and model predictions below are based on sample
+          fixtures, not live results.
+        </span>
       </p>
     </div>
   );

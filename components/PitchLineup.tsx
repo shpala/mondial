@@ -71,6 +71,20 @@ function XIList({ lineup, side }: { lineup: Lineup; side: string }) {
   );
 }
 
+/** Persistent "estimated" marker beside a generated XI's footer label, so the
+ *  fabricated-roster caveat stays attached to the pitch after the notice above
+ *  scrolls out of view. Uses the same slate provenance palette as EstimatedTag. */
+function EstMark() {
+  return (
+    <span
+      title="Estimated line-up — placeholder names, not the official squad"
+      className="rounded-full bg-slate-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-300"
+    >
+      ≈ est
+    </span>
+  );
+}
+
 export function PitchLineup({
   home,
   away,
@@ -205,13 +219,15 @@ export function PitchLineup({
           <span className="text-ink-400">
             {home ? `${home.team.name} · ${home.formation}` : "Home"}
           </span>
+          {home?.source === "generated" && <EstMark />}
         </div>
         {selected && (
-          <div className="font-medium text-slate-200">
+          <div className="font-medium text-ink-100">
             #{selected.player.number ?? "–"} {selected.player.name}
           </div>
         )}
         <div className="flex items-center gap-2">
+          {away?.source === "generated" && <EstMark />}
           <span className="text-ink-400">
             {away ? `${away.team.name} · ${away.formation}` : "Away"}
           </span>

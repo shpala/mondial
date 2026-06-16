@@ -9,7 +9,7 @@ import {
   winnerProb,
   type Matchup,
 } from "@/lib/prediction";
-import { useBracketStore } from "@/store/bracket";
+import { bracketStorageOk, useBracketStore } from "@/store/bracket";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 
 // A real, already-played knockout result, keyed by the unordered pair of team
@@ -267,13 +267,33 @@ export function BracketTree({
   qualified: Team[];
   results?: ResultMap;
 }) {
-  const { overrides, pick, reset } = useBracketStore();
+  const { overrides, pick, reset, undoReset } = useBracketStore();
   const [mounted, setMounted] = useState(false);
   const [mode, setMode] = useState<"you" | "model">("you");
+  const [undoToast, setUndoToast] = useState(false); // transient "cleared · undo"
+  const [restored, setRestored] = useState(0); // transient "restored N picks" note
   const [selectedRound, setSelectedRound] = useState(0); // phone round pager
-  const [mobileView, setMobileView] = useState<"tree" | "rounds">("tree");
+  // Default phones to the one-round pager: the full connector tree overflows
+  // the viewport and buries the Final card off-screen to the right.
+  const [mobileView, setMobileView] = useState<"tree" | "rounds">("rounds");
 
-  useEffect(() => setMounted(true), []);
+  // On mount, acknowledge any picks restored from localStorage (the bracket
+  // re-resolves into them once `mounted` flips — see the fade below).
+  useEffect(() => {
+    setMounted(true);
+    const n = Object.keys(useBracketStore.getState().overrides).length;
+    if (n === 0) return;
+    setRestored(n);
+    const id = setTimeout(() => setRestored(0), 5000);
+    return () => clearTimeout(id);
+  }, []);
+
+  // Auto-dismiss the "Bracket cleared · Undo" toast a few seconds after a reset.
+  useEffect(() => {
+    if (!undoToast) return;
+    const id = setTimeout(() => setUndoToast(false), 6000);
+    return () => clearTimeout(id);
+  }, [undoToast]);
 
   const skeleton = useMemo(() => buildBracket(qualified), [qualified]);
   const effectiveOverrides = mode === "you" && mounted ? overrides : {};
@@ -330,6 +350,11 @@ export function BracketTree({
     if (!content) return;
 
     const compute = () => {
+      // When the phone view is on the "Rounds" pager this tree is display:none,
+      // so every rect measures 0. Bail rather than clobber good lines with a
+      // degenerate 0×0 SVG — otherwise switching back to Tree can race the
+      // recompute and leave the connectors stuck invisible (mobile especially).
+      if (content.scrollWidth === 0 || content.scrollHeight === 0) return;
       const crect = content.getBoundingClientRect();
       const refs = cardRefs.current;
       const segs: string[] = [];
@@ -386,6 +411,13 @@ export function BracketTree({
       window.removeEventListener("resize", schedule);
     };
   }, [resolved, mounted, mobileView]);
+
+  // Soften the post-hydration swap: in "your picks" mode the bracket first
+  // renders the model baseline, then re-resolves into saved picks once mounted.
+  // A brief fade reads as "restoring" rather than a glitchy jump.
+  const settle = `transition-opacity duration-300 ${
+    mode === "you" && !mounted ? "opacity-60" : "opacity-100"
+  }`;
 
   return (
     <div>
@@ -444,8 +476,11 @@ export function BracketTree({
           {mode === "you" && overrideCount > 0 && (
             <button
               type="button"
-              onClick={reset}
-              className="rounded-lg border border-ink-700 px-3 py-1.5 text-sm text-ink-400 transition hover:text-slate-200"
+              onClick={() => {
+                reset();
+                setUndoToast(true);
+              }}
+              className="rounded-lg border border-ink-700 px-3 py-1.5 text-sm text-ink-400 transition hover:text-ink-100"
             >
               Reset ({overrideCount})
             </button>
@@ -453,13 +488,21 @@ export function BracketTree({
         </div>
       </div>
 
-      <p className="mb-4 text-xs text-ink-400">
+      <p className="mb-1 text-xs text-ink-400">
         {playedCount > 0
           ? "Played knockout matches show the real result (green); the rest is predicted."
           : "No knockout matches have been played yet — every tie below is a prediction."}{" "}
         {mode === "you" &&
-          "Tap any unplayed team to send them through; your picks recompute the rounds ahead and are saved on this device."}
+          (bracketStorageOk()
+            ? "Tap any unplayed team to send them through (tap a winner again to undo); your picks recompute the rounds ahead and are saved on this device."
+            : "Tap any unplayed team to send them through (tap a winner again to undo); your picks recompute the rounds ahead but can’t be saved here (private mode?).")}
       </p>
+      {mode === "you" && restored > 0 && (
+        <p className="mb-4 text-xs text-pitch-500" role="status">
+          Restored your {restored} saved pick{restored === 1 ? "" : "s"}.
+        </p>
+      )}
+      {!(mode === "you" && restored > 0) && <div className="mb-4" />}
 
       {/* PHONE: choose the compact scrollable tree or a one-round pager */}
       <div className="mb-3 md:hidden">
@@ -492,19 +535,20 @@ export function BracketTree({
       </div>
 
       {/* PHONE pager (Rounds view): one round at a time, no horizontal panning */}
-      <div className={mobileView === "rounds" ? "md:hidden" : "hidden"}>
-        <div className="sticky top-14 z-20 -mx-4 mb-3 bg-ink-900/90 px-4 py-2 backdrop-blur">
+      <div
+        className={`${settle} ${mobileView === "rounds" ? "md:hidden" : "hidden"}`}
+      >
+        <div className="sticky top-[var(--header-h)] z-20 -mx-4 mb-3 bg-ink-900/90 px-4 py-2 backdrop-blur">
           <div
             className="flex gap-1 rounded-lg border border-ink-700 p-0.5"
-            role="tablist"
+            role="group"
             aria-label="Bracket round"
           >
             {resolved.rounds.map((round, ri) => (
               <button
                 key={ri}
                 type="button"
-                role="tab"
-                aria-selected={selectedRound === ri}
+                aria-pressed={selectedRound === ri}
                 onClick={() => setSelectedRound(ri)}
                 className={`min-h-11 flex-1 whitespace-nowrap rounded-md px-1 text-xs font-semibold transition ${
                   selectedRound === ri
@@ -538,7 +582,7 @@ export function BracketTree({
 
       {/* TREE: full horizontal connector tree (desktop always; phone in Tree view) */}
       <div
-        className={`relative md:block ${mobileView === "tree" ? "block" : "hidden"}`}
+        className={`relative md:block ${settle} ${mobileView === "tree" ? "block" : "hidden"}`}
       >
         <div className="scroll-slim overflow-x-auto pb-4">
           <div ref={contentRef} className="relative flex gap-4 md:gap-6">
@@ -593,6 +637,26 @@ export function BracketTree({
           aria-hidden
         />
       </div>
+
+      {undoToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-x-0 bottom-20 z-50 mx-auto flex w-fit animate-fade-up items-center gap-3 rounded-full border border-ink-600 bg-ink-800/95 px-4 py-2 text-sm text-ink-100 shadow-lg backdrop-blur md:bottom-6"
+        >
+          <span>Bracket cleared</span>
+          <button
+            type="button"
+            onClick={() => {
+              undoReset();
+              setUndoToast(false);
+            }}
+            className="font-semibold text-accent-gold hover:underline"
+          >
+            Undo
+          </button>
+        </div>
+      )}
     </div>
   );
 }
