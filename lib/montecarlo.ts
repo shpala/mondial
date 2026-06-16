@@ -19,6 +19,11 @@ import {
   effectiveRating,
   predictWinProbability,
 } from "@/lib/prediction";
+import {
+  goalRates,
+  sampleScoreline,
+  type Outcome,
+} from "@/lib/scoreline";
 
 const DEFAULT_RUNS = 10_000;
 
@@ -60,30 +65,13 @@ function isFinished(f: Fixture): boolean {
 
 const pairKey = (x: number, y: number) => [x, y].sort((m, n) => m - n).join("-");
 
-// Light goals model — used ONLY to give simulated group games a plausible GD /
-// goals-for for tiebreaks. Returns goals for the match winner and loser (or a
-// drawn scoreline). Not meant to be an accurate scoreline predictor.
-function sampleMargin(rng: () => number): number {
-  const r = rng();
-  if (r < 0.5) return 1;
-  if (r < 0.83) return 2;
-  return 3 + Math.floor(rng() * 2); // 3 or 4
-}
-function sampleLoserGoals(rng: () => number): number {
-  const r = rng();
-  if (r < 0.45) return 0;
-  if (r < 0.85) return 1;
-  return 2;
-}
-function sampleDrawGoals(rng: () => number): number {
-  const r = rng();
-  if (r < 0.3) return 0;
-  if (r < 0.75) return 1;
-  if (r < 0.95) return 2;
-  return 3;
-}
-
-/** Sample a finished scoreline for an unplayed group game. */
+/**
+ * Sample a finished scoreline for an unplayed group game. The calibrated
+ * Davidson model picks the win/draw/away outcome; the rating-aware Poisson goal
+ * model then fills in a margin consistent with it, so a strong side's win is by
+ * a realistic GD rather than a fixed bucket. Validated out-of-sample on the 2022
+ * World Cup (docs/wc2022-report.md). Both steps draw from the seeded `rng`.
+ */
 function sampleGroupScore(
   home: Team,
   away: Team,
@@ -91,16 +79,12 @@ function sampleGroupScore(
 ): { hg: number; ag: number } {
   const p = outcomeProbs(home, away);
   const r = rng();
-  if (r < p.home) {
-    const loser = sampleLoserGoals(rng);
-    return { hg: loser + sampleMargin(rng), ag: loser };
-  }
-  if (r < p.home + p.draw) {
-    const g = sampleDrawGoals(rng);
-    return { hg: g, ag: g };
-  }
-  const loser = sampleLoserGoals(rng);
-  return { hg: loser, ag: loser + sampleMargin(rng) };
+  const outcome: Outcome = r < p.home ? "home" : r < p.home + p.draw ? "draw" : "away";
+  const { lambdaHome, lambdaAway } = goalRates(
+    effectiveRating(home),
+    effectiveRating(away),
+  );
+  return sampleScoreline(rng, lambdaHome, lambdaAway, outcome);
 }
 
 export interface TeamOdds {

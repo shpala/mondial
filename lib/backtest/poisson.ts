@@ -1,30 +1,16 @@
-// Independent-Poisson goal model for the out-of-sample backtest.
-// Pure functions, no I/O, so they run under tsx and vitest identically.
+// Backtest-only scoring helpers built on the production goal model. The shared
+// pure pieces (poissonPmf, goalRates) live in lib/scoreline.ts so production and
+// the offline harness can't drift; this module adds the 1X2 outcome and the full
+// joint grid used to *score* predictions against historical results.
 //
-// Each side's goal rate is an Elo-style logistic in the rating gap (base scaled
-// up/down by 10^(gap / (2*gamma))). The joint scoreline is the product of two
-// independent Poisson pmfs; the 1X2 outcome is that joint summed over regions.
+// The joint scoreline is the product of two independent Poisson pmfs; the 1X2
+// outcome is that joint summed over the home/draw/away regions.
+
+import { goalRates, poissonPmf } from "@/lib/scoreline";
+
+export { goalRates, poissonPmf };
 
 const MAX_GOALS = 10;
-
-/** Poisson pmf: P(K = k) for mean `lambda`. */
-export function poissonPmf(lambda: number, k: number): number {
-  let fact = 1;
-  for (let i = 2; i <= k; i++) fact *= i;
-  return (Math.exp(-lambda) * Math.pow(lambda, k)) / fact;
-}
-
-/** Expected goals for each side from host-adjusted ratings. */
-export function goalRates(
-  effHome: number,
-  effAway: number,
-  base: number,
-  gamma: number,
-): { lambdaHome: number; lambdaAway: number } {
-  const lambdaHome = base * Math.pow(10, (effHome - effAway) / (2 * gamma));
-  const lambdaAway = base * Math.pow(10, (effAway - effHome) / (2 * gamma));
-  return { lambdaHome, lambdaAway };
-}
 
 /**
  * 1X2 outcome probabilities from two independent Poisson goal rates. Sums the
