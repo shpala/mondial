@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { getDashboardFixtures, getTeams } from "@/lib/data";
+import { getDashboardFixtures, getRawFixtures, getTeams } from "@/lib/data";
+import { gradeOutcomes } from "@/lib/modelreport";
 import { MatchCard } from "@/components/MatchCard";
+import { ModelReportCard } from "@/components/ModelReportCard";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { AutoRefresh } from "@/components/AutoRefresh";
 
@@ -31,10 +33,9 @@ function Section({
 }
 
 export default async function DashboardPage() {
-  const [{ live, today, upcoming, recent }, teams] = await Promise.all([
-    getDashboardFixtures(),
-    getTeams(),
-  ]);
+  const [{ live, today, upcoming, recent }, teams, rawFixtures] =
+    await Promise.all([getDashboardFixtures(), getTeams(), getRawFixtures()]);
+  const report = gradeOutcomes(rawFixtures);
 
   return (
     <div className="animate-fade-up">
@@ -89,6 +90,10 @@ export default async function DashboardPage() {
         </section>
       )}
       </div>
+
+      <section className="mb-8">
+        <ModelReportCard report={report} />
+      </section>
 
       {today.length > 0 && (
         <section className="mb-8">

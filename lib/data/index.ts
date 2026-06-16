@@ -62,6 +62,12 @@ async function rawFixtures(): Promise<Fixture[]> {
   return overlayLiveScores(sorted);
 }
 
+/** Seed-rating fixtures (live scores overlaid, ratings = pre-tournament seeds).
+ *  The basis for model-accuracy grading, which must roll Elo from the seeds. */
+export async function getRawFixtures(): Promise<Fixture[]> {
+  return rawFixtures();
+}
+
 export async function getFixtures(): Promise<Fixture[]> {
   const fixtures = await rawFixtures();
   // Overlay live Elo so each fixture's win probability reflects results so far.

@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/groups", label: "Groups" },
   { href: "/teams", label: "Teams" },
   { href: "/bracket", label: "Bracket" },
+  { href: "/model", label: "Model" },
 ];
 
 export function SiteNav() {
