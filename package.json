@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "backtest": "tsx scripts/backtest.ts"
   },
   "dependencies": {
     "next": "16.2.9",
@@ -23,6 +24,7 @@
     "autoprefixer": "10.4.20",
     "postcss": "8.5.15",
     "tailwindcss": "3.4.17",
+    "tsx": "4.19.2",
     "typescript": "5.7.3",
     "vitest": "4.1.8"
   },

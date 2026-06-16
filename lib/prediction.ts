@@ -28,6 +28,23 @@ export function winProbability(ratingA: number, ratingB: number): number {
   return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
 }
 
+/**
+ * Three-outcome Davidson probabilities (home / draw / away) on two ratings.
+ * `nu` is the draw weight; conditional on a decisive result it collapses exactly
+ * to `winProbability`. Ratings passed in are already host/home-adjusted.
+ */
+export function davidsonProbs(
+  ratingA: number,
+  ratingB: number,
+  nu: number,
+): { home: number; draw: number; away: number } {
+  const a = Math.pow(10, ratingA / 400);
+  const b = Math.pow(10, ratingB / 400);
+  const d = nu * Math.sqrt(a * b);
+  const z = a + b + d;
+  return { home: a / z, draw: d / z, away: b / z };
+}
+
 /** A team's rating for prediction, including the host home-field bump. */
 export function effectiveRating(team: Pick<Team, "rating" | "host">): number {
   return team.rating + (team.host ? HOST_ADVANTAGE : 0);

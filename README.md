@@ -120,14 +120,24 @@ and escapes the group.
 
 Each run samples the **unplayed group games** with a three-outcome **Davidson**
 model — `P(home) ∝ 10^(Aᵉ/400)`, `P(away) ∝ 10^(Bᵉ/400)`, `P(draw) ∝ ν·10^((Aᵉ+Bᵉ)/800)`
-(`ν ≈ 0.63` → ~24% draws between even sides). Conditional on a decisive result it
+(`ν = 0.70` → ~26% draws between even sides). Conditional on a decisive result it
 collapses exactly to the Elo win prob above, so the simulation and the match-card
 win % stay consistent. Group standings rebuild via `computeGroupStandings` →
 `qualifiedTeams`, then the knockouts play out as weighted coin flips on
 `predictWinProbability` (finished real results held fixed). A seeded RNG makes the
 odds stable between renders, shifting only when results change. The draw constant
-`ν` and the tiebreak goals model are sensible but **uncalibrated** — a backtest
-harness (a future addition) would tune them.
+`ν` is now set from the backtest below (0.70); the tiebreak goals model is
+sensible but still **uncalibrated**.
+
+**Calibration.** `npm run backtest` replays ~12 years of real international
+results (`data/intl_results.csv`), rolls one Elo table forward, and scores the
+model out-of-sample (log-loss, Brier, a reliability table) against a no-skill
+base-rate baseline and a grid-search best — see `docs/backtest-report.md`. It
+confirmed the model beats the baseline by ~0.15 log-loss and that the shipping
+constants were already near-optimal; its one actionable finding — the model
+under-predicted draws — is why `ν` was nudged 0.63 → 0.70. The host bump (100) and
+K (60) tested near-optimal and are left as-is. Pass `--no-friendlies` to see the
+fit without low-intensity games.
 
 ### Where the ratings come from
 

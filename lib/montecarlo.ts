@@ -15,15 +15,18 @@ import { qualifiedTeams } from "@/lib/qualifiers";
 import {
   ROUNDS,
   buildBracket,
+  davidsonProbs,
   effectiveRating,
   predictWinProbability,
 } from "@/lib/prediction";
 
 const DEFAULT_RUNS = 10_000;
 
-// Davidson draw parameter: ν ≈ 0.63 → ~24% draws between even sides. Conditional
-// on a decisive result the model collapses exactly to `winProbability`.
-const DRAW_NU = 0.63;
+// Davidson draw parameter: ν = 0.70 → ~26% draws between even sides. Conditional
+// on a decisive result the model collapses exactly to `winProbability`. Nudged up
+// from 0.63 after the backtest (`npm run backtest`) showed the model slightly
+// under-predicted draws; 0.70 captures nearly all the calibration gain.
+const DRAW_NU = 0.7;
 
 /** Deterministic PRNG so odds are stable between renders (seeded from results). */
 function mulberry32(seed: number): () => number {
@@ -42,11 +45,7 @@ export function outcomeProbs(
   home: Pick<Team, "rating" | "host">,
   away: Pick<Team, "rating" | "host">,
 ): { home: number; draw: number; away: number } {
-  const a = Math.pow(10, effectiveRating(home) / 400);
-  const b = Math.pow(10, effectiveRating(away) / 400);
-  const d = DRAW_NU * Math.sqrt(a * b);
-  const z = a + b + d;
-  return { home: a / z, draw: d / z, away: b / z };
+  return davidsonProbs(effectiveRating(home), effectiveRating(away), DRAW_NU);
 }
 
 function isFinished(f: Fixture): boolean {

@@ -25,6 +25,23 @@ function goalMultiplier(goalDiff: number): number {
   return (11 + d) / 8;
 }
 
+/**
+ * Symmetric per-match Elo delta for the home side (away gets the negation).
+ * `effHome`/`effAway` are already host/home-adjusted ratings; `k` is the gain
+ * (default 60, the World Cup finals weight).
+ */
+export function eloUpdate(
+  effHome: number,
+  effAway: number,
+  homeGoals: number,
+  awayGoals: number,
+  k: number = K,
+): number {
+  const we = winProbability(effHome, effAway);
+  const w = homeGoals > awayGoals ? 1 : homeGoals < awayGoals ? 0 : 0.5;
+  return k * goalMultiplier(homeGoals - awayGoals) * (w - we);
+}
+
 /** A finished real match with a recorded score, usable for an Elo update. */
 function isCompleted(f: Fixture): boolean {
   return (
@@ -72,15 +89,13 @@ export function computeLiveRatings(fixtures: Fixture[]): Map<number, number> {
   for (const f of completed) {
     const a = f.home.id;
     const b = f.away.id;
-    // Expected (host-adjusted) result for the home side at this point in time.
-    const we = winProbability(
+    // Symmetric Elo delta from the host-adjusted ratings at this point in time.
+    const change = eloUpdate(
       effectiveRating({ rating: at(a), host: host.get(a) }),
       effectiveRating({ rating: at(b), host: host.get(b) }),
+      f.homeGoals!,
+      f.awayGoals!,
     );
-    const hg = f.homeGoals!;
-    const ag = f.awayGoals!;
-    const w = hg > ag ? 1 : hg < ag ? 0 : 0.5;
-    const change = K * goalMultiplier(hg - ag) * (w - we);
     bump(a, change);
     bump(b, -change); // symmetric: (W_b − We_b) = −(W_a − We_a)
   }
