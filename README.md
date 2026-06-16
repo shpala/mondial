@@ -110,6 +110,25 @@ tree — it locks green and cascades downstream (`app/bracket/page.tsx`). In **Y
 picks** mode you can override any *unplayed* tie; the rounds ahead recompute and
 your picks persist on the device (`store/bracket.ts`).
 
+### Title odds (Monte Carlo)
+
+The deterministic tree shows the single most-likely path; the **Title odds** table
+(on `/bracket`, and per-team on each team page) answers the probabilistic question
+— *what are the chances?* `lib/montecarlo.ts` simulates the rest of the tournament
+**10,000 times** and tallies how often each team wins the cup, reaches the final,
+and escapes the group.
+
+Each run samples the **unplayed group games** with a three-outcome **Davidson**
+model — `P(home) ∝ 10^(Aᵉ/400)`, `P(away) ∝ 10^(Bᵉ/400)`, `P(draw) ∝ ν·10^((Aᵉ+Bᵉ)/800)`
+(`ν ≈ 0.63` → ~24% draws between even sides). Conditional on a decisive result it
+collapses exactly to the Elo win prob above, so the simulation and the match-card
+win % stay consistent. Group standings rebuild via `computeGroupStandings` →
+`qualifiedTeams`, then the knockouts play out as weighted coin flips on
+`predictWinProbability` (finished real results held fixed). A seeded RNG makes the
+odds stable between renders, shifting only when results change. The draw constant
+`ν` and the tiebreak goals model are sensible but **uncalibrated** — a backtest
+harness (a future addition) would tune them.
+
 ### Where the ratings come from
 
 Every nation has one **`rating`** constant in `lib/teams/registry.ts` (Spain 2129
