@@ -24,17 +24,24 @@ import {
   sampleScoreline,
   type Outcome,
 } from "@/lib/scoreline";
-import { DRAW_NU } from "@/lib/model/constants";
+import { DRAW_NU, WC_PREDICTION_SCALE } from "@/lib/model/constants";
 import { mulberry32 } from "@/lib/rng";
 
 const DEFAULT_RUNS = 10_000;
 
-/** Win / draw / loss probabilities for a group match (Davidson on host-adj Elo). */
+/** Win / draw / loss probabilities for a group match (Davidson on host-adj Elo).
+ *  Uses the flatter WC_PREDICTION_SCALE — these are World Cup matches, so they get
+ *  the same calibrated spread as the bracket (predictWinProbability). */
 export function outcomeProbs(
   home: Pick<Team, "rating" | "host">,
   away: Pick<Team, "rating" | "host">,
 ): { home: number; draw: number; away: number } {
-  return davidsonProbs(effectiveRating(home), effectiveRating(away), DRAW_NU);
+  return davidsonProbs(
+    effectiveRating(home),
+    effectiveRating(away),
+    DRAW_NU,
+    WC_PREDICTION_SCALE,
+  );
 }
 
 function isFinished(f: Fixture): boolean {

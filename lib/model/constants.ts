@@ -11,10 +11,31 @@
 // the tsx backtest scripts.
 
 /**
- * Logistic spread of the Elo win-probability curve (the classic Elo "400").
- * Smaller → sharper, more confident probabilities for the same rating gap.
+ * Logistic spread of the Elo win-probability curve (the classic Elo "400"),
+ * used by the RATING SYSTEM: the live-Elo update's expected result `We`
+ * (lib/ratings) and the full-corpus backtest. Smaller → sharper, more confident
+ * probabilities for the same rating gap. This is the scale ratings are *fit* on;
+ * displayed World Cup probabilities flatten it via {@link WC_PREDICTION_SCALE}.
  */
 export const LOGISTIC_SCALE = 300;
+
+/**
+ * Logistic spread used to turn rating gaps into the DISPLAYED win/draw/away
+ * probabilities for World Cup matches (the bracket, match cards, Monte Carlo title
+ * odds, exact-score predictions) — i.e. everything the live app shows, which is
+ * exclusively the 2026 World Cup. Deliberately flatter than LOGISTIC_SCALE: World
+ * Cup fields are strength-compressed (only qualified sides play) and single-match
+ * variance is high, so favourites win *less* often than the friendly-heavy global
+ * Elo curve (300) implies.
+ *
+ * Found by the algorithm bakeoff (docs/algo-bakeoff.md): tuned on the 2022 World
+ * Cup it generalises out-of-sample to the played 2026 games — 1X2 log-loss
+ * wc2022 1.0666→1.0557, wc2026 1.0929→1.0622 — while leaving the rating system and
+ * the full backtest corpus untouched (the Elo roll still uses LOGISTIC_SCALE). The
+ * 2022 optimum was ~509 and the 2026 optimum ~550; 500 is a robust round value at
+ * the conservative end of that range. Re-fit as the 2026 group stage completes.
+ */
+export const WC_PREDICTION_SCALE = 500;
 
 /**
  * Home-field bump (in Elo points) applied to the three 2026 co-hosts

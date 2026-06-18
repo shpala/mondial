@@ -5,7 +5,12 @@
 // have no draws (extra time / penalties decide), so a two-outcome model fits.
 
 import type { Team } from "@/lib/types";
-import { DRAW_NU, HOST_ADVANTAGE, LOGISTIC_SCALE } from "@/lib/model/constants";
+import {
+  DRAW_NU,
+  HOST_ADVANTAGE,
+  LOGISTIC_SCALE,
+  WC_PREDICTION_SCALE,
+} from "@/lib/model/constants";
 import {
   GOAL_RHO,
   conditionScorelineGrid,
@@ -28,9 +33,18 @@ export const ROUNDS = [
 
 export type RoundName = (typeof ROUNDS)[number];
 
-/** Probability that team A beats team B in a single knockout match. */
-export function winProbability(ratingA: number, ratingB: number): number {
-  return 1 / (1 + Math.pow(10, (ratingB - ratingA) / LOGISTIC_SCALE));
+/**
+ * Probability that team A beats team B in a single knockout match. `scale` is the
+ * logistic spread; it defaults to LOGISTIC_SCALE (the rating-system scale, used by
+ * the Elo update), while the prediction-facing callers below pass the flatter
+ * WC_PREDICTION_SCALE for displayed World Cup probabilities.
+ */
+export function winProbability(
+  ratingA: number,
+  ratingB: number,
+  scale: number = LOGISTIC_SCALE,
+): number {
+  return 1 / (1 + Math.pow(10, (ratingB - ratingA) / scale));
 }
 
 /**
@@ -40,7 +54,9 @@ export function winProbability(ratingA: number, ratingB: number): number {
  *
  * `scale` is the logistic spread (the Elo "400"): smaller → sharper, more
  * confident probabilities for the same rating gap; larger → flatter. Defaults to
- * LOGISTIC_SCALE so production is unchanged; the backtest sweeps it to calibrate.
+ * LOGISTIC_SCALE (the rating-system scale); the prediction-facing callers
+ * (predictScoreline, Monte Carlo) pass the flatter WC_PREDICTION_SCALE, and the
+ * backtest sweeps it to calibrate.
  */
 export function davidsonProbs(
   ratingA: number,
@@ -62,13 +78,15 @@ export function effectiveRating(team: Pick<Team, "rating" | "host">): number {
 
 /**
  * Probability that `a` beats `b`, accounting for host advantage. Use this over
- * raw `winProbability` anywhere two real teams meet (match cards, bracket).
+ * raw `winProbability` anywhere two real teams meet (match cards, bracket). Uses
+ * the flatter WC_PREDICTION_SCALE: the live app only predicts World Cup fixtures,
+ * where favourites win less often than the rating-system scale implies.
  */
 export function predictWinProbability(
   a: Pick<Team, "rating" | "host">,
   b: Pick<Team, "rating" | "host">,
 ): number {
-  return winProbability(effectiveRating(a), effectiveRating(b));
+  return winProbability(effectiveRating(a), effectiveRating(b), WC_PREDICTION_SCALE);
 }
 
 export interface ScorelinePrediction {
@@ -104,10 +122,10 @@ export function predictScoreline(
   const effAway = effectiveRating(away);
   const outcome = decisive
     ? (() => {
-        const home = winProbability(effHome, effAway);
+        const home = winProbability(effHome, effAway, WC_PREDICTION_SCALE);
         return { home, draw: 0, away: 1 - home };
       })()
-    : davidsonProbs(effHome, effAway, DRAW_NU);
+    : davidsonProbs(effHome, effAway, DRAW_NU, WC_PREDICTION_SCALE);
   const { lambdaHome, lambdaAway } = goalRates(effHome, effAway);
   const grid = conditionScorelineGrid(
     poissonJoint(lambdaHome, lambdaAway, GOAL_RHO),
