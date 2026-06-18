@@ -8,8 +8,14 @@ import {
   ELO_K,
   HOST_ADVANTAGE,
   LOGISTIC_SCALE,
+  WC_PREDICTION_SCALE,
 } from "@/lib/model/constants";
-import { davidsonProbs, effectiveRating, winProbability } from "@/lib/prediction";
+import {
+  davidsonProbs,
+  effectiveRating,
+  predictWinProbability,
+  winProbability,
+} from "@/lib/prediction";
 import { eloUpdate } from "@/lib/ratings";
 import { outcomeProbs } from "@/lib/montecarlo";
 import { CURRENT } from "@/lib/backtest/run";
@@ -24,12 +30,25 @@ describe("model constants — single source of truth", () => {
     });
   });
 
-  it("the Monte Carlo group model uses the shared draw weight + scale", () => {
+  it("the Monte Carlo group model uses the shared draw weight + WC prediction scale", () => {
+    // Displayed World Cup probabilities (bracket, match cards, title odds) flatten
+    // the rating gap with WC_PREDICTION_SCALE, not the rating-system LOGISTIC_SCALE.
     const home = { rating: 1850, host: false };
     const away = { rating: 1700, host: false };
     expect(outcomeProbs(home, away)).toEqual(
-      davidsonProbs(1850, 1700, DRAW_NU, LOGISTIC_SCALE),
+      davidsonProbs(1850, 1700, DRAW_NU, WC_PREDICTION_SCALE),
     );
+  });
+
+  it("the bracket/match win-prob uses the shared WC prediction scale, flatter than the rating scale", () => {
+    const a = { rating: 1850, host: false };
+    const b = { rating: 1700, host: false };
+    expect(predictWinProbability(a, b)).toBe(
+      winProbability(1850, 1700, WC_PREDICTION_SCALE),
+    );
+    // The prediction scale is genuinely flatter than the rating-system scale.
+    expect(WC_PREDICTION_SCALE).toBeGreaterThan(LOGISTIC_SCALE);
+    expect(predictWinProbability(a, b)).toBeLessThan(winProbability(1850, 1700));
   });
 
   it("the live Elo update uses the shared K by default", () => {

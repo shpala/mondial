@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Fixture, Team } from "@/lib/types";
 import { outcomeProbs, simulateTournament } from "@/lib/montecarlo";
 import { winProbability } from "@/lib/prediction";
+import { WC_PREDICTION_SCALE } from "@/lib/model/constants";
 
 function team(id: number, rating: number, group: string): Team {
   return { id, name: `T${id}`, code: `T${id}`, flag: "⚽", group, rating };
@@ -21,12 +22,15 @@ describe("outcomeProbs (Davidson)", () => {
     expect(even).toBeLessThan(0.3);
   });
 
-  it("is consistent with the Elo win prob conditional on a decisive result", () => {
+  it("is consistent with the Elo win prob (at the WC prediction scale) conditional on a decisive result", () => {
     const a = { rating: 1900 };
     const b = { rating: 1700 };
     const p = outcomeProbs(a, b);
     const conditional = p.home / (p.home + p.away);
-    expect(conditional).toBeCloseTo(winProbability(1900, 1700), 9);
+    expect(conditional).toBeCloseTo(
+      winProbability(1900, 1700, WC_PREDICTION_SCALE),
+      9,
+    );
   });
 });
 

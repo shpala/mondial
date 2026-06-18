@@ -13,7 +13,7 @@ import {
   winProbability,
 } from "@/lib/prediction";
 import { conditionScorelineGrid, goalRates, poissonJoint } from "@/lib/scoreline";
-import { DRAW_NU } from "@/lib/model/constants";
+import { DRAW_NU, WC_PREDICTION_SCALE } from "@/lib/model/constants";
 
 function makeTeams(n: number): Team[] {
   // Strongest first: rating decreases with index.
@@ -65,8 +65,14 @@ describe("host advantage", () => {
     ).toBeCloseTo(1, 6);
   });
 
-  it("matches raw winProbability when neither side hosts", () => {
+  it("matches raw winProbability (at the WC prediction scale) when neither side hosts", () => {
+    // Displayed World Cup probabilities use the flatter WC_PREDICTION_SCALE, not
+    // the rating-system default — so predictWinProbability is less extreme than the
+    // raw default-scale winProbability for the same gap.
     expect(predictWinProbability({ rating: 1900 }, { rating: 1700 })).toBe(
+      winProbability(1900, 1700, WC_PREDICTION_SCALE),
+    );
+    expect(predictWinProbability({ rating: 1900 }, { rating: 1700 })).toBeLessThan(
       winProbability(1900, 1700),
     );
   });
@@ -177,7 +183,13 @@ describe("predictScoreline", () => {
   });
 
   it("predicts a home win as the most likely score for a clear favourite", () => {
-    const p = predictScoreline(strong, weak);
+    // Use a wide gap: at the flatter WC prediction scale a modest favourite can
+    // still have 1-1 as its single most-likely *scoreline* (draw mass concentrates
+    // on one cell while home wins spread over many) even though the home *outcome*
+    // leads. A clear favourite's modal scoreline is unambiguously a home win.
+    const clearFav = { rating: 1980 };
+    const clearDog = { rating: 1520 };
+    const p = predictScoreline(clearFav, clearDog);
     expect(p.outcome.home).toBeGreaterThan(0.5);
     expect(p.mostLikely.hg).toBeGreaterThan(p.mostLikely.ag);
   });
@@ -218,7 +230,7 @@ describe("predictScoreline", () => {
     const away = { rating: 1780 };
     const eh = effectiveRating(home);
     const ea = effectiveRating(away);
-    const outcome = davidsonProbs(eh, ea, DRAW_NU);
+    const outcome = davidsonProbs(eh, ea, DRAW_NU, WC_PREDICTION_SCALE);
     const { lambdaHome, lambdaAway } = goalRates(eh, ea);
     // The same prediction but WITHOUT the low-score correction (rho = 0).
     const noCorrection = conditionScorelineGrid(
