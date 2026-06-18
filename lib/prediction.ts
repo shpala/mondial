@@ -106,26 +106,24 @@ export function bracketSeedOrder(n: number): number[] {
 }
 
 /**
- * Build the bracket skeleton from up to 32 qualified teams, ordered strongest
- * first. Slots are filled for the first round; later rounds are empty until
- * resolved.
+ * Build a 32-slot bracket skeleton from teams already placed in their opening
+ * positions: `slotted[2i]`/`slotted[2i+1]` are the top/bottom of first-round
+ * match `i`, and adjacent matches meet in the next round. Later rounds are empty
+ * until resolved. This is the placement-agnostic core; callers decide the slot
+ * order (rating seeding, or the official group-position template).
  */
-export function buildBracket(qualified: Team[]): Bracket {
+export function buildBracketFromSlots(slotted: (Team | null)[]): Bracket {
   const size = 32;
-  const teams = qualified.slice(0, size);
-  const order = bracketSeedOrder(size);
 
   const first: Matchup[] = [];
   for (let i = 0; i < size / 2; i++) {
-    const topSeed = order[i * 2];
-    const bottomSeed = order[i * 2 + 1];
     first.push({
       id: `R0-${i}`,
       round: ROUNDS[0],
       roundIndex: 0,
       slot: i,
-      top: teams[topSeed - 1] ?? null,
-      bottom: teams[bottomSeed - 1] ?? null,
+      top: slotted[i * 2] ?? null,
+      bottom: slotted[i * 2 + 1] ?? null,
       topWinProb: null,
       winnerId: null,
       source: null,
@@ -153,6 +151,17 @@ export function buildBracket(qualified: Team[]): Bracket {
   }
 
   return { rounds, championId: null };
+}
+
+/**
+ * Build the bracket skeleton from up to 32 qualified teams, ordered strongest
+ * first, using standard tennis-style seeding (seed 1 vs 32, etc.). Used for
+ * tests and as a generic utility; the live app slots by official group position
+ * (see lib/bracket).
+ */
+export function buildBracket(qualified: Team[]): Bracket {
+  const order = bracketSeedOrder(32);
+  return buildBracketFromSlots(order.map((seed) => qualified[seed - 1] ?? null));
 }
 
 function winnerOf(m: Matchup): Team | null {

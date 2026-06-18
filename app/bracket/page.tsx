@@ -1,6 +1,7 @@
 import { getFixtures, getGroups, getLiveRatings } from "@/lib/data";
-import { qualificationBreakdown, qualifiedTeams } from "@/lib/qualifiers";
+import { qualificationBreakdown } from "@/lib/qualifiers";
 import { withLiveRating } from "@/lib/ratings";
+import { buildOfficialBracket } from "@/lib/bracket";
 import { simulateTournament } from "@/lib/montecarlo";
 import { TitleOddsTable } from "@/components/TitleOddsTable";
 import { BracketTree, type ResultMap } from "@/components/BracketTree";
@@ -47,11 +48,13 @@ export default async function BracketPage() {
     getFixtures(),
     getLiveRatings(),
   ]);
-  // Seed and predict the bracket from results-adjusted Elo; re-sort because the
-  // seeding order (buildBracket) treats its input as strongest-first.
-  const qualified = qualifiedTeams(groups)
-    .map((t) => withLiveRating(t, live))
-    .sort((a, b) => b.rating - a.rating);
+  // Place teams into the official 2026 bracket by group position; overlay
+  // results-adjusted Elo so each tie's win probability reflects form so far.
+  const groupsLive = groups.map((g) => ({
+    ...g,
+    rows: g.rows.map((r) => ({ ...r, team: withLiveRating(r.team, live) })),
+  }));
+  const skeleton = buildOfficialBracket(groupsLive);
   const breakdown = qualificationBreakdown(groups);
   const results = buildResultMap(fixtures);
   const odds = simulateTournament(fixtures);
@@ -86,7 +89,7 @@ export default async function BracketPage() {
           />
         </div>
         <div className="order-1 lg:order-2">
-          <BracketTree qualified={qualified} results={results} />
+          <BracketTree skeleton={skeleton} results={results} />
         </div>
       </div>
     </div>

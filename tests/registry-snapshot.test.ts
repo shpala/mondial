@@ -30,4 +30,12 @@ describe("snapshot ↔ registry reconciliation", () => {
       expect(t.rating, `${t.code} rating`).toBe(reg!.rating);
     }
   });
+
+  it("snapshot team ids are the canonical registry ids (stable links across modes)", () => {
+    for (const t of TEAMS) {
+      const reg = resolveTeam(t.code);
+      expect(reg, `${t.code} missing from registry`).not.toBeNull();
+      expect(t.id, `${t.code} id`).toBe(reg!.id);
+    }
+  });
 });

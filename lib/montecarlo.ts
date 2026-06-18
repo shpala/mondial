@@ -14,11 +14,11 @@ import { computeGroupStandings } from "@/lib/standings";
 import { qualifiedTeams } from "@/lib/qualifiers";
 import {
   ROUNDS,
-  buildBracket,
   davidsonProbs,
   effectiveRating,
   predictWinProbability,
 } from "@/lib/prediction";
+import { buildOfficialBracket } from "@/lib/bracket";
 import {
   goalRates,
   sampleScoreline,
@@ -162,8 +162,8 @@ export function simulateTournament(
     const qualified = qualifiedTeams(groups);
     for (const t of qualified) tally(t).q++;
 
-    // --- Knockouts: resolve the bracket as weighted coin flips.
-    const bracket = buildBracket(qualified);
+    // --- Knockouts: resolve the official bracket as weighted coin flips.
+    const bracket = buildOfficialBracket(groups);
     const resolved = new Map<string, Team | null>();
     for (let r = 0; r < bracket.rounds.length; r++) {
       for (const m of bracket.rounds[r]) {

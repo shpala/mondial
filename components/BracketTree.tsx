@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Team } from "@/lib/types";
 import {
-  buildBracket,
   resolveBracket,
   winnerProb,
+  type Bracket,
   type Matchup,
 } from "@/lib/prediction";
 import { bracketStorageOk, useBracketStore } from "@/store/bracket";
@@ -261,10 +261,10 @@ function MatchupCard({
 }
 
 export function BracketTree({
-  qualified,
+  skeleton,
   results = {},
 }: {
-  qualified: Team[];
+  skeleton: Bracket;
   results?: ResultMap;
 }) {
   const { overrides, pick, reset, undoReset } = useBracketStore();
@@ -295,7 +295,6 @@ export function BracketTree({
     return () => clearTimeout(id);
   }, [undoToast]);
 
-  const skeleton = useMemo(() => buildBracket(qualified), [qualified]);
   const effectiveOverrides = mode === "you" && mounted ? overrides : {};
 
   // Resolve once for pairings, derive forced winners from real results, resolve
@@ -321,9 +320,18 @@ export function BracketTree({
     return { resolved: finalBracket, playedNodes: played };
   }, [skeleton, effectiveOverrides, results]);
 
+  // Team lookup for the champion badge, drawn from the placed R32 field.
+  const teamsById = useMemo(() => {
+    const m = new Map<number, Team>();
+    for (const mt of skeleton.rounds[0]) {
+      if (mt.top) m.set(mt.top.id, mt.top);
+      if (mt.bottom) m.set(mt.bottom.id, mt.bottom);
+    }
+    return m;
+  }, [skeleton]);
   const champion =
     resolved.championId != null
-      ? qualified.find((t) => t.id === resolved.championId) ?? null
+      ? teamsById.get(resolved.championId) ?? null
       : null;
 
   const overrideCount = Object.keys(overrides).length;

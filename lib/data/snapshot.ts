@@ -7,6 +7,7 @@ import { generateLineup, generateSquad } from "./generate";
 import { computeGroupStandings } from "@/lib/standings";
 import { effectiveRating } from "@/lib/prediction";
 import { mulberry32 } from "@/lib/rng";
+import { registryId } from "@/lib/teams/registry";
 
 const GROUP_LETTERS = "ABCDEFGHIJKL".split(""); // 12 groups
 
@@ -76,13 +77,18 @@ const POT4: Seed[] = [
 
 function buildTeams(): Team[] {
   const teams: Team[] = [];
-  let id = 1;
   [POT1, POT2, POT3, POT4].forEach((pot, potIndex) => {
     pot.forEach((seed, i) => {
       const groupIndex = potIndex % 2 === 0 ? i : GROUP_LETTERS.length - 1 - i;
       const [name, code, flag, rating] = seed;
+      // Reuse the canonical registry id so a team has one stable id regardless
+      // of whether it came from the live spine or this snapshot.
+      const id = registryId(code);
+      if (id == null) {
+        throw new Error(`snapshot team ${code} is not in the canonical registry`);
+      }
       teams.push({
-        id: id++,
+        id,
         name,
         code,
         flag,
