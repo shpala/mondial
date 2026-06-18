@@ -17,10 +17,10 @@ import { goalRates, poissonPmf, poissonOutcome, poissonJoint } from "@/lib/score
 import { mulberry32 } from "@/lib/rng";
 
 const INIT = 1500;
-const NU = 0.7;
-const SCALE = 400;
-const HOME_BUMP = 100;
-const K = 60;
+const NU = 0.8;
+const SCALE = 300;
+const HOME_BUMP = 87.5;
+const K = 45;
 const TRAIN_CUTOFF = "2022-11-20";
 const TEST_START = "2022-11-20";
 const TEST_END = "2022-12-18";

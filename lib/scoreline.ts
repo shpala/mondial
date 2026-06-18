@@ -16,7 +16,7 @@ import type { MatchOutcome } from "@/lib/types";
 
 /** Calibrated goal-model constants (2022 WC backtest winner). */
 export const GOAL_BASE = 1.2;
-export const GOAL_GAMMA = 575;
+export const GOAL_GAMMA = 450;
 
 /** Joint scoreline grid is computed over 0..MAX_GOALS per side; the tail beyond
  *  it is dropped and the grid renormalized. */

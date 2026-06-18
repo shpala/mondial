@@ -71,7 +71,7 @@ describe("refineGrid", () => {
     expect(g.nu).toEqual([0.05, 0.1]); // 0 dropped (nu must be > 0)
     expect(g.home).toEqual([0, 12.5]); // negative dropped (home >= 0)
     expect(g.k).toEqual([5, 10]); // 0 dropped (k must be > 0)
-    expect(g.scale).toEqual([375, 400, 425]); // missing scale centres on 400
+    expect(g.scale).toEqual([275, 300, 325]); // missing scale centres on 300
   });
 
   it("brackets and filters a low scale centre", () => {

@@ -58,8 +58,8 @@ describe("computeLiveRatings", () => {
     expect(b).toBeLessThan(1800);
     // Zero-sum: deltas cancel.
     expect(a - 1800 + (b - 1800)).toBeCloseTo(0, 6);
-    // Even sides, GD 1 → K·(1 − 0.5) = 30.
-    expect(a).toBeCloseTo(1830, 6);
+    // Even sides, GD 1 → K·(1 − 0.5) = 22.5.
+    expect(a).toBeCloseTo(1822.5, 6);
   });
 
   it("scales the swing by goal difference", () => {
@@ -71,7 +71,7 @@ describe("computeLiveRatings", () => {
     ]).get(1)!;
     // GD 4 multiplier (11+4)/8 = 1.875 > 1.
     expect(rout - 1800).toBeGreaterThan(narrow - 1800);
-    expect(rout).toBeCloseTo(1800 + 30 * 1.875, 6);
+    expect(rout).toBeCloseTo(1800 + 22.5 * 1.875, 6);
   });
 
   it("rewards an upset more than an expected win", () => {
@@ -84,7 +84,7 @@ describe("computeLiveRatings", () => {
       match(weak, strong, 1, 0, "2026-06-11T00:00:00Z"),
     ]).get(2)!;
     expect(expectedWin - 2000).toBeLessThan(15); // favourite barely gains
-    expect(upset - 1600).toBeGreaterThan(45); // underdog gains a lot
+    expect(upset - 1600).toBeGreaterThan(33.75); // underdog gains a lot
   });
 
   it("applies updates in chronological order, not array order", () => {
@@ -94,15 +94,15 @@ describe("computeLiveRatings", () => {
       match(A, B, 1, 0, "2026-06-11T00:00:00Z"),
     ]);
     // After game 1, A is 1830/B 1770; game 2 expects A to win more often, so the
-    // second win adds less than the first → total < 60.
-    expect(live.get(1)! - 1800).toBeGreaterThan(30);
-    expect(live.get(1)! - 1800).toBeLessThan(60);
+    // second win adds less than the first → total < 45.
+    expect(live.get(1)! - 1800).toBeGreaterThan(22.5);
+    expect(live.get(1)! - 1800).toBeLessThan(45);
   });
 
   it("uses the host bump when forming the expected result", () => {
     const host = team(1, 1800, true);
     const visitor = team(2, 1800);
-    // Host was already favoured, so beating an even side gains less than 30.
+    // Host was already favoured, so beating an even side gains less than 22.5.
     const gain =
       computeLiveRatings([
         match(host, visitor, 1, 0, "2026-06-11T00:00:00Z"),
@@ -111,7 +111,7 @@ describe("computeLiveRatings", () => {
       effectiveRating(host),
       effectiveRating(visitor),
     );
-    expect(gain).toBeCloseTo(60 * (1 - we), 6);
-    expect(gain).toBeLessThan(30);
+    expect(gain).toBeCloseTo(45 * (1 - we), 6);
+    expect(gain).toBeLessThan(22.5);
   });
 });

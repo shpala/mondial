@@ -24,10 +24,10 @@ describe("backtest calibration (docs/backtest-report.md)", () => {
   it("the shipped constants score exactly the documented numbers", () => {
     const r = rollAndScore(matches, CURRENT);
     expect(r.n).toBe(8105); // scored after the 2018 burn-in
-    expect(r4(r.logLoss)).toBe(0.8961);
-    expect(r4(r.brier)).toBe(0.5275);
+    expect(r4(r.logLoss)).toBe(0.8959);
+    expect(r4(r.brier)).toBe(0.5277);
     expect(pct1(r.drawObserved)).toBe(23.1);
-    expect(pct1(r.drawPredicted)).toBe(21.9);
+    expect(pct1(r.drawPredicted)).toBe(24.1);
   });
 
   it("the no-skill baseline scores the documented numbers", () => {

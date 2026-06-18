@@ -14,17 +14,17 @@
  * Logistic spread of the Elo win-probability curve (the classic Elo "400").
  * Smaller → sharper, more confident probabilities for the same rating gap.
  */
-export const LOGISTIC_SCALE = 400;
+export const LOGISTIC_SCALE = 300;
 
 /**
  * Home-field bump (in Elo points) applied to the three 2026 co-hosts
  * (USA/Mexico/Canada) whenever they play. 100 is eloratings.net's standard
  * home-advantage constant — worth ~+14 percentage points between even sides.
  */
-export const HOST_ADVANTAGE = 100;
+export const HOST_ADVANTAGE = 87.5;
 
 /** World Cup finals Elo K-factor for the live-rating (results) update. */
-export const ELO_K = 60;
+export const ELO_K = 45;
 
 /**
  * Davidson draw weight ν → ~26% draws between even sides. Conditional on a
@@ -32,4 +32,4 @@ export const ELO_K = 60;
  * after the backtest (`npm run backtest`) showed the model slightly
  * under-predicted draws; 0.70 captures nearly all the calibration gain.
  */
-export const DRAW_NU = 0.7;
+export const DRAW_NU = 0.8;

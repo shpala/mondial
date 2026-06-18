@@ -19,8 +19,8 @@ describe("eloUpdate", () => {
     );
   });
 
-  it("defaults k to the World Cup weight of 60", () => {
-    // 1800 vs 1800, 2-goal win: 60 * 1.5 * (1 - 0.5) = 45
-    expect(eloUpdate(1800, 1800, 2, 0)).toBeCloseTo(45, 9);
+  it("defaults k to the World Cup weight of 45", () => {
+    // 1800 vs 1800, 2-goal win: 45 * 1.5 * (1 - 0.5) = 33.75
+    expect(eloUpdate(1800, 1800, 2, 0)).toBeCloseTo(33.75, 9);
   });
 });
