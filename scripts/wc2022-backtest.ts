@@ -15,6 +15,7 @@ import { parseResults } from "@/lib/backtest/parse";
 import { davidsonProbs } from "@/lib/prediction";
 import { eloUpdate } from "@/lib/ratings";
 import { goalRates, poissonPmf, poissonOutcome, poissonJoint } from "@/lib/backtest/poisson";
+import { mulberry32 } from "@/lib/rng";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -196,6 +197,32 @@ const b = logLossAndBrier(bRows);
 aScoreLL /= test.length;
 bScoreLL /= test.length;
 
+// --- Paired bootstrap: is A's outcome-log-loss edge over B more than noise? ---
+// One tournament (n=64) is a small sample, so resample the per-match log-loss
+// differences with replacement to get a 95% CI on the mean advantage.
+const llA = aRows.map((r) => -Math.log(r.p[r.actual]));
+const llB = bRows.map((r) => -Math.log(r.p[r.actual]));
+const llDiff = llB.map((v, i) => v - llA[i]); // B − A; positive ⇒ A has lower loss
+
+function bootstrapMeanCI(xs: number[], iters: number) {
+  const n = xs.length;
+  const rng = mulberry32(20221218); // fixed seed → reproducible CI
+  const means: number[] = [];
+  for (let k = 0; k < iters; k++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += xs[Math.floor(rng() * n)];
+    means.push(s / n);
+  }
+  means.sort((x, y) => x - y);
+  return {
+    mean: xs.reduce((s, v) => s + v, 0) / n,
+    lo: means[Math.floor(0.025 * iters)],
+    hi: means[Math.floor(0.975 * iters)],
+  };
+}
+const llCI = bootstrapMeanCI(llDiff, 5000);
+const ciExcludesZero = llCI.lo > 0 || llCI.hi < 0;
+
 // --- STEP 5: write outputs ------------------------------------------------
 const predsPath = resolve(ROOT, "docs/wc2022-predictions.json");
 writeFileSync(predsPath, JSON.stringify(preds, null, 2) + "\n");
@@ -219,6 +246,13 @@ Fitted Poisson params: **base = ${bestBase}**, **gamma = ${bestGamma}** (train N
 | B | Independent Poisson | ${r4(b.logLoss)} | ${r4(b.brier)} |
 
 A coin-flip-style baseline (uniform 1/3 each) has log-loss ln 3 ≈ 1.0986.
+
+## Is A's edge real? Paired bootstrap (n = ${test.length})
+
+Mean per-match log-loss advantage of A (Davidson) over B (Poisson):
+**${r4(llCI.mean)}** — 95% bootstrap CI [${r4(llCI.lo)}, ${r4(llCI.hi)}], 5000 resamples.
+The interval **${ciExcludesZero ? "excludes" : "includes"} 0**, so on this single
+${test.length}-match tournament the difference is ${ciExcludesZero ? "unlikely to be due to chance" : "within sampling noise"}.
 
 ## Exact-scoreline log-loss (goals 0..10) — lower is better
 
@@ -255,6 +289,7 @@ const summary = {
   testMatches: test.length,
   variantA: a,
   variantB: b,
+  logLossAdvantageAoverB: { ...llCI, ciExcludesZero },
   scorelineLogLoss: { A: aScoreLL, B: bScoreLL },
   predictionsJsonPath: predsPath,
   sanity: {

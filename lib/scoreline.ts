@@ -5,11 +5,12 @@
 // tiebreaks — reflects team strength instead of fixed buckets.
 //
 // Each side's goal rate is an independent-Poisson mean scaled off a base by the
-// rating gap. `base`/`gamma` were fit on ~8k pre-2022 internationals and
-// validated out-of-sample on the 2022 World Cup (docs/wc2022-report.md): this
-// "Davidson outcome + Poisson margin" variant beat a full-Poisson outcome model
-// on every metric, so the calibrated outcome model is kept and only the margin
-// is upgraded.
+// rating gap. `base`/`gamma` were fit on ~8k pre-2022 internationals and tested
+// out-of-sample on the 2022 World Cup (docs/wc2022-report.md): the "Davidson
+// outcome + Poisson margin" variant edged a full-Poisson outcome model on every
+// metric, though on a single 64-match tournament that edge is within sampling
+// noise (see the paired bootstrap CI in the report). We keep the calibrated
+// outcome model and upgrade only the margin.
 
 import type { MatchOutcome } from "@/lib/types";
 

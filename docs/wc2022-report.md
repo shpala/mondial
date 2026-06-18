@@ -16,6 +16,13 @@ Fitted Poisson params: **base = 1.2**, **gamma = 575** (train NLL = 24164.33).
 
 A coin-flip-style baseline (uniform 1/3 each) has log-loss ln 3 ≈ 1.0986.
 
+## Is A's edge real? Paired bootstrap (n = 64)
+
+Mean per-match log-loss advantage of A (Davidson) over B (Poisson):
+**0.0127** — 95% bootstrap CI [-0.0095, 0.0428], 5000 resamples.
+The interval **includes 0**, so on this single
+64-match tournament the difference is within sampling noise.
+
 ## Exact-scoreline log-loss (goals 0..10) — lower is better
 
 | Variant | Scoreline log-loss |
