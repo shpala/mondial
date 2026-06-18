@@ -7,22 +7,22 @@ matches (no leakage). The Poisson goal model's `base`/`gamma` were fit on the
 the Dixon-Coles low-score weight `rho` was then fit on the same train set by
 minimizing the Variant-A exact-scoreline NLL.
 
-Fitted Poisson params: **base = 1.2**, **gamma = 575** (train NLL = 24164.33).
+Fitted Poisson params: **base = 1.2**, **gamma = 450** (train NLL = 24180.47).
 Fitted Dixon-Coles weight: **rho = -0.03**.
 
 ## Outcome (1X2) metrics — lower is better
 
 | Variant | Model | Log-loss | Brier |
 |---|---|---|---|
-| A | Davidson (nu=0.7, scale=400) | 1.0613 | 0.6286 |
-| B | Independent Poisson | 1.0740 | 0.6314 |
+| A | Davidson (nu=0.7, scale=400) | 1.0666 | 0.6309 |
+| B | Independent Poisson | 1.0738 | 0.6324 |
 
 A coin-flip-style baseline (uniform 1/3 each) has log-loss ln 3 ≈ 1.0986.
 
 ## Is A's edge real? Paired bootstrap (n = 64)
 
 Mean per-match log-loss advantage of A (Davidson) over B (Poisson):
-**0.0127** — 95% bootstrap CI [-0.0095, 0.0428], 5000 resamples.
+**0.0071** — 95% bootstrap CI [-0.0108, 0.0298], 5000 resamples.
 The interval **includes 0**, so on this single
 64-match tournament the difference is within sampling noise.
 
@@ -30,9 +30,9 @@ The interval **includes 0**, so on this single
 
 | Variant | Scoreline log-loss |
 |---|---|
-| A — Davidson + Dixon-Coles (rho = -0.03) | 3.0440 |
-| A — Davidson, independent Poisson (rho = 0) | 3.0458 |
-| B — raw independent Poisson | 3.0585 |
+| A — Davidson + Dixon-Coles (rho = -0.03) | 3.0515 |
+| A — Davidson, independent Poisson (rho = 0) | 3.0534 |
+| B — raw independent Poisson | 3.0606 |
 
 Variant A reuses the Poisson joint but renormalizes each outcome region (home /
 draw / away) so the region masses match Davidson's 1X2 split — the same
