@@ -3,13 +3,17 @@ import type { Team } from "@/lib/types";
 import {
   bracketSeedOrder,
   buildBracket,
+  davidsonProbs,
   effectiveRating,
   HOST_ADVANTAGE,
+  predictScoreline,
   predictWinProbability,
   resolveBracket,
   winnerProb,
   winProbability,
 } from "@/lib/prediction";
+import { conditionScorelineGrid, goalRates, poissonJoint } from "@/lib/scoreline";
+import { DRAW_NU } from "@/lib/model/constants";
 
 function makeTeams(n: number): Team[] {
   // Strongest first: rating decreases with index.
@@ -146,5 +150,89 @@ describe("resolveBracket (user override)", () => {
     const resolved = resolveBracket(bracket, { [m.id]: 9999 });
     // Falls back to the model pick (stronger team).
     expect(resolved.rounds[0][0].winnerId).toBe(m.top?.id);
+  });
+});
+
+describe("predictScoreline", () => {
+  const strong = { rating: 1950 };
+  const weak = { rating: 1620 };
+
+  it("returns a normalized grid with top scorelines sorted by probability", () => {
+    const p = predictScoreline(strong, weak);
+    let total = 0;
+    for (const row of p.grid) for (const c of row) total += c;
+    expect(total).toBeCloseTo(1, 9);
+    expect(p.top).toHaveLength(3);
+    expect(p.top[0].p).toBeGreaterThanOrEqual(p.top[1].p);
+    expect(p.mostLikely).toEqual(p.top[0]);
+  });
+
+  it("its outcome marginals are the calibrated Davidson model (consistent with the site win-prob)", () => {
+    const p = predictScoreline(strong, weak);
+    expect(p.outcome.home + p.outcome.draw + p.outcome.away).toBeCloseTo(1, 9);
+    // Davidson collapses to winProbability conditional on a decisive result, so
+    // the home share among decisive outcomes must equal the displayed win-prob.
+    const decisiveHome = p.outcome.home / (p.outcome.home + p.outcome.away);
+    expect(decisiveHome).toBeCloseTo(predictWinProbability(strong, weak), 6);
+  });
+
+  it("predicts a home win as the most likely score for a clear favourite", () => {
+    const p = predictScoreline(strong, weak);
+    expect(p.outcome.home).toBeGreaterThan(0.5);
+    expect(p.mostLikely.hg).toBeGreaterThan(p.mostLikely.ag);
+  });
+
+  it("honours host advantage", () => {
+    const evenAway = predictScoreline({ rating: 1800 }, { rating: 1800 });
+    const evenHost = predictScoreline({ rating: 1800, host: true }, { rating: 1800 });
+    expect(evenHost.outcome.home).toBeGreaterThan(evenAway.outcome.home);
+  });
+
+  it("honours an explicit top-N", () => {
+    expect(predictScoreline(strong, weak, { topN: 5 }).top).toHaveLength(5);
+  });
+
+  it("knockout (decisive) mode zeroes the draw region and renormalizes home/away", () => {
+    const p = predictScoreline(strong, weak, { decisive: true });
+    let drawMass = 0;
+    for (let i = 0; i < p.grid.length; i++) drawMass += p.grid[i][i];
+    expect(drawMass).toBeCloseTo(0, 12);
+    expect(p.outcome.draw).toBe(0);
+    // every listed scoreline is decisive (no draws)
+    for (const c of p.top) expect(c.hg).not.toBe(c.ag);
+    // outcome home is the 2-way Elo win prob — consistent with the bracket model
+    expect(p.outcome.home).toBeCloseTo(predictWinProbability(strong, weak), 9);
+    // still a proper normalized distribution
+    let total = 0;
+    for (const row of p.grid) for (const c of row) total += c;
+    expect(total).toBeCloseTo(1, 9);
+  });
+
+  it("a knockout favourite's most likely score is a decisive home win", () => {
+    const p = predictScoreline(strong, weak, { decisive: true });
+    expect(p.mostLikely.hg).toBeGreaterThan(p.mostLikely.ag);
+  });
+
+  it("applies the Dixon-Coles correction through the shipped pipeline", () => {
+    const home = { rating: 1820 };
+    const away = { rating: 1780 };
+    const eh = effectiveRating(home);
+    const ea = effectiveRating(away);
+    const outcome = davidsonProbs(eh, ea, DRAW_NU);
+    const { lambdaHome, lambdaAway } = goalRates(eh, ea);
+    // The same prediction but WITHOUT the low-score correction (rho = 0).
+    const noCorrection = conditionScorelineGrid(
+      poissonJoint(lambdaHome, lambdaAway, 0),
+      outcome,
+    );
+    const shipped = predictScoreline(home, away).grid;
+    // DC lifts 0-0 and trims 1-0 / 0-1 within their (Davidson-fixed) regions.
+    // Fails loudly if GOAL_RHO is zeroed or predictScoreline stops passing it.
+    expect(shipped[0][0]).toBeGreaterThan(noCorrection[0][0]);
+    expect(shipped[1][0]).toBeLessThan(noCorrection[1][0]);
+    expect(shipped[0][1]).toBeLessThan(noCorrection[0][1]);
+    // ...but the total draw rate is unchanged — Davidson sets it, DC only reshapes.
+    const drawMass = (g: number[][]) => g.reduce((s, row, i) => s + row[i], 0);
+    expect(drawMass(shipped)).toBeCloseTo(drawMass(noCorrection), 9);
   });
 });

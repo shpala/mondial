@@ -4,12 +4,13 @@ import { notFound } from "next/navigation";
 import { getFixtures, getMatchLineups } from "@/lib/data";
 import { PitchLineup } from "@/components/PitchLineup";
 import { GoalList } from "@/components/GoalList";
+import { ScorelinePrediction } from "@/components/ScorelinePrediction";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { EstimatedNotice, EstimatedTag } from "@/components/ui/EstimatedData";
 import { formatKickoff } from "@/lib/format";
-import { predictWinProbability } from "@/lib/prediction";
+import { predictScoreline, predictWinProbability } from "@/lib/prediction";
 
 export const dynamic = "force-dynamic";
 
@@ -94,6 +95,13 @@ export default async function MatchPage({
     predicted && realTeams
       ? predictWinProbability(fixture.home, fixture.away)
       : null;
+  // Knockout ties (group == null) are settled by ET/penalties — no draw — so we
+  // predict a decisive scoreline there; group games keep the three-way model.
+  const decisive = fixture.group == null;
+  const scorePrediction =
+    predicted && realTeams
+      ? predictScoreline(fixture.home, fixture.away, { decisive })
+      : null;
 
   const badge = live
     ? {
@@ -152,12 +160,12 @@ export default async function MatchPage({
               <>
                 <div
                   className="font-display text-xl font-extrabold tabular-nums text-amber-300"
-                  aria-label={`Predicted win probability: ${fixture.home.name} ${Math.round(homeProb * 100)} percent, ${fixture.away.name} ${Math.round((1 - homeProb) * 100)} percent`}
+                  aria-label={`Predicted win probability if decisive: ${fixture.home.name} ${Math.round(homeProb * 100)} percent, ${fixture.away.name} ${Math.round((1 - homeProb) * 100)} percent`}
                 >
                   {Math.round(homeProb * 100)}%–{Math.round((1 - homeProb) * 100)}%
                 </div>
                 <div className="text-[10px] uppercase tracking-wide text-ink-400">
-                  win prob
+                  win prob if decisive
                 </div>
               </>
             ) : (
@@ -176,6 +184,15 @@ export default async function MatchPage({
           </div>
         </div>
       </header>
+
+      {scorePrediction && (
+        <ScorelinePrediction
+          prediction={scorePrediction}
+          home={fixture.home}
+          away={fixture.away}
+          decisive={decisive}
+        />
+      )}
 
       {/* Goals above the pitch on phone; goals as a left sidebar on desktop. */}
       <div className="lg:flex lg:items-start lg:gap-6">

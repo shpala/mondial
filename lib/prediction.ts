@@ -5,7 +5,15 @@
 // have no draws (extra time / penalties decide), so a two-outcome model fits.
 
 import type { Team } from "@/lib/types";
-import { HOST_ADVANTAGE, LOGISTIC_SCALE } from "@/lib/model/constants";
+import { DRAW_NU, HOST_ADVANTAGE, LOGISTIC_SCALE } from "@/lib/model/constants";
+import {
+  GOAL_RHO,
+  conditionScorelineGrid,
+  goalRates,
+  poissonJoint,
+  topScorelines,
+  type ScoreCell,
+} from "@/lib/scoreline";
 
 // Re-exported so existing callers keep importing it from here.
 export { HOST_ADVANTAGE };
@@ -61,6 +69,52 @@ export function predictWinProbability(
   b: Pick<Team, "rating" | "host">,
 ): number {
   return winProbability(effectiveRating(a), effectiveRating(b));
+}
+
+export interface ScorelinePrediction {
+  /** Calibrated home/draw/away masses the scoreline grid is conditioned on. */
+  outcome: { home: number; draw: number; away: number };
+  /** Single most likely scoreline (identical to `top[0]`). */
+  mostLikely: ScoreCell;
+  /** The most likely scorelines, most likely first. */
+  top: ScoreCell[];
+  /** Full conditioned P(i,j) grid (home goals = row, away goals = column). */
+  grid: number[][];
+}
+
+/**
+ * Predict a full scoreline distribution for a single fixture. The calibrated
+ * Davidson model sets the home/draw/away masses; the rating-aware Poisson goal
+ * model (with the Dixon-Coles low-score correction) shapes the scorelines within
+ * each outcome region, so the displayed scores stay consistent with the site's
+ * win probabilities. Ratings are host-adjusted exactly as `predictWinProbability`
+ * does. Pure — runs on the server and in tests.
+ *
+ * `decisive` (knockout mode): a knockout tie is settled by extra time / penalties,
+ * so there is no drawn result. Setting it zeroes the draw region and conditions on
+ * the two-outcome model (`winProbability`) the bracket already uses, so the most
+ * likely score is always a decisive one.
+ */
+export function predictScoreline(
+  home: Pick<Team, "rating" | "host">,
+  away: Pick<Team, "rating" | "host">,
+  { topN = 3, decisive = false }: { topN?: number; decisive?: boolean } = {},
+): ScorelinePrediction {
+  const effHome = effectiveRating(home);
+  const effAway = effectiveRating(away);
+  const outcome = decisive
+    ? (() => {
+        const home = winProbability(effHome, effAway);
+        return { home, draw: 0, away: 1 - home };
+      })()
+    : davidsonProbs(effHome, effAway, DRAW_NU);
+  const { lambdaHome, lambdaAway } = goalRates(effHome, effAway);
+  const grid = conditionScorelineGrid(
+    poissonJoint(lambdaHome, lambdaAway, GOAL_RHO),
+    outcome,
+  );
+  const top = topScorelines(grid, topN);
+  return { outcome, mostLikely: top[0], top, grid };
 }
 
 export interface Matchup {
