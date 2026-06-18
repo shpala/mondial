@@ -9,6 +9,8 @@ import {
   HOST_ADVANTAGE,
   LOGISTIC_SCALE,
 } from "@/lib/model/constants";
+import { outcomeOf } from "@/lib/outcome";
+import type { MatchOutcome } from "@/lib/types";
 import type { MatchRow } from "@/lib/backtest/parse";
 
 export interface Constants {
@@ -49,12 +51,6 @@ export const CURRENT: Constants = {
 const INIT = 1500; // flat starting rating for every team
 const BURN_IN = "2018-01-01"; // only score matches on/after this date
 
-type Outcome = "home" | "draw" | "away";
-
-function outcomeOf(r: MatchRow): Outcome {
-  return r.homeGoals > r.awayGoals ? "home" : r.homeGoals < r.awayGoals ? "away" : "draw";
-}
-
 export function rollAndScore(
   matches: MatchRow[],
   c: Constants,
@@ -80,9 +76,9 @@ export function rollAndScore(
     const p = davidsonProbs(effHome, effAway, c.nu, scale);
 
     if (mtch.date >= burnIn) {
-      const o = outcomeOf(mtch);
+      const o = outcomeOf(mtch.homeGoals, mtch.awayGoals);
       ll += -Math.log(Math.max(p[o], 1e-15));
-      for (const key of ["home", "draw", "away"] as Outcome[]) {
+      for (const key of ["home", "draw", "away"] as MatchOutcome[]) {
         const y = o === key ? 1 : 0;
         brier += (p[key] - y) ** 2;
         const b = Math.min(9, Math.floor(p[key] * 10));
@@ -137,7 +133,7 @@ export function baseline(
   let h = 0;
   let d = 0;
   for (const mtch of scored) {
-    const o = outcomeOf(mtch);
+    const o = outcomeOf(mtch.homeGoals, mtch.awayGoals);
     if (o === "home") h++;
     else if (o === "draw") d++;
   }
@@ -146,9 +142,9 @@ export function baseline(
   let ll = 0;
   let brier = 0;
   for (const mtch of scored) {
-    const o = outcomeOf(mtch);
+    const o = outcomeOf(mtch.homeGoals, mtch.awayGoals);
     ll += -Math.log(Math.max(p[o], 1e-15));
-    for (const key of ["home", "draw", "away"] as Outcome[]) {
+    for (const key of ["home", "draw", "away"] as MatchOutcome[]) {
       const y = o === key ? 1 : 0;
       brier += (p[key] - y) ** 2;
     }

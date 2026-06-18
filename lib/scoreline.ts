@@ -11,6 +11,8 @@
 // on every metric, so the calibrated outcome model is kept and only the margin
 // is upgraded.
 
+import type { MatchOutcome } from "@/lib/types";
+
 /** Calibrated goal-model constants (2022 WC backtest winner). */
 export const GOAL_BASE = 1.2;
 export const GOAL_GAMMA = 575;
@@ -46,7 +48,9 @@ export function samplePoisson(rng: () => number, lambda: number): number {
   return k - 1;
 }
 
-export type Outcome = "home" | "draw" | "away";
+/** Alias of the shared {@link MatchOutcome} — the outcome a sampled scoreline is
+ *  conditioned on. */
+export type Outcome = MatchOutcome;
 
 function fits(hg: number, ag: number, outcome: Outcome): boolean {
   return outcome === "home" ? hg > ag : outcome === "away" ? hg < ag : hg === ag;

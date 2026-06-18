@@ -1,13 +1,12 @@
 // Grade the prediction model against real, finished results. Pure — no I/O, no
 // Date/Math.random — so it runs identically on the server and in tests. Reuses
 // the live-Elo roll and the Davidson outcome model; never mutates inputs.
-import type { Fixture, Group, Team } from "@/lib/types";
+import type { Fixture, Group, MatchOutcome, Team } from "@/lib/types";
 import { effectiveRating } from "@/lib/prediction";
 import { eloUpdate } from "@/lib/ratings";
+import { outcomeOf } from "@/lib/outcome";
 import { outcomeProbs, simulateTournament, type TeamOdds } from "@/lib/montecarlo";
 import { qualifiedTeams } from "@/lib/qualifiers";
-
-export type Outcome3 = "home" | "draw" | "away";
 
 export interface MatchGrade {
   date: string;
@@ -16,7 +15,7 @@ export interface MatchGrade {
   homeGoals: number;
   awayGoals: number;
   predicted: { home: number; draw: number; away: number };
-  actual: Outcome3;
+  actual: MatchOutcome;
   correct: boolean;
 }
 
@@ -45,10 +44,6 @@ function isFinishedReal(f: Fixture): boolean {
     f.home.id !== 0 && f.away.id !== 0 &&
     f.homeGoals != null && f.awayGoals != null
   );
-}
-
-function outcomeOf(hg: number, ag: number): Outcome3 {
-  return hg > ag ? "home" : hg < ag ? "away" : "draw";
 }
 
 export function gradeOutcomes(fixtures: Fixture[]): OutcomeReport {
@@ -84,14 +79,14 @@ export function gradeOutcomes(fixtures: Fixture[]): OutcomeReport {
     const actual = outcomeOf(f.homeGoals!, f.awayGoals!);
 
     logLoss += -Math.log(Math.max(p[actual], 1e-15));
-    for (const key of ["home", "draw", "away"] as Outcome3[]) {
+    for (const key of ["home", "draw", "away"] as MatchOutcome[]) {
       const y = actual === key ? 1 : 0;
       brier += (p[key] - y) ** 2;
       const b = Math.min(9, Math.floor(p[key] * 10));
       relP[b] += p[key]; relH[b] += y; relN[b] += 1;
     }
-    const fav = (["home", "draw", "away"] as Outcome3[]).reduce((m, k) =>
-      p[k] > p[m] ? k : m, "home" as Outcome3);
+    const fav = (["home", "draw", "away"] as MatchOutcome[]).reduce((m, k) =>
+      p[k] > p[m] ? k : m, "home" as MatchOutcome);
     const correct = fav === actual;
     if (correct) hits++;
 

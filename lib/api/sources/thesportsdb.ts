@@ -120,15 +120,20 @@ interface TsdbLineupRow {
   idPlayer: string;
 }
 
-let seasonEventsCache: TsdbEvent[] | null = null;
+// Cached with a TTL (not for the whole server lifetime) so mid-tournament
+// additions/corrections to the season schedule are eventually picked up.
+const SEASON_EVENTS_TTL = 60 * 60 * 1000; // 1h
+let seasonEventsCache: { at: number; events: TsdbEvent[] } | null = null;
 
 async function seasonEvents(): Promise<TsdbEvent[]> {
-  if (seasonEventsCache) return seasonEventsCache;
+  if (seasonEventsCache && Date.now() - seasonEventsCache.at < SEASON_EVENTS_TTL) {
+    return seasonEventsCache.events;
+  }
   const data = await tsdb<{ events: TsdbEvent[] | null }>(
     `eventsseason.php?id=${WORLD_CUP_LEAGUE}&s=${SEASON}`,
   );
-  seasonEventsCache = data.events ?? [];
-  return seasonEventsCache;
+  seasonEventsCache = { at: Date.now(), events: data.events ?? [] };
+  return seasonEventsCache.events;
 }
 
 function eventMatchesFixture(e: TsdbEvent, fixture: Fixture): boolean {

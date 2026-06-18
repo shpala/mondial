@@ -24,12 +24,15 @@ cp .env.example .env.local
 
 ## Scripts
 
-| Command         | Description                          |
-| --------------- | ------------------------------------ |
-| `npm run dev`   | Start the dev server                 |
-| `npm run build` | Production build                     |
-| `npm run start` | Run the production build             |
-| `npm test`      | Run the Vitest unit tests            |
+| Command                  | Description                                   |
+| ------------------------ | --------------------------------------------- |
+| `npm run dev`            | Start the dev server                          |
+| `npm run build`          | Production build                              |
+| `npm run start`          | Run the production build                       |
+| `npm test`               | Run the Vitest unit tests                     |
+| `npm run test:watch`     | Run the unit tests in watch mode              |
+| `npm run backtest`       | Replay the international corpus, print calibration |
+| `npm run backtest:wc2022`| Out-of-sample 2022 World Cup variant bakeoff   |
 
 ## How it works
 

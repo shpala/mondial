@@ -2,6 +2,9 @@
   "name": "mondial",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,7 +12,8 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "backtest": "tsx scripts/backtest.ts"
+    "backtest": "tsx scripts/backtest.ts",
+    "backtest:wc2022": "tsx scripts/wc2022-backtest.ts"
   },
   "dependencies": {
     "next": "16.2.9",

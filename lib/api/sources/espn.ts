@@ -124,7 +124,12 @@ export async function fetchEspnLive(revalidate = 15): Promise<Map<string, EspnLi
         ok = false;
         break;
       }
-      scores[code] = Number(c.score ?? 0) || 0;
+      const score = Number(c.score ?? 0);
+      if (!Number.isFinite(score)) {
+        ok = false; // malformed score — skip the event rather than invent a 0-0
+        break;
+      }
+      scores[code] = score;
       if (c.team?.id != null) teamIdToCode.set(String(c.team.id), code);
     }
     if (!ok) continue;

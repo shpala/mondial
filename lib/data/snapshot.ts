@@ -6,6 +6,7 @@ import type { Fixture, Group, MatchLineups, Squad, Team } from "@/lib/types";
 import { generateLineup, generateSquad } from "./generate";
 import { computeGroupStandings } from "@/lib/standings";
 import { effectiveRating } from "@/lib/prediction";
+import { mulberry32 } from "@/lib/rng";
 
 const GROUP_LETTERS = "ABCDEFGHIJKL".split(""); // 12 groups
 
@@ -97,24 +98,9 @@ function buildTeams(): Team[] {
 export const TEAMS: Team[] = buildTeams();
 
 const TEAM_BY_ID = new Map(TEAMS.map((t) => [t.id, t]));
-const TEAM_BY_CODE = new Map(TEAMS.map((t) => [t.code, t]));
 
 export function teamById(id: number): Team | undefined {
   return TEAM_BY_ID.get(id);
-}
-export function teamByCode(code: string): Team | undefined {
-  return TEAM_BY_CODE.get(code);
-}
-
-function mulberry32(seed: number) {
-  let a = seed >>> 0;
-  return function () {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
 
 const GROUP_STAGE_START = Date.UTC(2026, 5, 11, 16, 0, 0); // 2026-06-11
