@@ -3,9 +3,12 @@
 Held-out test set: the **64** matches with `tournament === "FIFA World Cup"`
 and date in [2022-11-20, 2022-12-18]. Ratings come only from strictly-earlier
 matches (no leakage). The Poisson goal model's `base`/`gamma` were fit on the
-8131 pre-2022-11-20 match tuples by minimizing one-step scoreline NLL.
+8131 pre-2022-11-20 match tuples by minimizing one-step scoreline NLL;
+the Dixon-Coles low-score weight `rho` was then fit on the same train set by
+minimizing the Variant-A exact-scoreline NLL.
 
 Fitted Poisson params: **base = 1.2**, **gamma = 575** (train NLL = 24164.33).
+Fitted Dixon-Coles weight: **rho = -0.03**.
 
 ## Outcome (1X2) metrics — lower is better
 
@@ -27,10 +30,14 @@ The interval **includes 0**, so on this single
 
 | Variant | Scoreline log-loss |
 |---|---|
-| A | 3.0458 |
-| B | 3.0585 |
+| A — Davidson + Dixon-Coles (rho = -0.03) | 3.0440 |
+| A — Davidson, independent Poisson (rho = 0) | 3.0458 |
+| B — raw independent Poisson | 3.0585 |
 
-Variant A reuses the independent-Poisson joint but renormalizes each outcome
-region (home / draw / away) so the region masses match Davidson's 1X2 split.
+Variant A reuses the Poisson joint but renormalizes each outcome region (home /
+draw / away) so the region masses match Davidson's 1X2 split — the same
+construction the shipped `predictScoreline` uses. The Dixon-Coles row is the
+shipped model; the rho = 0 row is the same model without the low-score correction,
+for comparison.
 
 Per-match predictions: `docs/wc2022-predictions.json` (64 rows).

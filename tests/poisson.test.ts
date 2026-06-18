@@ -41,4 +41,10 @@ describe("independent-Poisson goal model", () => {
     for (const row of grid) for (const p of row) total += p;
     expect(total).toBeCloseTo(1, 9);
   });
+
+  it("re-exports the production joint at the independent default (guards the backtest baseline)", () => {
+    // The harness/docs scoreline numbers assume the re-exported default is plain
+    // independent Poisson (no Dixon-Coles). A default flip would move this cell.
+    expect(poissonJoint(1.4, 1.1)[0][0]).toBeCloseTo(0.0821, 4);
+  });
 });
