@@ -14,9 +14,9 @@ describe("davidsonProbs", () => {
     expect(hi).toBeGreaterThan(lo);
   });
 
-  it("defaults scale to 400", () => {
+  it("defaults scale to 300", () => {
     const def = davidsonProbs(1900, 1700, 0.63);
-    const explicit = davidsonProbs(1900, 1700, 0.63, 400);
+    const explicit = davidsonProbs(1900, 1700, 0.63, 300);
     expect(def).toEqual(explicit);
   });
 

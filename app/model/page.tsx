@@ -2,6 +2,7 @@ import { getRawFixtures, getGroups } from "@/lib/data";
 import { gradeOutcomes, gradeQualification } from "@/lib/modelreport";
 import { simulateTournament } from "@/lib/montecarlo";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
+import { TeamFlag } from "@/components/ui/TeamFlag";
 
 export const dynamic = "force-dynamic";
 
@@ -284,7 +285,7 @@ export default async function ModelPage() {
                     <span className="w-4 text-right tabular-nums text-ink-400">
                       {i + 1}
                     </span>
-                    <span className="text-lg">{o.team.flag}</span>
+                    <TeamFlag flag={o.team.flag} alt={o.team.name} size={20} decorative />
                     <span className="text-white">{o.team.name}</span>
                   </span>
                   <span className="tabular-nums font-semibold text-accent-gold">

@@ -24,12 +24,15 @@ cp .env.example .env.local
 
 ## Scripts
 
-| Command         | Description                          |
-| --------------- | ------------------------------------ |
-| `npm run dev`   | Start the dev server                 |
-| `npm run build` | Production build                     |
-| `npm run start` | Run the production build             |
-| `npm test`      | Run the Vitest unit tests            |
+| Command                  | Description                                   |
+| ------------------------ | --------------------------------------------- |
+| `npm run dev`            | Start the dev server                          |
+| `npm run build`          | Production build                              |
+| `npm run start`          | Run the production build                       |
+| `npm test`               | Run the Vitest unit tests                     |
+| `npm run test:watch`     | Run the unit tests in watch mode              |
+| `npm run backtest`       | Replay the international corpus, print calibration |
+| `npm run backtest:wc2022`| Out-of-sample 2022 World Cup variant bakeoff   |
 
 ## How it works
 
@@ -131,9 +134,10 @@ group game — which feeds the goal-difference tiebreaks — comes from a rating
 **Poisson margin** (`lib/scoreline.ts`): Davidson picks win/draw/away, then two
 independent Poisson goal rates fill in a consistent margin, so stronger sides win
 by realistically larger margins. Its `base`/`γ` were fit on pre-2022 results and
-validated out-of-sample on the 2022 World Cup (`docs/wc2022-report.md`), where
-this "Davidson outcome + Poisson margin" model beat a full-Poisson alternative on
-every metric.
+tested out-of-sample on the 2022 World Cup (`docs/wc2022-report.md`), where this
+"Davidson outcome + Poisson margin" model edged a full-Poisson alternative on
+every metric — a gap that, on a single 64-match tournament, is within sampling
+noise (the report includes a paired bootstrap CI).
 
 **Calibration.** `npm run backtest` replays ~12 years of real international
 results (`data/intl_results.csv`), rolls one Elo table forward, and scores the

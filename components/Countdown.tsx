@@ -30,6 +30,8 @@ export function Countdown({
   const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
+    // SSR-safe: the current time can't be read during render without a mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);

@@ -5,6 +5,18 @@
 // have no draws (extra time / penalties decide), so a two-outcome model fits.
 
 import type { Team } from "@/lib/types";
+import { DRAW_NU, HOST_ADVANTAGE, LOGISTIC_SCALE } from "@/lib/model/constants";
+import {
+  GOAL_RHO,
+  conditionScorelineGrid,
+  goalRates,
+  poissonJoint,
+  topScorelines,
+  type ScoreCell,
+} from "@/lib/scoreline";
+
+// Re-exported so existing callers keep importing it from here.
+export { HOST_ADVANTAGE };
 
 export const ROUNDS = [
   "Round of 32",
@@ -16,16 +28,9 @@ export const ROUNDS = [
 
 export type RoundName = (typeof ROUNDS)[number];
 
-/**
- * Home-field bump (in Elo points) applied to the three 2026 co-hosts
- * (USA/Mexico/Canada) whenever they play. 100 is eloratings.net's standard
- * home-advantage constant — worth ~+14 percentage points between even sides.
- */
-export const HOST_ADVANTAGE = 100;
-
 /** Probability that team A beats team B in a single knockout match. */
 export function winProbability(ratingA: number, ratingB: number): number {
-  return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+  return 1 / (1 + Math.pow(10, (ratingB - ratingA) / LOGISTIC_SCALE));
 }
 
 /**
@@ -35,13 +40,13 @@ export function winProbability(ratingA: number, ratingB: number): number {
  *
  * `scale` is the logistic spread (the Elo "400"): smaller → sharper, more
  * confident probabilities for the same rating gap; larger → flatter. Defaults to
- * 400 so production is unchanged; the backtest sweeps it to calibrate confidence.
+ * LOGISTIC_SCALE so production is unchanged; the backtest sweeps it to calibrate.
  */
 export function davidsonProbs(
   ratingA: number,
   ratingB: number,
   nu: number,
-  scale = 400,
+  scale = LOGISTIC_SCALE,
 ): { home: number; draw: number; away: number } {
   const a = Math.pow(10, ratingA / scale);
   const b = Math.pow(10, ratingB / scale);
@@ -64,6 +69,52 @@ export function predictWinProbability(
   b: Pick<Team, "rating" | "host">,
 ): number {
   return winProbability(effectiveRating(a), effectiveRating(b));
+}
+
+export interface ScorelinePrediction {
+  /** Calibrated home/draw/away masses the scoreline grid is conditioned on. */
+  outcome: { home: number; draw: number; away: number };
+  /** Single most likely scoreline (identical to `top[0]`). */
+  mostLikely: ScoreCell;
+  /** The most likely scorelines, most likely first. */
+  top: ScoreCell[];
+  /** Full conditioned P(i,j) grid (home goals = row, away goals = column). */
+  grid: number[][];
+}
+
+/**
+ * Predict a full scoreline distribution for a single fixture. The calibrated
+ * Davidson model sets the home/draw/away masses; the rating-aware Poisson goal
+ * model (with the Dixon-Coles low-score correction) shapes the scorelines within
+ * each outcome region, so the displayed scores stay consistent with the site's
+ * win probabilities. Ratings are host-adjusted exactly as `predictWinProbability`
+ * does. Pure — runs on the server and in tests.
+ *
+ * `decisive` (knockout mode): a knockout tie is settled by extra time / penalties,
+ * so there is no drawn result. Setting it zeroes the draw region and conditions on
+ * the two-outcome model (`winProbability`) the bracket already uses, so the most
+ * likely score is always a decisive one.
+ */
+export function predictScoreline(
+  home: Pick<Team, "rating" | "host">,
+  away: Pick<Team, "rating" | "host">,
+  { topN = 3, decisive = false }: { topN?: number; decisive?: boolean } = {},
+): ScorelinePrediction {
+  const effHome = effectiveRating(home);
+  const effAway = effectiveRating(away);
+  const outcome = decisive
+    ? (() => {
+        const home = winProbability(effHome, effAway);
+        return { home, draw: 0, away: 1 - home };
+      })()
+    : davidsonProbs(effHome, effAway, DRAW_NU);
+  const { lambdaHome, lambdaAway } = goalRates(effHome, effAway);
+  const grid = conditionScorelineGrid(
+    poissonJoint(lambdaHome, lambdaAway, GOAL_RHO),
+    outcome,
+  );
+  const top = topScorelines(grid, topN);
+  return { outcome, mostLikely: top[0], top, grid };
 }
 
 export interface Matchup {
@@ -109,26 +160,24 @@ export function bracketSeedOrder(n: number): number[] {
 }
 
 /**
- * Build the bracket skeleton from up to 32 qualified teams, ordered strongest
- * first. Slots are filled for the first round; later rounds are empty until
- * resolved.
+ * Build a 32-slot bracket skeleton from teams already placed in their opening
+ * positions: `slotted[2i]`/`slotted[2i+1]` are the top/bottom of first-round
+ * match `i`, and adjacent matches meet in the next round. Later rounds are empty
+ * until resolved. This is the placement-agnostic core; callers decide the slot
+ * order (rating seeding, or the official group-position template).
  */
-export function buildBracket(qualified: Team[]): Bracket {
+export function buildBracketFromSlots(slotted: (Team | null)[]): Bracket {
   const size = 32;
-  const teams = qualified.slice(0, size);
-  const order = bracketSeedOrder(size);
 
   const first: Matchup[] = [];
   for (let i = 0; i < size / 2; i++) {
-    const topSeed = order[i * 2];
-    const bottomSeed = order[i * 2 + 1];
     first.push({
       id: `R0-${i}`,
       round: ROUNDS[0],
       roundIndex: 0,
       slot: i,
-      top: teams[topSeed - 1] ?? null,
-      bottom: teams[bottomSeed - 1] ?? null,
+      top: slotted[i * 2] ?? null,
+      bottom: slotted[i * 2 + 1] ?? null,
       topWinProb: null,
       winnerId: null,
       source: null,
@@ -156,6 +205,17 @@ export function buildBracket(qualified: Team[]): Bracket {
   }
 
   return { rounds, championId: null };
+}
+
+/**
+ * Build the bracket skeleton from up to 32 qualified teams, ordered strongest
+ * first, using standard tennis-style seeding (seed 1 vs 32, etc.). Used for
+ * tests and as a generic utility; the live app slots by official group position
+ * (see lib/bracket).
+ */
+export function buildBracket(qualified: Team[]): Bracket {
+  const order = bracketSeedOrder(32);
+  return buildBracketFromSlots(order.map((seed) => qualified[seed - 1] ?? null));
 }
 
 function winnerOf(m: Matchup): Team | null {

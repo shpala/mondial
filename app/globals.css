@@ -22,6 +22,18 @@ html {
     outline-offset: 2px;
     border-radius: 4px;
   }
+
+  /* SVG groups don't render a CSS outline reliably, so the pitch tokens use an
+     explicit focus ring (a child <circle>) shown only on keyboard focus. */
+  .pitch-token {
+    outline: none;
+  }
+  .pitch-token .pitch-focus-ring {
+    opacity: 0;
+  }
+  .pitch-token:focus-visible .pitch-focus-ring {
+    opacity: 1;
+  }
 }
 
 /* Respect users who ask for less motion. */

@@ -8,6 +8,7 @@ import "server-only";
 import type { Lineup, Player, Position, Team } from "@/lib/types";
 import { resolveTeam } from "@/lib/teams/registry";
 import { gridForFormation } from "@/lib/data/generate";
+import { fetchWithTimeout } from "@/lib/api/http";
 
 const BASE =
   "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
@@ -103,7 +104,7 @@ export async function fetchEspnLive(revalidate = 15): Promise<Map<string, EspnLi
   const tomorrow = new Date(now.getTime() + 24 * 3600 * 1000);
   const url = `${BASE}?dates=${ymd(yesterday)}-${ymd(tomorrow)}`;
 
-  const res = await fetch(url, { next: { revalidate } });
+  const res = await fetchWithTimeout(url, { next: { revalidate } });
   if (!res.ok) throw new Error(`espn -> ${res.status}`);
   const data = (await res.json()) as { events?: EspnEvent[] };
 
@@ -123,7 +124,12 @@ export async function fetchEspnLive(revalidate = 15): Promise<Map<string, EspnLi
         ok = false;
         break;
       }
-      scores[code] = Number(c.score ?? 0) || 0;
+      const score = Number(c.score ?? 0);
+      if (!Number.isFinite(score)) {
+        ok = false; // malformed score — skip the event rather than invent a 0-0
+        break;
+      }
+      scores[code] = score;
       if (c.team?.id != null) teamIdToCode.set(String(c.team.id), code);
     }
     if (!ok) continue;
@@ -261,7 +267,7 @@ export async function fetchEspnLineup(
   revalidate = 30,
 ): Promise<{ home: Lineup | null; away: Lineup | null }> {
   const url = `${SUMMARY}?event=${encodeURIComponent(eventId)}`;
-  const res = await fetch(url, { next: { revalidate } });
+  const res = await fetchWithTimeout(url, { next: { revalidate } });
   if (!res.ok) throw new Error(`espn summary -> ${res.status}`);
   const data = (await res.json()) as EspnSummary;
 

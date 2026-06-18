@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Team } from "@/lib/types";
 import {
-  buildBracket,
   resolveBracket,
   winnerProb,
+  type Bracket,
   type Matchup,
 } from "@/lib/prediction";
 import { bracketStorageOk, useBracketStore } from "@/store/bracket";
@@ -30,6 +30,10 @@ function pairKey(a: number, b: number): string {
 
 // Short labels for the phone round pager (one per round, R32 → Final).
 const SHORT_ROUNDS = ["R32", "R16", "QF", "SF", "Final"];
+
+// Stable empty-overrides reference for model mode / pre-hydration, so the resolve
+// memo and the connector-measuring effect don't re-run on every unrelated render.
+const NO_OVERRIDES: Record<string, number> = {};
 
 type WinnerTone = "result" | "pick" | "model";
 
@@ -85,22 +89,19 @@ function Slot({
       : isWinner && winnerTone === "model" && prob != null
         ? `, ${Math.round(prob * 100)} percent model win probability`
         : "";
+  const label = clickable
+    ? `${team.name}, ${stateWord}${metric}, activate to pick as winner`
+    : `${team.name}, ${stateWord}${metric}`;
+  const className = `flex h-11 w-full items-center text-left transition sm:h-9 ${
+    compact ? "gap-1 px-1.5 sm:gap-1.5 sm:px-2" : "gap-1.5 px-2"
+  } ${
+    clickable
+      ? "cursor-pointer hover:bg-ink-700/60 active:bg-ink-600"
+      : "cursor-default"
+  } ${isWinner ? WINNER_CLASS[winnerTone] : dimmed ? "text-ink-400" : ""}`;
 
-  return (
-    <button
-      type="button"
-      onClick={clickable ? onPick : undefined}
-      disabled={!interactive && !locked}
-      aria-disabled={locked || undefined}
-      aria-label={`${team.name}, ${stateWord}${metric}`}
-      className={`flex h-11 w-full items-center text-left transition sm:h-9 ${
-        compact ? "gap-1 px-1.5 sm:gap-1.5 sm:px-2" : "gap-1.5 px-2"
-      } ${
-        clickable
-          ? "cursor-pointer hover:bg-ink-700/60 active:bg-ink-600"
-          : "cursor-default"
-      } ${isWinner ? WINNER_CLASS[winnerTone] : dimmed ? "text-ink-400" : ""}`}
-    >
+  const content = (
+    <>
       <TeamFlag flag={team.flag} alt={team.name} size={16} decorative />
       {/* team code is always 2-3 chars — never truncate it */}
       <span className="shrink-0 text-xs">{team.code}</span>
@@ -121,6 +122,27 @@ function Slot({
           </span>
         )
       )}
+    </>
+  );
+
+  // Only a pickable slot is a <button>. Played ties are wrapped in a <Link>, so
+  // a nested <button> there would be invalid HTML (a double tab stop, broken
+  // activation); model-mode slots aren't actionable either. Render those static.
+  if (!clickable) {
+    return (
+      <div className={className} aria-label={label}>
+        {content}
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onPick}
+      aria-label={label}
+      className={className}
+    >
+      {content}
     </button>
   );
 }
@@ -261,10 +283,10 @@ function MatchupCard({
 }
 
 export function BracketTree({
-  qualified,
+  skeleton,
   results = {},
 }: {
-  qualified: Team[];
+  skeleton: Bracket;
   results?: ResultMap;
 }) {
   const { overrides, pick, reset, undoReset } = useBracketStore();
@@ -280,6 +302,9 @@ export function BracketTree({
   // On mount, acknowledge any picks restored from localStorage (the bracket
   // re-resolves into them once `mounted` flips — see the fade below).
   useEffect(() => {
+    // Hydration flag: SSR renders the model baseline, the client flips to saved
+    // picks after mount (avoids an SSR/client mismatch).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     const n = Object.keys(useBracketStore.getState().overrides).length;
     if (n === 0) return;
@@ -295,8 +320,7 @@ export function BracketTree({
     return () => clearTimeout(id);
   }, [undoToast]);
 
-  const skeleton = useMemo(() => buildBracket(qualified), [qualified]);
-  const effectiveOverrides = mode === "you" && mounted ? overrides : {};
+  const effectiveOverrides = mode === "you" && mounted ? overrides : NO_OVERRIDES;
 
   // Resolve once for pairings, derive forced winners from real results, resolve
   // again so actual outcomes take precedence over model + user picks.
@@ -321,9 +345,18 @@ export function BracketTree({
     return { resolved: finalBracket, playedNodes: played };
   }, [skeleton, effectiveOverrides, results]);
 
+  // Team lookup for the champion badge, drawn from the placed R32 field.
+  const teamsById = useMemo(() => {
+    const m = new Map<number, Team>();
+    for (const mt of skeleton.rounds[0]) {
+      if (mt.top) m.set(mt.top.id, mt.top);
+      if (mt.bottom) m.set(mt.bottom.id, mt.bottom);
+    }
+    return m;
+  }, [skeleton]);
   const champion =
     resolved.championId != null
-      ? qualified.find((t) => t.id === resolved.championId) ?? null
+      ? teamsById.get(resolved.championId) ?? null
       : null;
 
   const overrideCount = Object.keys(overrides).length;
@@ -333,6 +366,8 @@ export function BracketTree({
   // --- SVG connector lines between rounds (measured from the laid-out cards) ---
   const contentRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[][]>([]);
+  // Round-pager buttons, for roving-tabindex arrow-key navigation.
+  const roundTabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const setCardRef =
     (r: number, i: number) => (el: HTMLDivElement | null) => {
       if (!cardRefs.current[r]) cardRefs.current[r] = [];
@@ -548,8 +583,25 @@ export function BracketTree({
               <button
                 key={ri}
                 type="button"
+                ref={(el) => {
+                  roundTabRefs.current[ri] = el;
+                }}
                 aria-pressed={selectedRound === ri}
+                // Roving tabindex: only the active round is in the tab order;
+                // ArrowLeft/Right move between rounds (a panel switcher).
+                tabIndex={selectedRound === ri ? 0 : -1}
                 onClick={() => setSelectedRound(ri)}
+                onKeyDown={(e) => {
+                  if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+                  e.preventDefault();
+                  const n = resolved.rounds.length;
+                  const next =
+                    e.key === "ArrowRight"
+                      ? (ri + 1) % n
+                      : (ri - 1 + n) % n;
+                  setSelectedRound(next);
+                  roundTabRefs.current[next]?.focus();
+                }}
                 className={`min-h-11 flex-1 whitespace-nowrap rounded-md px-1 text-xs font-semibold transition ${
                   selectedRound === ri
                     ? "bg-ink-700 text-white"

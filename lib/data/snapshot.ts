@@ -6,6 +6,8 @@ import type { Fixture, Group, MatchLineups, Squad, Team } from "@/lib/types";
 import { generateLineup, generateSquad } from "./generate";
 import { computeGroupStandings } from "@/lib/standings";
 import { effectiveRating } from "@/lib/prediction";
+import { mulberry32 } from "@/lib/rng";
+import { registryId } from "@/lib/teams/registry";
 
 const GROUP_LETTERS = "ABCDEFGHIJKL".split(""); // 12 groups
 
@@ -38,21 +40,21 @@ const POT2: Seed[] = [
   ["Colombia", "COL", "🇨🇴", 1982],
   ["Senegal", "SEN", "🇸🇳", 1860],
   ["Switzerland", "SUI", "🇨🇭", 1865],
-  ["Denmark", "DEN", "🇩🇰", 1869],
+  ["Turkey", "TUR", "🇹🇷", 1849],
   ["Korea Republic", "KOR", "🇰🇷", 1786],
   ["Ecuador", "ECU", "🇪🇨", 1890],
   ["Austria", "AUT", "🇦🇹", 1830],
   ["Australia", "AUS", "🇦🇺", 1839],
 ];
 const POT3: Seed[] = [
-  ["Nigeria", "NGA", "🇳🇬", 1767],
+  ["Scotland", "SCO", "🏴󠁧󠁢󠁳󠁣󠁴󠁿", 1794],
   ["Norway", "NOR", "🇳🇴", 1914],
   ["Egypt", "EGY", "🇪🇬", 1696],
-  ["Serbia", "SRB", "🇷🇸", 1734],
+  ["Czech Republic", "CZE", "🇨🇿", 1712],
   ["Sweden", "SWE", "🇸🇪", 1755],
-  ["Poland", "POL", "🇵🇱", 1710],
-  ["Ukraine", "UKR", "🇺🇦", 1780],
-  ["Wales", "WAL", "🏴", 1682],
+  ["DR Congo", "COD", "🇨🇩", 1652],
+  ["Bosnia & Herzegovina", "BIH", "🇧🇦", 1616],
+  ["Iraq", "IRQ", "🇮🇶", 1607],
   ["Côte d'Ivoire", "CIV", "🇨🇮", 1743],
   ["Tunisia", "TUN", "🇹🇳", 1585],
   ["Iran", "IRN", "🇮🇷", 1772],
@@ -66,8 +68,8 @@ const POT4: Seed[] = [
   ["Panama", "PAN", "🇵🇦", 1730],
   ["Cape Verde", "CPV", "🇨🇻", 1606],
   ["Uzbekistan", "UZB", "🇺🇿", 1714],
-  ["Jamaica", "JAM", "🇯🇲", 1527],
-  ["Honduras", "HON", "🇭🇳", 1570],
+  ["Haiti", "HAI", "🇭🇹", 1536],
+  ["Curaçao", "CUW", "🇨🇼", 1427],
   ["South Africa", "RSA", "🇿🇦", 1511],
   ["Algeria", "ALG", "🇩🇿", 1772],
   ["Paraguay", "PAR", "🇵🇾", 1780],
@@ -75,13 +77,18 @@ const POT4: Seed[] = [
 
 function buildTeams(): Team[] {
   const teams: Team[] = [];
-  let id = 1;
   [POT1, POT2, POT3, POT4].forEach((pot, potIndex) => {
     pot.forEach((seed, i) => {
       const groupIndex = potIndex % 2 === 0 ? i : GROUP_LETTERS.length - 1 - i;
       const [name, code, flag, rating] = seed;
+      // Reuse the canonical registry id so a team has one stable id regardless
+      // of whether it came from the live spine or this snapshot.
+      const id = registryId(code);
+      if (id == null) {
+        throw new Error(`snapshot team ${code} is not in the canonical registry`);
+      }
       teams.push({
-        id: id++,
+        id,
         name,
         code,
         flag,
@@ -97,24 +104,9 @@ function buildTeams(): Team[] {
 export const TEAMS: Team[] = buildTeams();
 
 const TEAM_BY_ID = new Map(TEAMS.map((t) => [t.id, t]));
-const TEAM_BY_CODE = new Map(TEAMS.map((t) => [t.code, t]));
 
 export function teamById(id: number): Team | undefined {
   return TEAM_BY_ID.get(id);
-}
-export function teamByCode(code: string): Team | undefined {
-  return TEAM_BY_CODE.get(code);
-}
-
-function mulberry32(seed: number) {
-  let a = seed >>> 0;
-  return function () {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
 
 const GROUP_STAGE_START = Date.UTC(2026, 5, 11, 16, 0, 0); // 2026-06-11

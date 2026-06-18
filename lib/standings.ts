@@ -69,6 +69,10 @@ export function computeGroupStandings(
         }
       });
 
+    // Tiebreak ladder: points → overall goal difference → overall goals scored
+    // → rating. NOTE: this omits FIFA's head-to-head step (points/GD/goals among
+    // the teams still level), using rating as the deterministic deep tiebreak
+    // instead — a deliberate simplification (see tests/standings.test.ts).
     const sorted = [...rows.values()].sort((x, y) => {
       if (y.points !== x.points) return y.points - x.points;
       const xgd = x.goalsFor - x.goalsAgainst;

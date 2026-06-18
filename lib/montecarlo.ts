@@ -14,36 +14,20 @@ import { computeGroupStandings } from "@/lib/standings";
 import { qualifiedTeams } from "@/lib/qualifiers";
 import {
   ROUNDS,
-  buildBracket,
   davidsonProbs,
   effectiveRating,
   predictWinProbability,
 } from "@/lib/prediction";
+import { buildOfficialBracket } from "@/lib/bracket";
 import {
   goalRates,
   sampleScoreline,
   type Outcome,
 } from "@/lib/scoreline";
+import { DRAW_NU } from "@/lib/model/constants";
+import { mulberry32 } from "@/lib/rng";
 
 const DEFAULT_RUNS = 10_000;
-
-// Davidson draw parameter: ν = 0.70 → ~26% draws between even sides. Conditional
-// on a decisive result the model collapses exactly to `winProbability`. Nudged up
-// from 0.63 after the backtest (`npm run backtest`) showed the model slightly
-// under-predicted draws; 0.70 captures nearly all the calibration gain.
-const DRAW_NU = 0.7;
-
-/** Deterministic PRNG so odds are stable between renders (seeded from results). */
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return function () {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 /** Win / draw / loss probabilities for a group match (Davidson on host-adj Elo). */
 export function outcomeProbs(
@@ -178,8 +162,8 @@ export function simulateTournament(
     const qualified = qualifiedTeams(groups);
     for (const t of qualified) tally(t).q++;
 
-    // --- Knockouts: resolve the bracket as weighted coin flips.
-    const bracket = buildBracket(qualified);
+    // --- Knockouts: resolve the official bracket as weighted coin flips.
+    const bracket = buildOfficialBracket(groups);
     const resolved = new Map<string, Team | null>();
     for (let r = 0; r < bracket.rounds.length; r++) {
       for (const m of bracket.rounds[r]) {

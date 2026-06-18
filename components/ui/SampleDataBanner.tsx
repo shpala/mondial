@@ -1,7 +1,8 @@
-import { usingSampleData } from "@/lib/data";
+import { getDataStatus } from "@/lib/data";
 
-export function SampleDataBanner() {
-  if (!usingSampleData()) return null;
+export async function SampleDataBanner() {
+  const { usingSample } = await getDataStatus();
+  if (!usingSample) return null;
   return (
     <div className="mb-6 flex items-start gap-3 rounded-xl border border-accent-gold/30 bg-accent-gold/10 px-4 py-3 text-sm text-amber-200">
       <span className="text-base leading-none">⚠️</span>

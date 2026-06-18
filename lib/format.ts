@@ -85,13 +85,3 @@ export function positionLabel(pos: string): string {
       return pos;
   }
 }
-
-/** Deterministic accent color from a team code, for chips/borders. */
-export function teamAccent(code: string): string {
-  let hash = 0;
-  for (let i = 0; i < code.length; i++) {
-    hash = (hash * 31 + code.charCodeAt(i)) >>> 0;
-  }
-  const hue = hash % 360;
-  return `hsl(${hue} 70% 55%)`;
-}
