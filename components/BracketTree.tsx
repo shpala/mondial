@@ -31,6 +31,10 @@ function pairKey(a: number, b: number): string {
 // Short labels for the phone round pager (one per round, R32 → Final).
 const SHORT_ROUNDS = ["R32", "R16", "QF", "SF", "Final"];
 
+// Stable empty-overrides reference for model mode / pre-hydration, so the resolve
+// memo and the connector-measuring effect don't re-run on every unrelated render.
+const NO_OVERRIDES: Record<string, number> = {};
+
 type WinnerTone = "result" | "pick" | "model";
 
 const WINNER_CLASS: Record<WinnerTone, string> = {
@@ -313,7 +317,7 @@ export function BracketTree({
     return () => clearTimeout(id);
   }, [undoToast]);
 
-  const effectiveOverrides = mode === "you" && mounted ? overrides : {};
+  const effectiveOverrides = mode === "you" && mounted ? overrides : NO_OVERRIDES;
 
   // Resolve once for pairings, derive forced winners from real results, resolve
   // again so actual outcomes take precedence over model + user picks.

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getFixtures, getSquad, getTeam } from "@/lib/data";
@@ -10,6 +11,20 @@ import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { EstimatedNotice } from "@/components/ui/EstimatedData";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const team = await getTeam(Number(id));
+  if (!team) return { title: "Team not found" };
+  return {
+    title: `${team.name} — squad & title odds`,
+    description: `${team.name}'s 2026 World Cup squad (Group ${team.group}), starting line-ups, and the model's title odds.`,
+  };
+}
 
 /** Probability → sentence-friendly percentage (never a bare dash). */
 function oddsPct(p: number): string {
