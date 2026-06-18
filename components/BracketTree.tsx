@@ -302,6 +302,9 @@ export function BracketTree({
   // On mount, acknowledge any picks restored from localStorage (the bracket
   // re-resolves into them once `mounted` flips — see the fade below).
   useEffect(() => {
+    // Hydration flag: SSR renders the model baseline, the client flips to saved
+    // picks after mount (avoids an SSR/client mismatch).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     const n = Object.keys(useBracketStore.getState().overrides).length;
     if (n === 0) return;

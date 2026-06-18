@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Fixture, Team } from "@/lib/types";
 import { gradeOutcomes, gradeQualification } from "@/lib/modelreport";
-import type { Group } from "@/lib/types";
 import { simulateTournament } from "@/lib/montecarlo";
 import { computeGroupStandings } from "@/lib/standings";
 

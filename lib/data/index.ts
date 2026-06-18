@@ -26,7 +26,6 @@ import {
   TEAMS,
   matchLineups as snapshotLineups,
   resolveFixtureStatuses,
-  squadForTeam,
   standings as snapshotStandings,
   teamById,
 } from "./snapshot";
