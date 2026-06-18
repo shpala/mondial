@@ -363,6 +363,8 @@ export function BracketTree({
   // --- SVG connector lines between rounds (measured from the laid-out cards) ---
   const contentRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[][]>([]);
+  // Round-pager buttons, for roving-tabindex arrow-key navigation.
+  const roundTabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const setCardRef =
     (r: number, i: number) => (el: HTMLDivElement | null) => {
       if (!cardRefs.current[r]) cardRefs.current[r] = [];
@@ -578,8 +580,25 @@ export function BracketTree({
               <button
                 key={ri}
                 type="button"
+                ref={(el) => {
+                  roundTabRefs.current[ri] = el;
+                }}
                 aria-pressed={selectedRound === ri}
+                // Roving tabindex: only the active round is in the tab order;
+                // ArrowLeft/Right move between rounds (a panel switcher).
+                tabIndex={selectedRound === ri ? 0 : -1}
                 onClick={() => setSelectedRound(ri)}
+                onKeyDown={(e) => {
+                  if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+                  e.preventDefault();
+                  const n = resolved.rounds.length;
+                  const next =
+                    e.key === "ArrowRight"
+                      ? (ri + 1) % n
+                      : (ri - 1 + n) % n;
+                  setSelectedRound(next);
+                  roundTabRefs.current[next]?.focus();
+                }}
                 className={`min-h-11 flex-1 whitespace-nowrap rounded-md px-1 text-xs font-semibold transition ${
                   selectedRound === ri
                     ? "bg-ink-700 text-white"

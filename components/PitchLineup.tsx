@@ -170,7 +170,7 @@ export function PitchLineup({
             <g
               key={`${t.player.id}-${i}`}
               transform={`translate(${cx} ${cy})`}
-              className="cursor-pointer"
+              className="pitch-token cursor-pointer"
               role="button"
               tabIndex={0}
               aria-label={`#${t.player.number ?? "–"} ${t.player.name}`}
@@ -184,6 +184,14 @@ export function PitchLineup({
             >
               {/* ~44px transparent touch target (visible dot stays small) */}
               <circle r={6} fill="transparent" style={{ pointerEvents: "all" }} />
+              {/* keyboard focus ring (CSS-toggled; SVG ignores outline) */}
+              <circle
+                className="pitch-focus-ring"
+                r={6}
+                fill="none"
+                stroke="#fbbf24"
+                strokeWidth={0.9}
+              />
               <circle
                 r={isSel ? 4.4 : 3.6}
                 fill={t.color}
