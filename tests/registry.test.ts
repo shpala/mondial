@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import {
   allCountries,
+  hostNations,
   registryId,
   resolveTeam,
   teamByIdRegistry,
@@ -64,5 +65,14 @@ describe("registry identity", () => {
     const t = resolveTeam("Brazil")!;
     expect(registryId("BRA")).toBe(t.id);
     expect(teamByIdRegistry(t.id)?.code).toBe("BRA");
+  });
+});
+
+describe("hostNations", () => {
+  it("returns the three 2026 co-hosts north-to-south with their flags", () => {
+    const hosts = hostNations();
+    expect(hosts.map((t) => t.code)).toEqual(["CAN", "USA", "MEX"]);
+    expect(hosts.every((t) => t.host === true)).toBe(true);
+    expect(hosts.every((t) => t.flag.length > 0)).toBe(true);
   });
 });

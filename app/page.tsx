@@ -5,6 +5,13 @@ import { MatchCard } from "@/components/MatchCard";
 import { ModelReportCard } from "@/components/ModelReportCard";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { TeamFlag } from "@/components/ui/TeamFlag";
+import { hostNations } from "@/lib/teams/registry";
+
+// Co-host nations shown in the hero eyebrow. Flags come from the registry (the
+// canonical source) and render through <TeamFlag>, so they fall back to images
+// on platforms without flag-emoji fonts (Windows) instead of bare letters.
+const HOSTS = hostNations();
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +59,12 @@ export default async function DashboardPage() {
       <section className="card mb-8 overflow-hidden">
         <div className="relative bg-gradient-to-br from-pitch-700/50 via-ink-800 to-ink-800 px-6 py-6 sm:py-12">
           <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-pitch-50/80">
-            <span aria-hidden>🇨🇦 🇺🇸 🇲🇽</span> FIFA World Cup
+            <span className="inline-flex items-center gap-1">
+              {HOSTS.map((h) => (
+                <TeamFlag key={h.code} flag={h.flag} alt={h.name} size={16} decorative />
+              ))}
+            </span>{" "}
+            FIFA World Cup
           </p>
           <h1 className="font-display text-3xl font-extrabold leading-[0.95] tracking-tight sm:text-6xl">
             Mondial <span className="text-accent-gold">2026</span>
