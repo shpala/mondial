@@ -13,7 +13,10 @@ const display = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Mondial — 2026 World Cup",
+  title: {
+    default: "Mondial — 2026 World Cup",
+    template: "%s · Mondial",
+  },
   description:
     "Current 2026 FIFA World Cup squads, starting lineups, and an interactive prediction bracket.",
 };

@@ -17,6 +17,7 @@ import type {
   Team,
 } from "@/lib/types";
 import { resolveTeam } from "@/lib/teams/registry";
+import { fetchWithTimeout } from "@/lib/api/http";
 
 const KEY = process.env.THESPORTSDB_KEY || "3";
 const BASE = `https://www.thesportsdb.com/api/v1/json/${KEY}`;
@@ -26,7 +27,7 @@ const MIN_USEFUL_XI = 7; // below this, fall back to a generated lineup
 const MIN_USEFUL_SQUAD = 18; // below this (or no GK), fall back to a generated squad
 
 async function tsdb<T>(path: string, revalidate = 600): Promise<T> {
-  const res = await fetch(`${BASE}/${path}`, {
+  const res = await fetchWithTimeout(`${BASE}/${path}`, {
     next: { revalidate },
     headers: { "User-Agent": "mondial-app" },
   });
@@ -119,15 +120,20 @@ interface TsdbLineupRow {
   idPlayer: string;
 }
 
-let seasonEventsCache: TsdbEvent[] | null = null;
+// Cached with a TTL (not for the whole server lifetime) so mid-tournament
+// additions/corrections to the season schedule are eventually picked up.
+const SEASON_EVENTS_TTL = 60 * 60 * 1000; // 1h
+let seasonEventsCache: { at: number; events: TsdbEvent[] } | null = null;
 
 async function seasonEvents(): Promise<TsdbEvent[]> {
-  if (seasonEventsCache) return seasonEventsCache;
+  if (seasonEventsCache && Date.now() - seasonEventsCache.at < SEASON_EVENTS_TTL) {
+    return seasonEventsCache.events;
+  }
   const data = await tsdb<{ events: TsdbEvent[] | null }>(
     `eventsseason.php?id=${WORLD_CUP_LEAGUE}&s=${SEASON}`,
   );
-  seasonEventsCache = data.events ?? [];
-  return seasonEventsCache;
+  seasonEventsCache = { at: Date.now(), events: data.events ?? [] };
+  return seasonEventsCache.events;
 }
 
 function eventMatchesFixture(e: TsdbEvent, fixture: Fixture): boolean {

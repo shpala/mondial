@@ -14,8 +14,7 @@
 
 import type { Fixture, Team } from "@/lib/types";
 import { effectiveRating, winProbability } from "@/lib/prediction";
-
-const K = 60; // World Cup finals weight
+import { ELO_K } from "@/lib/model/constants";
 
 /** Goal-difference multiplier from eloratings.net. */
 function goalMultiplier(goalDiff: number): number {
@@ -35,7 +34,7 @@ export function eloUpdate(
   effAway: number,
   homeGoals: number,
   awayGoals: number,
-  k: number = K,
+  k: number = ELO_K,
 ): number {
   const we = winProbability(effHome, effAway);
   const w = homeGoals > awayGoals ? 1 : homeGoals < awayGoals ? 0 : 0.5;

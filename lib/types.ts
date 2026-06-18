@@ -1,6 +1,6 @@
-// Domain models for the app. These are the shapes the UI consumes — the
-// API-Football client (lib/api/*) and the seeded snapshot both produce these,
-// so screens never see raw provider JSON.
+// Domain models for the app. These are the shapes the UI consumes — the source
+// adapters in lib/api/sources/* (openfootball, ESPN, TheSportsDB) and the
+// bundled snapshot both produce these, so screens never see raw provider JSON.
 
 export type Position = "GK" | "DEF" | "MID" | "FWD";
 
@@ -55,6 +55,10 @@ export interface Group {
 
 export type FixtureStatus = "scheduled" | "live" | "finished";
 
+/** A match result from the home side's perspective. The one shared union used
+ *  by the prediction, scoreline, Monte Carlo, model-report and backtest code. */
+export type MatchOutcome = "home" | "draw" | "away";
+
 export interface Goal {
   side: "home" | "away"; // which team the goal counted for
   minute: string; // "9", "45+2", "90+3"
@@ -82,7 +86,7 @@ export interface Fixture {
 
 export interface LineupPlayer {
   player: Player;
-  /** Grid position "row:col" as provided by API-Football, e.g. "2:3". */
+  /** Grid position "row:col" (1-indexed, back-to-front rows), e.g. "2:3". */
   grid: string | null;
 }
 

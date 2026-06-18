@@ -25,14 +25,17 @@ export function TeamFlag({
   const [emojiUnsupported, setEmojiUnsupported] = useState(false);
 
   useEffect(() => {
+    // Client-only flag-emoji feature detection; can't run during SSR.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (cdnUrl && !flagEmojiSupported()) setEmojiUnsupported(true);
   }, [cdnUrl]);
 
   const src = directUrl ?? (emojiUnsupported ? cdnUrl : null);
 
   if (src) {
-    // eslint-disable-next-line @next/next/no-img-element
     return (
+      // Flags are tiny remote SVGs; next/image adds no benefit and needs config.
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={src}
         alt={decorative ? "" : alt}

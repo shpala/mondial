@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getFixtures, getMatchLineups } from "@/lib/data";
 import { PitchLineup } from "@/components/PitchLineup";
@@ -11,6 +12,21 @@ import { formatKickoff } from "@/lib/format";
 import { predictWinProbability } from "@/lib/prediction";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const fixture = (await getFixtures()).find((f) => f.id === Number(id));
+  if (!fixture) return { title: "Match not found" };
+  const tie = `${fixture.home.name} v ${fixture.away.name}`;
+  return {
+    title: `${tie} — line-ups & prediction`,
+    description: `${tie} at the 2026 World Cup (${fixture.stage}): starting line-ups, live score and the model's prediction.`,
+  };
+}
 
 // Slow region: lineups come from TheSportsDB (with generated fallback). Streamed
 // under Suspense so the score header paints immediately from the spine.
