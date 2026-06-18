@@ -133,3 +133,8 @@ export function teamByIdRegistry(id: number, group = "?"): Team | null {
 export function allCountries(): Team[] {
   return COUNTRIES.map((c) => toTeam(c, "?"));
 }
+
+/** The three 2026 co-hosts as Teams, north-to-south (Canada, USA, Mexico). */
+export function hostNations(): Team[] {
+  return ["CAN", "USA", "MEX"].map((code) => teamByCodeRegistry(code)!);
+}

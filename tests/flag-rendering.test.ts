@@ -28,13 +28,38 @@ function tsxFiles(dir: string): string[] {
 // child render (e.g. `>{o.team.flag}<`), not a prop pass (`flag={o.team.flag}`).
 const RAW_FLAG_RENDER = /[^=]\{[\w.]*\.flag\}/;
 
+// Hardcoded flag-emoji literals have the same no-fallback problem: a
+// regional-indicator pair ("🇨🇦") or a subdivision-tag flag ("🏴…") drops to
+// the bare letters on a flag-less platform. They must go through <TeamFlag> too.
+function hasFlagEmojiLiteral(line: string): boolean {
+  for (const ch of line) {
+    const cp = ch.codePointAt(0)!;
+    if (cp >= 0x1f1e6 && cp <= 0x1f1ff) return true; // regional indicator
+    if (cp === 0x1f3f4) return true; // subdivision tag flag base (gb-eng, etc.)
+  }
+  return false;
+}
+
+const SOURCE_DIRS = ["app", "components"];
+
 describe("flag rendering", () => {
   it("renders every flag through <TeamFlag>, never as a raw JSX child", () => {
     const violations: string[] = [];
-    for (const file of [...tsxFiles("app"), ...tsxFiles("components")]) {
+    for (const file of SOURCE_DIRS.flatMap(tsxFiles)) {
       const lines = readFileSync(join(ROOT, file), "utf8").split("\n");
       lines.forEach((line, i) => {
         if (RAW_FLAG_RENDER.test(line)) violations.push(`${file}:${i + 1}: ${line.trim()}`);
+      });
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("never hardcodes flag-emoji literals in JSX", () => {
+    const violations: string[] = [];
+    for (const file of SOURCE_DIRS.flatMap(tsxFiles)) {
+      const lines = readFileSync(join(ROOT, file), "utf8").split("\n");
+      lines.forEach((line, i) => {
+        if (hasFlagEmojiLiteral(line)) violations.push(`${file}:${i + 1}: ${line.trim()}`);
       });
     }
     expect(violations).toEqual([]);
