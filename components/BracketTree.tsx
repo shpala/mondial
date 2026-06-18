@@ -85,22 +85,19 @@ function Slot({
       : isWinner && winnerTone === "model" && prob != null
         ? `, ${Math.round(prob * 100)} percent model win probability`
         : "";
+  const label = clickable
+    ? `${team.name}, ${stateWord}${metric}, activate to pick as winner`
+    : `${team.name}, ${stateWord}${metric}`;
+  const className = `flex h-11 w-full items-center text-left transition sm:h-9 ${
+    compact ? "gap-1 px-1.5 sm:gap-1.5 sm:px-2" : "gap-1.5 px-2"
+  } ${
+    clickable
+      ? "cursor-pointer hover:bg-ink-700/60 active:bg-ink-600"
+      : "cursor-default"
+  } ${isWinner ? WINNER_CLASS[winnerTone] : dimmed ? "text-ink-400" : ""}`;
 
-  return (
-    <button
-      type="button"
-      onClick={clickable ? onPick : undefined}
-      disabled={!interactive && !locked}
-      aria-disabled={locked || undefined}
-      aria-label={`${team.name}, ${stateWord}${metric}`}
-      className={`flex h-11 w-full items-center text-left transition sm:h-9 ${
-        compact ? "gap-1 px-1.5 sm:gap-1.5 sm:px-2" : "gap-1.5 px-2"
-      } ${
-        clickable
-          ? "cursor-pointer hover:bg-ink-700/60 active:bg-ink-600"
-          : "cursor-default"
-      } ${isWinner ? WINNER_CLASS[winnerTone] : dimmed ? "text-ink-400" : ""}`}
-    >
+  const content = (
+    <>
       <TeamFlag flag={team.flag} alt={team.name} size={16} decorative />
       {/* team code is always 2-3 chars — never truncate it */}
       <span className="shrink-0 text-xs">{team.code}</span>
@@ -121,6 +118,27 @@ function Slot({
           </span>
         )
       )}
+    </>
+  );
+
+  // Only a pickable slot is a <button>. Played ties are wrapped in a <Link>, so
+  // a nested <button> there would be invalid HTML (a double tab stop, broken
+  // activation); model-mode slots aren't actionable either. Render those static.
+  if (!clickable) {
+    return (
+      <div className={className} aria-label={label}>
+        {content}
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onPick}
+      aria-label={label}
+      className={className}
+    >
+      {content}
     </button>
   );
 }

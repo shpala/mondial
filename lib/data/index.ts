@@ -8,6 +8,7 @@
 // Each capability picks its best source independently and falls back to the
 // snapshot on any error. The country registry reconciles names across origins.
 import "server-only";
+import { cache } from "react";
 
 import type { Fixture, Group, Lineup, MatchLineups, Squad, Team } from "@/lib/types";
 import { isToday } from "@/lib/format";
@@ -30,28 +31,37 @@ import {
   teamById,
 } from "./snapshot";
 
-// Tracks whether the spine (openfootball) is serving live data, for the banner.
-let spineLive = false;
-
-export function usingSampleData(): boolean {
-  return !spineLive;
-}
-
-async function trySpine() {
+// Per-request memoized spine fetch (React cache): the openfootball fetch + parse
+// runs once per request and is shared by every getter. Returns null when the
+// spine is unreachable so callers fall back to the snapshot.
+const trySpine = cache(async () => {
   try {
-    const data = await fetchOpenfootball();
-    spineLive = true;
-    return data;
+    return await fetchOpenfootball();
   } catch (err) {
     console.warn("[data] openfootball spine failed, using snapshot:", err);
-    spineLive = false;
     return null;
   }
-}
+});
+
+/**
+ * Whether this request is serving the bundled snapshot (spine unreachable),
+ * for the sample-data banner. Request-scoped via `cache()` rather than a module
+ * global, so concurrent requests can't flip each other's banner.
+ */
+export const getDataStatus = cache(
+  async (): Promise<{ usingSample: boolean }> => ({
+    usingSample: (await trySpine()) === null,
+  }),
+);
+
+// Per-request memoized ESPN scoreboard (live scores + minute + goal timeline),
+// shared by the score overlay and the line-up lookup.
+const espnLive = cache(() => fetchEspnLive());
 
 /** Chronological fixtures with real live scores overlaid, ratings untouched
- *  (pre-tournament seeds). The basis for live-rating computation. */
-async function rawFixtures(): Promise<Fixture[]> {
+ *  (pre-tournament seeds). The basis for live-rating computation. Memoized per
+ *  request so the spine parse + score overlay run once. */
+const rawFixtures = cache(async (): Promise<Fixture[]> => {
   const spine = await trySpine();
   const fixtures = spine ? spine.fixtures : resolveFixtureStatuses(Date.now());
   // Always chronological so every consumer (dashboard, schedule, bracket) is
@@ -60,7 +70,7 @@ async function rawFixtures(): Promise<Fixture[]> {
     (a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff),
   );
   return overlayLiveScores(sorted);
-}
+});
 
 /** Seed-rating fixtures (live scores overlaid, ratings = pre-tournament seeds).
  *  The basis for model-accuracy grading, which must roll Elo from the seeds. */
@@ -68,7 +78,9 @@ export async function getRawFixtures(): Promise<Fixture[]> {
   return rawFixtures();
 }
 
-export async function getFixtures(): Promise<Fixture[]> {
+// Memoized per request: the live-Elo overlay (computeLiveRatings over the whole
+// schedule) is non-trivial and several pages call this more than once.
+export const getFixtures = cache(async (): Promise<Fixture[]> => {
   const fixtures = await rawFixtures();
   // Overlay live Elo so each fixture's win probability reflects results so far.
   const live = computeLiveRatings(fixtures);
@@ -78,7 +90,7 @@ export async function getFixtures(): Promise<Fixture[]> {
     home: withLiveRating(f.home, live),
     away: withLiveRating(f.away, live),
   }));
-}
+});
 
 /**
  * Current (results-adjusted) Elo per team id. Consumers that seed predictions
@@ -98,7 +110,7 @@ export async function getLiveRatings(): Promise<Map<number, number>> {
 async function overlayLiveScores(fixtures: Fixture[]): Promise<Fixture[]> {
   let liveMap: Awaited<ReturnType<typeof fetchEspnLive>>;
   try {
-    liveMap = await fetchEspnLive();
+    liveMap = await espnLive();
   } catch (err) {
     console.warn("[data] ESPN live overlay unavailable:", err);
     return fixtures;
@@ -200,7 +212,7 @@ export async function getMatchLineups(
   const realTeams = fixture.home.id !== 0 && fixture.away.id !== 0;
   if (kickedOff && realTeams) {
     try {
-      const liveMap = await fetchEspnLive();
+      const liveMap = await espnLive();
       const entry = liveMap.get(pairCodeKey(fixture.home.code, fixture.away.code));
       if (entry?.eventId) {
         const espn = await fetchEspnLineup(
