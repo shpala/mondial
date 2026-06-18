@@ -5,6 +5,10 @@
 // have no draws (extra time / penalties decide), so a two-outcome model fits.
 
 import type { Team } from "@/lib/types";
+import { HOST_ADVANTAGE, LOGISTIC_SCALE } from "@/lib/model/constants";
+
+// Re-exported so existing callers keep importing it from here.
+export { HOST_ADVANTAGE };
 
 export const ROUNDS = [
   "Round of 32",
@@ -16,16 +20,9 @@ export const ROUNDS = [
 
 export type RoundName = (typeof ROUNDS)[number];
 
-/**
- * Home-field bump (in Elo points) applied to the three 2026 co-hosts
- * (USA/Mexico/Canada) whenever they play. 100 is eloratings.net's standard
- * home-advantage constant — worth ~+14 percentage points between even sides.
- */
-export const HOST_ADVANTAGE = 100;
-
 /** Probability that team A beats team B in a single knockout match. */
 export function winProbability(ratingA: number, ratingB: number): number {
-  return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+  return 1 / (1 + Math.pow(10, (ratingB - ratingA) / LOGISTIC_SCALE));
 }
 
 /**
@@ -35,13 +32,13 @@ export function winProbability(ratingA: number, ratingB: number): number {
  *
  * `scale` is the logistic spread (the Elo "400"): smaller → sharper, more
  * confident probabilities for the same rating gap; larger → flatter. Defaults to
- * 400 so production is unchanged; the backtest sweeps it to calibrate confidence.
+ * LOGISTIC_SCALE so production is unchanged; the backtest sweeps it to calibrate.
  */
 export function davidsonProbs(
   ratingA: number,
   ratingB: number,
   nu: number,
-  scale = 400,
+  scale = LOGISTIC_SCALE,
 ): { home: number; draw: number; away: number } {
   const a = Math.pow(10, ratingA / scale);
   const b = Math.pow(10, ratingB / scale);

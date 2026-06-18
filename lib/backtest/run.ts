@@ -3,6 +3,12 @@
 
 import { davidsonProbs } from "@/lib/prediction";
 import { eloUpdate } from "@/lib/ratings";
+import {
+  DRAW_NU,
+  ELO_K,
+  HOST_ADVANTAGE,
+  LOGISTIC_SCALE,
+} from "@/lib/model/constants";
 import type { MatchRow } from "@/lib/backtest/parse";
 
 export interface Constants {
@@ -13,7 +19,7 @@ export interface Constants {
   scale?: number;
 }
 
-const DEFAULT_SCALE = 400;
+const DEFAULT_SCALE = LOGISTIC_SCALE;
 
 export interface Report {
   constants: Constants;
@@ -30,8 +36,15 @@ export interface SweepResult {
   all: Report[];
 }
 
-/** The constants the app currently ships (montecarlo ν, host bump, Elo K, scale). */
-export const CURRENT: Constants = { nu: 0.7, home: 100, k: 60, scale: 400 };
+/** The constants the app currently ships (montecarlo ν, host bump, Elo K, scale).
+ *  Built from the single source of truth so the backtest always grades the
+ *  values the live model actually uses. */
+export const CURRENT: Constants = {
+  nu: DRAW_NU,
+  home: HOST_ADVANTAGE,
+  k: ELO_K,
+  scale: LOGISTIC_SCALE,
+};
 
 const INIT = 1500; // flat starting rating for every team
 const BURN_IN = "2018-01-01"; // only score matches on/after this date

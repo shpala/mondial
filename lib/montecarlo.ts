@@ -24,14 +24,9 @@ import {
   sampleScoreline,
   type Outcome,
 } from "@/lib/scoreline";
+import { DRAW_NU } from "@/lib/model/constants";
 
 const DEFAULT_RUNS = 10_000;
-
-// Davidson draw parameter: ν = 0.70 → ~26% draws between even sides. Conditional
-// on a decisive result the model collapses exactly to `winProbability`. Nudged up
-// from 0.63 after the backtest (`npm run backtest`) showed the model slightly
-// under-predicted draws; 0.70 captures nearly all the calibration gain.
-const DRAW_NU = 0.7;
 
 /** Deterministic PRNG so odds are stable between renders (seeded from results). */
 function mulberry32(seed: number): () => number {

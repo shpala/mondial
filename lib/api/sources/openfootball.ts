@@ -7,6 +7,7 @@ import "server-only";
 import type { Fixture, Goal, Group, Team } from "@/lib/types";
 import { resolveTeam } from "@/lib/teams/registry";
 import { computeGroupStandings } from "@/lib/standings";
+import { fetchWithTimeout } from "@/lib/api/http";
 
 const SOURCE_URL =
   "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json";
@@ -132,7 +133,7 @@ export interface OpenfootballData {
 export async function fetchOpenfootball(
   revalidate = 600,
 ): Promise<OpenfootballData> {
-  const res = await fetch(SOURCE_URL, { next: { revalidate } });
+  const res = await fetchWithTimeout(SOURCE_URL, { next: { revalidate } });
   if (!res.ok) throw new Error(`openfootball -> ${res.status}`);
   const data = (await res.json()) as OfFile;
   if (!data.matches?.length) throw new Error("openfootball: empty matches");
