@@ -1,8 +1,14 @@
 import Link from "next/link";
-import { getDashboardFixtures, getRawFixtures, getTeams } from "@/lib/data";
+import {
+  getDashboardFixtures,
+  getRawFixtures,
+  getTeams,
+  getTitleOdds,
+} from "@/lib/data";
 import { gradeOutcomes } from "@/lib/modelreport";
 import { MatchCard } from "@/components/MatchCard";
 import { ModelReportCard } from "@/components/ModelReportCard";
+import { TitleOddsTable } from "@/components/TitleOddsTable";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { TeamFlag } from "@/components/ui/TeamFlag";
@@ -45,9 +51,16 @@ function Section({
 }
 
 export default async function DashboardPage() {
-  const [{ live, today, upcoming, recent }, teams, rawFixtures] =
-    await Promise.all([getDashboardFixtures(), getTeams(), getRawFixtures()]);
+  const [{ live, today, upcoming, recent }, teams, rawFixtures, odds] =
+    await Promise.all([
+      getDashboardFixtures(),
+      getTeams(),
+      getRawFixtures(),
+      getTitleOdds(),
+    ]);
   const report = gradeOutcomes(rawFixtures);
+  // The model's current pick to win the cup — leads the hero (the product's thesis).
+  const favourite = odds.find((o) => o.champion > 0) ?? null;
 
   return (
     <div className="animate-fade-up">
@@ -66,25 +79,57 @@ export default async function DashboardPage() {
             </span>{" "}
             FIFA World Cup
           </p>
-          <h1 className="font-display text-3xl font-extrabold leading-[0.95] tracking-tight sm:text-6xl">
-            Mondial <span className="text-accent-gold">2026</span>
-          </h1>
-          <p className="mt-3 max-w-xl text-sm text-ink-300">
-            {teams.length} nations · 12 groups · live squads, starting lineups
-            and an interactive prediction bracket.
-          </p>
+          {favourite ? (
+            <>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-400">
+                The model&rsquo;s pick to lift the trophy
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span className="flex items-center gap-3">
+                  <TeamFlag
+                    flag={favourite.team.flag}
+                    alt={favourite.team.name}
+                    size={36}
+                  />
+                  <span className="font-display text-3xl font-extrabold leading-none tracking-tight sm:text-5xl">
+                    {favourite.team.name}
+                  </span>
+                </span>
+                <span className="font-display text-3xl font-extrabold leading-none tabular-nums text-accent-gold sm:text-5xl">
+                  {Math.round(favourite.champion * 100)}%
+                </span>
+              </div>
+              <p className="mt-3 max-w-xl text-sm text-ink-300">
+                {report.n > 0
+                  ? `${report.hits} of ${report.n} group calls correct so far — `
+                  : ""}
+                title odds across {teams.length} nations, simulated thousands of
+                times.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="font-display text-3xl font-extrabold leading-[0.95] tracking-tight sm:text-6xl">
+                Mondial <span className="text-accent-gold">2026</span>
+              </h1>
+              <p className="mt-3 max-w-xl text-sm text-ink-300">
+                {teams.length} nations · 12 groups · live squads, starting
+                lineups and an interactive prediction bracket.
+              </p>
+            </>
+          )}
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
               href="/bracket"
               className="rounded-xl bg-pitch-500 px-4 py-2 text-sm font-semibold text-pitch-900 transition hover:bg-pitch-50"
             >
-              Open prediction bracket →
+              See the full bracket →
             </Link>
             <Link
-              href="/groups"
+              href="/model"
               className="rounded-xl border border-ink-600 px-4 py-2 text-sm font-semibold transition hover:border-ink-500"
             >
-              Group standings
+              How the model&rsquo;s doing
             </Link>
           </div>
         </div>
@@ -107,6 +152,8 @@ export default async function DashboardPage() {
         </section>
       )}
       </div>
+
+      {favourite && <TitleOddsTable odds={odds} limit={5} />}
 
       <section className="mb-8">
         <ModelReportCard report={report} />

@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/sources/espn";
 import { fetchSquadTSDB, fetchLineupsTSDB } from "@/lib/api/sources/thesportsdb";
 import { fetchWorldCupOdds } from "@/lib/api/sources/oddsapi";
+import { simulateTournament } from "@/lib/montecarlo";
 import { generateLineup, generateSquad } from "./generate";
 import { computeLiveRatings, withLiveRating } from "@/lib/ratings";
 import { teamByIdRegistry } from "@/lib/teams/registry";
@@ -104,6 +105,16 @@ export const getFixtures = cache(async (): Promise<Fixture[]> => {
     return next;
   });
 });
+
+/**
+ * Monte Carlo title odds (champion / final / etc. probabilities), memoized per
+ * request so the 10k-simulation run is shared by every consumer on a page (the
+ * dashboard hero, the title-race table, the bracket page). Deterministic for a
+ * given results state.
+ */
+export const getTitleOdds = cache(async () =>
+  simulateTournament(await getFixtures()),
+);
 
 /**
  * Current (results-adjusted) Elo per team id. Consumers that seed predictions
