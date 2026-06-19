@@ -84,7 +84,7 @@ export default async function DashboardPage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-400">
                 The model&rsquo;s pick to lift the trophy
               </p>
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <h1 className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
                 <span className="flex items-center gap-3">
                   <TeamFlag
                     flag={favourite.team.flag}
@@ -98,7 +98,7 @@ export default async function DashboardPage() {
                 <span className="font-display text-3xl font-extrabold leading-none tabular-nums text-accent-gold sm:text-5xl">
                   {Math.round(favourite.champion * 100)}%
                 </span>
-              </div>
+              </h1>
               <p className="mt-3 max-w-xl text-sm text-ink-300">
                 {report.n > 0
                   ? `${report.hits} of ${report.n} group calls correct so far — `

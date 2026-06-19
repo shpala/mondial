@@ -58,6 +58,30 @@ export function CalibrationChart({
           </div>
         </div>
       </div>
+      {/* Screen-reader equivalent of the plotted points (the chart is aria-img). */}
+      <table className="sr-only">
+        <caption>Calibration by predicted-probability band</caption>
+        <thead>
+          <tr>
+            <th>Band</th>
+            <th>Predicted</th>
+            <th>Observed</th>
+            <th>Matches</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pts.map((p) => (
+            <tr key={p.bucket}>
+              <td>
+                {p.bucket * 10}–{p.bucket * 10 + 10}%
+              </td>
+              <td>{Math.round(p.predicted * 100)}%</td>
+              <td>{Math.round(p.observed * 100)}%</td>
+              <td>{p.count}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
       <figcaption className="mt-3 text-xs text-ink-400">
         On the dashed line = perfectly calibrated.{" "}
         <span className="font-medium text-pitch-500">Above</span> = cautious;{" "}
