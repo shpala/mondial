@@ -139,7 +139,7 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
       href={`/matches/${fixture.id}`}
       className={`card group flex flex-col gap-2 p-3 transition hover:bg-ink-700/60 active:bg-ink-700/60 ${ring} ${
         predicted
-          ? "border-dashed border-accent-gold/30 hover:border-accent-gold/50"
+          ? "border-l-2 border-l-accent-gold/70 hover:border-l-accent-gold"
           : "hover:border-ink-500"
       }`}
     >
@@ -186,20 +186,28 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
             <div
               role="img"
               aria-label={`Predicted win probability: ${fixture.home.name} ${homePct} percent, ${fixture.away.name} ${awayPct} percent`}
-              className="flex h-1.5 overflow-hidden rounded-full bg-ink-700"
+              className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-ink-700"
             >
-              <div className="bg-pitch-500/70" style={{ width: `${homePct}%` }} />
-              <div className="bg-accent-ember/70" style={{ width: `${awayPct}%` }} />
+              <div className="bg-pitch-500" style={{ width: `${homePct}%` }} />
+              <div className="bg-accent-ember" style={{ width: `${awayPct}%` }} />
             </div>
-            <div className="mt-1 flex items-center justify-between text-[10px] text-ink-400">
-              <span className="tabular-nums">{homePct}%</span>
+            <div className="mt-1.5 flex items-baseline justify-between text-[10px] text-ink-400">
               <span
-                className={`uppercase tracking-wide ${marketBacked ? "text-accent-gold/80" : ""}`}
+                className={`font-display text-sm tabular-nums ${homePct >= awayPct ? "text-ink-50" : "text-ink-300"}`}
+              >
+                {homePct}%
+              </span>
+              <span
+                className={`uppercase tracking-wide ${marketBacked ? "text-accent-gold" : ""}`}
                 title={marketBacked ? "Market-implied (de-vigged betting odds)" : undefined}
               >
                 {marketBacked ? "◆ market" : "win prob"}
               </span>
-              <span className="tabular-nums">{awayPct}%</span>
+              <span
+                className={`font-display text-sm tabular-nums ${awayPct > homePct ? "text-ink-50" : "text-ink-300"}`}
+              >
+                {awayPct}%
+              </span>
             </div>
             <div className="text-center text-[10px] uppercase tracking-wide text-ink-400 tabular-nums">
               {kickoffLabel}

@@ -32,7 +32,9 @@ const config: Config = {
           50: "#f1f5f9",
         },
         accent: {
-          gold: "#fbbf24",
+          // Trophy bronze — warmer and more "World Cup metal" than the generic
+          // lemon-gold #fbbf24, still legible on ink-900. Marks model output.
+          gold: "#d68f2e",
           ember: "#f97316",
         },
       },

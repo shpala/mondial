@@ -50,10 +50,6 @@ html {
 
 body {
   @apply bg-ink-900 text-ink-50 antialiased;
-  background-image:
-    radial-gradient(1200px 600px at 80% -10%, rgba(22, 163, 74, 0.12), transparent),
-    radial-gradient(900px 500px at -10% 10%, rgba(251, 191, 36, 0.06), transparent);
-  background-attachment: fixed;
 }
 
 /* Pitch surnames collide at phone width — hide them there (numbers stay; the
