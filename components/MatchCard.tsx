@@ -3,7 +3,7 @@ import type { Fixture } from "@/lib/types";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 import { Countdown } from "@/components/Countdown";
 import { formatKickoff, isToday } from "@/lib/format";
-import { predictWinProbability } from "@/lib/prediction";
+import { fixtureHomeWinProb, isMarketBacked } from "@/lib/displayProbs";
 
 function StatusPill({
   status,
@@ -113,9 +113,8 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
   // Model prediction for upcoming games (skip placeholder knockout slots).
   const realTeams = fixture.home.id !== 0 && fixture.away.id !== 0;
   const homeProb =
-    predicted && realTeams
-      ? predictWinProbability(fixture.home, fixture.away)
-      : null;
+    predicted && realTeams ? fixtureHomeWinProb(fixture) : null;
+  const marketBacked = predicted && realTeams && isMarketBacked(fixture);
   const homePct = homeProb != null ? Math.round(homeProb * 100) : 50;
   const awayPct = 100 - homePct;
   const today = isToday(fixture.kickoff);
@@ -194,7 +193,12 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
             </div>
             <div className="mt-1 flex items-center justify-between text-[10px] text-ink-400">
               <span className="tabular-nums">{homePct}%</span>
-              <span className="uppercase tracking-wide">win prob</span>
+              <span
+                className={`uppercase tracking-wide ${marketBacked ? "text-accent-gold/80" : ""}`}
+                title={marketBacked ? "Market-implied (de-vigged betting odds)" : undefined}
+              >
+                {marketBacked ? "◆ market" : "win prob"}
+              </span>
               <span className="tabular-nums">{awayPct}%</span>
             </div>
             <div className="text-center text-[10px] uppercase tracking-wide text-ink-400 tabular-nums">
