@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Space_Grotesk } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { SiteNav } from "@/components/SiteNav";
 import { MobileTabBar } from "@/components/MobileTabBar";
+import { VerdictBand, VerdictBandSkeleton } from "@/components/VerdictBand";
+import { VerdictBandSlot } from "@/components/VerdictBandSlot";
 
 // Distinctive display face for headings, scores and stats (body stays system sans).
 const display = Space_Grotesk({
@@ -38,6 +41,11 @@ export default function RootLayout({
           Skip to content
         </a>
         <SiteNav />
+        <VerdictBandSlot>
+          <Suspense fallback={<VerdictBandSkeleton />}>
+            <VerdictBand />
+          </Suspense>
+        </VerdictBandSlot>
         <main
           id="main"
           tabIndex={-1}
