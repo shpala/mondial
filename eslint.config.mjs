@@ -10,6 +10,11 @@ const config = [
       "node_modules/**",
       "next-env.d.ts",
       "tsconfig.tsbuildinfo",
+      // One-off prediction-model exploration scripts (the algorithm bakeoff —
+      // docs/algo-bakeoff.md). Kept for reproducibility but not production code,
+      // so they are not held to the app's lint bar. The shipped logic lives in
+      // lib/backtest/wcflatten.ts (linted) and is covered by tests.
+      "scripts/explore/**",
     ],
   },
   ...coreWebVitals,
