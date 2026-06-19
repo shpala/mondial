@@ -374,7 +374,10 @@ export function BracketTree({
       if (!cardRefs.current[r]) cardRefs.current[r] = [];
       cardRefs.current[r][i] = el;
     };
-  const [conns, setConns] = useState<{ segs: string[]; w: number; h: number }>({
+  // A connector segment carries the model's flow: stroke class (emerald=played,
+  // pitch=predicted, ink=structural), width and opacity scaled by confidence.
+  type Conn = { d: string; cls: string; w: number; o: number };
+  const [conns, setConns] = useState<{ segs: Conn[]; w: number; h: number }>({
     segs: [],
     w: 0,
     h: 0,
@@ -393,11 +396,20 @@ export function BracketTree({
       if (content.scrollWidth === 0 || content.scrollHeight === 0) return;
       const crect = content.getBoundingClientRect();
       const refs = cardRefs.current;
-      const segs: string[] = [];
+      const segs: Conn[] = [];
+      // The flow through a connector = the team that ADVANCED from a source match.
+      // Colour each outgoing stub by how the model called that match.
+      const NEUTRAL = { cls: "stroke-ink-600", w: 1.5, o: 1 };
+      const PLAYED = { cls: "stroke-emerald-500", w: 2.6, o: 0.9 };
+      const modelFlow = (p: number | null) => {
+        const k = Math.max(0, Math.min(1, ((p ?? 0.5) - 0.5) / 0.5)); // 0..1 confidence
+        return { cls: "stroke-pitch-500", w: 1.6 + 1.3 * k, o: 0.35 + 0.5 * k };
+      };
       // Each matchup i in round r+1 is fed by matchups 2i and 2i+1 in round r.
       for (let r = 0; r < refs.length - 1; r++) {
         const cur = refs[r];
         const nxt = refs[r + 1];
+        const mr = resolved.rounds[r];
         if (!cur || !nxt) continue;
         for (let i = 0; i < nxt.length; i++) {
           const A = cur[2 * i];
@@ -406,18 +418,22 @@ export function BracketTree({
           if (!A || !B || !T) continue;
           const a = A.getBoundingClientRect();
           const b = B.getBoundingClientRect();
-          const t = T.getBoundingClientRect();
+          const tr = T.getBoundingClientRect();
           const ay = Math.round(a.top - crect.top + a.height / 2);
           const by = Math.round(b.top - crect.top + b.height / 2);
-          const ty = Math.round(t.top - crect.top + t.height / 2);
+          const ty = Math.round(tr.top - crect.top + tr.height / 2);
           const ax = Math.round(a.right - crect.left);
           const bx = Math.round(b.right - crect.left);
-          const tx = Math.round(t.left - crect.left);
+          const tx = Math.round(tr.left - crect.left);
           const midX = Math.round((Math.max(ax, bx) + tx) / 2);
-          segs.push(`M${ax},${ay} H${midX}`); // stub out of top source
-          segs.push(`M${bx},${by} H${midX}`); // stub out of bottom source
-          segs.push(`M${midX},${ay} V${by}`); // vertical join
-          segs.push(`M${midX},${ty} H${tx}`); // stub into target
+          const mA = mr?.[2 * i];
+          const mB = mr?.[2 * i + 1];
+          const sA = !mA || mA.winnerId == null ? NEUTRAL : playedNodes[mA.id] ? PLAYED : modelFlow(winnerProb(mA));
+          const sB = !mB || mB.winnerId == null ? NEUTRAL : playedNodes[mB.id] ? PLAYED : modelFlow(winnerProb(mB));
+          segs.push({ d: `M${ax},${ay} H${midX}`, ...sA }); // top source winner advances
+          segs.push({ d: `M${bx},${by} H${midX}`, ...sB }); // bottom source winner advances
+          segs.push({ d: `M${midX},${ay} V${by}`, ...NEUTRAL }); // vertical join (structural)
+          segs.push({ d: `M${midX},${ty} H${tx}`, ...NEUTRAL }); // stub into target
         }
       }
       // scrollWidth/Height, not offsetWidth/Height: on a phone the tree overflows
@@ -426,7 +442,7 @@ export function BracketTree({
       const w = content.scrollWidth;
       const h = content.scrollHeight;
       // Only update when the lines actually change — breaks the RO feedback loop.
-      const sig = `${w}x${h}|${segs.join("|")}`;
+      const sig = `${w}x${h}|${segs.map((s) => `${s.d}:${s.cls}:${s.w}:${s.o}`).join("|")}`;
       if (sig === lastSig.current) return;
       lastSig.current = sig;
       setConns({ segs, w, h });
@@ -446,7 +462,7 @@ export function BracketTree({
       ro.disconnect();
       window.removeEventListener("resize", schedule);
     };
-  }, [resolved, mounted, mobileView]);
+  }, [resolved, playedNodes, mounted, mobileView]);
 
   // Soften the post-hydration swap: in "your picks" mode the bracket first
   // renders the model baseline, then re-resolves into saved picks once mounted.
@@ -461,7 +477,7 @@ export function BracketTree({
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-ink-400">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-3 w-3 rounded border border-emerald-600/60 bg-emerald-600/40" />
-          Result (played)
+          Result
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-3 w-3 rounded border border-dashed border-ink-500 bg-ink-500/80" />
@@ -646,13 +662,14 @@ export function BracketTree({
               height={conns.h}
               aria-hidden
             >
-              {conns.segs.map((d, i) => (
+              {conns.segs.map((s, i) => (
                 <path
                   key={i}
-                  d={d}
+                  d={s.d}
                   fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
+                  className={s.cls}
+                  strokeWidth={s.w}
+                  strokeOpacity={s.o}
                   strokeLinecap="round"
                 />
               ))}

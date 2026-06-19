@@ -73,10 +73,10 @@ export default async function BracketPage() {
         </span>
       </div>
       <p className="mb-6 max-w-2xl text-sm text-ink-400">
-        The knockout tree from the Round of 32 to the Final. The model fills in a
-        baseline from team strength and win probabilities — switch to{" "}
-        <strong>Your picks</strong> to override any result. As real knockout
-        matches are played they replace the prediction and lock in green.{" "}
+        The model&rsquo;s predicted path to the trophy, Round of 32 to the Final —
+        each tie filled in from team strength and win probability. Real knockout
+        results lock in green as they&rsquo;re played; switch to{" "}
+        <strong>Your picks</strong> to override any tie.{" "}
         <Link
           href="/methodology"
           className="font-medium text-accent-gold hover:underline"

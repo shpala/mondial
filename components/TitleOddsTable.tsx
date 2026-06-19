@@ -75,7 +75,7 @@ export function TitleOddsTable({
                   <span className="truncate font-medium">{o.team.name}</span>
                 </Link>
               </td>
-              <td className="py-1.5 text-right font-bold tabular-nums">
+              <td className="py-1.5 text-right font-display text-base font-extrabold tabular-nums text-accent-gold">
                 {pct(o.champion)}
               </td>
               <td className="hidden py-1.5 text-right tabular-nums text-ink-300 sm:table-cell">

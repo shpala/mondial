@@ -23,8 +23,10 @@ export function MobileTabBar() {
               key={t.href}
               href={t.href}
               aria-current={active ? "page" : undefined}
-              className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition ${
-                active ? "text-pitch-50" : "text-ink-400 active:text-ink-100"
+              className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 border-t-2 text-[10px] font-medium transition ${
+                active
+                  ? "border-pitch-500 text-pitch-50"
+                  : "border-transparent text-ink-400 active:text-ink-100"
               }`}
             >
               <span className="text-lg leading-none" aria-hidden>
