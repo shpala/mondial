@@ -9,6 +9,7 @@
 // snapshot on any error. The country registry reconciles names across origins.
 import "server-only";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 
 import type { Fixture, Group, Lineup, MatchLineups, Squad, Team } from "@/lib/types";
 import { isToday } from "@/lib/format";
@@ -21,6 +22,7 @@ import {
 import { fetchSquadTSDB, fetchLineupsTSDB } from "@/lib/api/sources/thesportsdb";
 import { fetchWorldCupOdds } from "@/lib/api/sources/oddsapi";
 import { simulateTournament } from "@/lib/montecarlo";
+import { gradeOutcomes } from "@/lib/modelreport";
 import { generateLineup, generateSquad } from "./generate";
 import { computeLiveRatings, withLiveRating } from "@/lib/ratings";
 import { teamByIdRegistry } from "@/lib/teams/registry";
@@ -106,15 +108,49 @@ export const getFixtures = cache(async (): Promise<Fixture[]> => {
   });
 });
 
+/** A cheap signature of the results state: changes only when a real result lands
+ *  (or the fixture set changes). The Monte Carlo output is a pure function of this,
+ *  so it keys the cross-request cache below. */
+function resultsSignature(fixtures: Fixture[]): string {
+  let sig = fixtures.length >>> 0;
+  for (const f of fixtures) {
+    if (f.status === "finished" && f.homeGoals != null && f.awayGoals != null) {
+      sig = (sig * 31 + f.id * 131 + f.homeGoals * 7 + f.awayGoals) >>> 0;
+    }
+  }
+  return sig.toString(36);
+}
+
 /**
- * Monte Carlo title odds (champion / final / etc. probabilities), memoized per
- * request so the 10k-simulation run is shared by every consumer on a page (the
- * dashboard hero, the title-race table, the bracket page). Deterministic for a
- * given results state.
+ * Monte Carlo title odds (champion / final / etc.), memoized per request AND
+ * cached across requests keyed on the results state — so the 10k-simulation runs
+ * only when a real result changes it, not on every page view (the Verdict band
+ * puts this on every route). Deterministic for a given results state.
  */
-export const getTitleOdds = cache(async () =>
-  simulateTournament(await getFixtures()),
-);
+export const getTitleOdds = cache(async () => {
+  const fixtures = await getFixtures();
+  const sig = resultsSignature(fixtures);
+  return unstable_cache(async () => simulateTournament(fixtures), ["title-odds", sig], {
+    revalidate: 3600,
+  })();
+});
+
+/**
+ * Everything the persistent Verdict band shows: the model's current pick to win
+ * the cup and its live track record (group calls right + log-loss edge over a
+ * no-skill baseline). Null favourite until the bracket can be simulated.
+ */
+export const getVerdict = cache(async () => {
+  const [odds, raw] = await Promise.all([getTitleOdds(), getRawFixtures()]);
+  const favourite = odds.find((o) => o.champion > 0) ?? null;
+  const report = gradeOutcomes(raw);
+  return {
+    favourite,
+    hits: report.hits,
+    n: report.n,
+    edge: report.n ? report.baselineLogLoss - report.logLoss : 0,
+  };
+});
 
 /**
  * Current (results-adjusted) Elo per team id. Consumers that seed predictions
