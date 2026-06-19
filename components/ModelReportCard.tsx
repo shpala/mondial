@@ -8,7 +8,7 @@ export function ModelReportCard({ report }: { report: OutcomeReport }) {
         <h3 className="text-sm font-semibold text-white">Model report card</h3>
         <p className="mt-1 text-sm text-ink-400">
           No results scored yet — the model’s calls will be graded here as
-          matches finish. <span className="text-pitch-500">see detail →</span>
+          matches finish. <span className="text-pitch-500">See detail →</span>
         </p>
       </Link>
     );
@@ -28,7 +28,7 @@ export function ModelReportCard({ report }: { report: OutcomeReport }) {
         {smallSample ? (
           <span className="text-ink-400"> (early days — small sample)</span>
         ) : null}
-        . <span className="text-pitch-500">see detail →</span>
+        . <span className="text-pitch-500">See detail →</span>
       </p>
     </Link>
   );

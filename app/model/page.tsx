@@ -4,6 +4,7 @@ import { gradeOutcomes, gradeQualification } from "@/lib/modelreport";
 import { simulateTournament } from "@/lib/montecarlo";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { TeamFlag } from "@/components/ui/TeamFlag";
+import { CalibrationChart } from "@/components/CalibrationChart";
 
 export const dynamic = "force-dynamic";
 
@@ -89,7 +90,7 @@ export default async function ModelPage() {
       {report.n > 0 && (
         <section className="mb-8">
           <h2 className="mb-1 font-display text-lg font-bold">
-            Outcome rigour
+            Accuracy &amp; calibration
           </h2>
           <p className="mb-1 text-sm text-ink-400">
             log-loss{" "}
@@ -116,40 +117,8 @@ export default async function ModelPage() {
             <strong>Observed</strong> in each band — the closer they track, the
             better-calibrated the model.
           </p>
-          {/* Reliability — are 70%-calls right ~70% of the time? */}
-          <div className="card mb-6 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-ink-700 text-left text-ink-400">
-                  <th className="px-4 py-2 font-medium">Bucket</th>
-                  <th className="px-4 py-2 text-right font-medium">Predicted</th>
-                  <th className="px-4 py-2 text-right font-medium">Observed</th>
-                  <th className="px-4 py-2 text-right font-medium">n</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.reliability.map((r) => (
-                  <tr
-                    key={r.bucket}
-                    className="border-b border-ink-700/50 last:border-0"
-                  >
-                    <td className="px-4 py-2 text-ink-300">
-                      {r.bucket * 10}–{r.bucket * 10 + 10}%
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-ink-300">
-                      {pct(r.predicted)}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-white">
-                      {pct(r.observed)}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-ink-400">
-                      {r.count}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* Reliability diagram — are 70%-calls right ~70% of the time? */}
+          <CalibrationChart reliability={report.reliability} />
 
           {/* Per-match history */}
           <h3 className="mb-2 text-sm font-semibold text-ink-300">
