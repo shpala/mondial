@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { SiteNav } from "@/components/SiteNav";
 import { MobileTabBar } from "@/components/MobileTabBar";
@@ -48,6 +50,10 @@ export default function RootLayout({
           &amp; TheSportsDB
         </footer>
         <MobileTabBar />
+        {/* Privacy-friendly, cookieless: page-view analytics + real-user Core
+            Web Vitals. Only collect on Vercel production deployments. */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
