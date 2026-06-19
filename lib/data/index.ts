@@ -19,6 +19,7 @@ import {
   pairCodeKey,
 } from "@/lib/api/sources/espn";
 import { fetchSquadTSDB, fetchLineupsTSDB } from "@/lib/api/sources/thesportsdb";
+import { fetchWorldCupOdds } from "@/lib/api/sources/oddsapi";
 import { generateLineup, generateSquad } from "./generate";
 import { computeLiveRatings, withLiveRating } from "@/lib/ratings";
 import { teamByIdRegistry } from "@/lib/teams/registry";
@@ -57,6 +58,10 @@ export const getDataStatus = cache(
 // shared by the score overlay and the line-up lookup.
 const espnLive = cache(() => fetchEspnLive());
 
+// Per-request memoized market odds (empty map unless ODDS_API_KEY is set). The
+// de-vigged consensus is overlaid onto upcoming fixtures for sharper win probs.
+const marketOdds = cache(() => fetchWorldCupOdds());
+
 /** Chronological fixtures with real live scores overlaid, ratings untouched
  *  (pre-tournament seeds). The basis for live-rating computation. Memoized per
  *  request so the spine parse + score overlay run once. */
@@ -81,14 +86,23 @@ export async function getRawFixtures(): Promise<Fixture[]> {
 // schedule) is non-trivial and several pages call this more than once.
 export const getFixtures = cache(async (): Promise<Fixture[]> => {
   const fixtures = await rawFixtures();
-  // Overlay live Elo so each fixture's win probability reflects results so far.
+  // Overlay live Elo so each fixture's win probability reflects results so far,
+  // and de-vigged market odds (when ODDS_API_KEY is set) for upcoming fixtures.
   const live = computeLiveRatings(fixtures);
-  if (!live.size) return fixtures;
-  return fixtures.map((f) => ({
-    ...f,
-    home: withLiveRating(f.home, live),
-    away: withLiveRating(f.away, live),
-  }));
+  const odds = await marketOdds();
+  if (!live.size && !odds.size) return fixtures;
+  return fixtures.map((f) => {
+    const next: Fixture = live.size
+      ? { ...f, home: withLiveRating(f.home, live), away: withLiveRating(f.away, live) }
+      : { ...f };
+    // Market consensus only applies to upcoming real-team fixtures; live/finished
+    // games show the actual score, not a prediction.
+    if (odds.size && f.status === "scheduled" && f.home.id !== 0 && f.away.id !== 0) {
+      const m = odds.get(pairCodeKey(f.home.code, f.away.code));
+      if (m) next.marketProbs = m;
+    }
+    return next;
+  });
 });
 
 /**

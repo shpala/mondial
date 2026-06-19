@@ -82,6 +82,9 @@ export interface Fixture {
   minute: string | null;
   /** Goal timeline (scorer + minute), when the source provides it. */
   goals: Goal[];
+  /** De-vigged market consensus 1X2 probabilities for an upcoming fixture when
+   *  betting odds are available (lib/api/sources/oddsapi); absent otherwise. */
+  marketProbs?: { home: number; draw: number; away: number } | null;
 }
 
 export interface LineupPlayer {

@@ -10,7 +10,8 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { EstimatedNotice, EstimatedTag } from "@/components/ui/EstimatedData";
 import { formatKickoff } from "@/lib/format";
-import { predictScoreline, predictWinProbability } from "@/lib/prediction";
+import { predictScoreline } from "@/lib/prediction";
+import { fixtureHomeWinProb } from "@/lib/displayProbs";
 
 export const dynamic = "force-dynamic";
 
@@ -92,9 +93,7 @@ export default async function MatchPage({
   const predicted = fixture.status === "scheduled";
   const realTeams = fixture.home.id !== 0 && fixture.away.id !== 0;
   const homeProb =
-    predicted && realTeams
-      ? predictWinProbability(fixture.home, fixture.away)
-      : null;
+    predicted && realTeams ? fixtureHomeWinProb(fixture) : null;
   // Knockout ties (group == null) are settled by ET/penalties — no draw — so we
   // predict a decisive scoreline there; group games keep the three-way model.
   const decisive = fixture.group == null;
