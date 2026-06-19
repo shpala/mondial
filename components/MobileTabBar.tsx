@@ -11,7 +11,7 @@ export function MobileTabBar() {
 
   return (
     <nav
-      aria-label="Primary"
+      aria-label="Sections"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-700 bg-ink-900/95 backdrop-blur md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
