@@ -355,8 +355,13 @@ P(home) = a/(a+b+d)   P(draw) = d/(a+b+d)   P(away) = b/(a+b+d)`}</Formula>
           The 2026 knockout bracket is <strong className="text-ink-100">fixed
           by group position</strong>: the Round of 32 pairs specific
           winner / runner-up / best-third slots, so two teams from the same group
-          can&rsquo;t meet early and every team&rsquo;s path is the real one.
-          Rating only feeds each tie&rsquo;s win probability, never the seeding.
+          can&rsquo;t meet early and each winner&rsquo;s and runner-up&rsquo;s path
+          is the official one. The eight best-third slots are filled by a
+          deterministic constrained matching that keeps every structural rule (no
+          same-group R32, correct winner/runner-up slots) but, when several
+          assignments are valid, may place a third-placed team in a different one of
+          its eligible slots than FIFA&rsquo;s Annex C lookup. Rating only feeds each
+          tie&rsquo;s win probability, never the seeding.
         </p>
         <p>Each matchup then resolves in priority order:</p>
         <ol className="ml-4 list-decimal space-y-1 marker:text-ink-400">
@@ -438,6 +443,19 @@ P(home) = a/(a+b+d)   P(draw) = d/(a+b+d)   P(away) = b/(a+b+d)`}</Formula>
           2022 World Cup; the World Cup flattening was tuned on that 2022
           tournament and then validated out-of-sample on the already-played 2026
           games. Each was graded on results it was never fitted to.
+        </p>
+        <p>
+          We also checked whether a fancier model would do better. Match-type
+          features (friendly vs qualifier vs finals), random forests, gradient-
+          boosted trees, SVMs, and several neural networks (a multilayer
+          perceptron, learned team embeddings, and a residual-over-Elo net) were
+          all tested out-of-sample on the same World Cup holdouts. None reliably
+          beat this calibrated Elo + Davidson model — on World Cup matches the
+          field is compressed and the sample is small, so the extra complexity
+          just fit noise. So we kept the simple, transparent model. The one
+          outside signal that genuinely sharpens predictions is{" "}
+          <strong className="text-ink-100">betting-market odds</strong>, which the
+          app blends in for upcoming matches when they&rsquo;re available.
         </p>
       </Section>
 

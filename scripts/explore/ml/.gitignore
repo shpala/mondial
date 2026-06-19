@@ -1,2 +1,3 @@
 # Generated feature matrices (regenerate with build_features.py / augment_teams.py)
 *.csv
+__pycache__/

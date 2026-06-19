@@ -108,15 +108,19 @@ export const getFixtures = cache(async (): Promise<Fixture[]> => {
   });
 });
 
-/** A cheap signature of the results state: changes only when a real result lands
- *  (or the fixture set changes). The Monte Carlo output is a pure function of this,
- *  so it keys the cross-request cache below. */
+/** Signature over every fixture input the Monte Carlo actually consumes — teams,
+ *  their (live) ratings, group, status and any result — so ANY upstream change
+ *  (a new result, a source correction to teams/groups, or a snapshot↔spine swap
+ *  with the same match count) invalidates the cross-request cache, not just a new
+ *  finished score. The simulation is a pure function of these, so same signature ⇒
+ *  same odds. */
 function resultsSignature(fixtures: Fixture[]): string {
   let sig = fixtures.length >>> 0;
   for (const f of fixtures) {
-    if (f.status === "finished" && f.homeGoals != null && f.awayGoals != null) {
-      sig = (sig * 31 + f.id * 131 + f.homeGoals * 7 + f.awayGoals) >>> 0;
-    }
+    const rating = Math.round((f.home.rating + f.away.rating) * 4);
+    sig = (sig * 33 + f.home.id * 131 + f.away.id * 17) >>> 0;
+    sig = (sig * 33 + (f.group?.charCodeAt(0) ?? 0) + f.status.charCodeAt(0)) >>> 0;
+    sig = (sig * 33 + rating + (f.homeGoals ?? -1) * 7 + (f.awayGoals ?? -1)) >>> 0;
   }
   return sig.toString(36);
 }
