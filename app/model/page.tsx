@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getRawFixtures, getGroups } from "@/lib/data";
 import { gradeOutcomes, gradeQualification } from "@/lib/modelreport";
 import { simulateTournament } from "@/lib/montecarlo";
@@ -40,7 +41,13 @@ export default async function ModelPage() {
       </h1>
       <p className="mb-6 max-w-2xl text-sm text-ink-400">
         How Mondial’s prediction model is doing against the real 2026 results —
-        every call is scored from what the model knew <em>before</em> each match.
+        every call is scored from what the model knew <em>before</em> each match.{" "}
+        <Link
+          href="/methodology"
+          className="font-medium text-accent-gold hover:underline"
+        >
+          How the model works →
+        </Link>
       </p>
 
       {/* ── Plain headline ─────────────────────────────────────────────── */}

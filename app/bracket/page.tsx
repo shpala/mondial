@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getFixtures, getGroups, getLiveRatings } from "@/lib/data";
 import { qualificationBreakdown } from "@/lib/qualifiers";
 import { withLiveRating } from "@/lib/ratings";
@@ -75,7 +76,13 @@ export default async function BracketPage() {
         The knockout tree from the Round of 32 to the Final. The model fills in a
         baseline from team strength and win probabilities — switch to{" "}
         <strong>Your picks</strong> to override any result. As real knockout
-        matches are played they replace the prediction and lock in green.
+        matches are played they replace the prediction and lock in green.{" "}
+        <Link
+          href="/methodology"
+          className="font-medium text-accent-gold hover:underline"
+        >
+          How these are calculated →
+        </Link>
       </p>
       <TitleOddsTable odds={odds} />
       {/* Phone: bracket first (the centerpiece), candidates below it.

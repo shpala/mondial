@@ -295,9 +295,10 @@ export function BracketTree({
   const [undoToast, setUndoToast] = useState(false); // transient "cleared · undo"
   const [restored, setRestored] = useState(0); // transient "restored N picks" note
   const [selectedRound, setSelectedRound] = useState(0); // phone round pager
-  // Default phones to the one-round pager: the full connector tree overflows
-  // the viewport and buries the Final card off-screen to the right.
-  const [mobileView, setMobileView] = useState<"tree" | "rounds">("rounds");
+  // Default phones to the full connector tree (it scrolls horizontally, with a
+  // right-edge fade cueing the pan); the one-round "Rounds" pager stays a tap away
+  // for anyone who prefers it.
+  const [mobileView, setMobileView] = useState<"tree" | "rounds">("tree");
 
   // On mount, acknowledge any picks restored from localStorage (the bracket
   // re-resolves into them once `mounted` flips — see the fade below).
