@@ -123,7 +123,7 @@ export default function MethodologyPage() {
                 href={`#${id}`}
                 className="text-ink-300 transition hover:text-accent-gold"
               >
-                <span className="mr-2 font-mono text-xs text-ink-500">
+                <span className="mr-2 font-mono text-xs text-ink-400">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 {label}
@@ -359,7 +359,7 @@ P(home) = a/(a+b+d)   P(draw) = d/(a+b+d)   P(away) = b/(a+b+d)`}</Formula>
           Rating only feeds each tie&rsquo;s win probability, never the seeding.
         </p>
         <p>Each matchup then resolves in priority order:</p>
-        <ol className="ml-4 list-decimal space-y-1 marker:text-ink-500">
+        <ol className="ml-4 list-decimal space-y-1 marker:text-ink-400">
           <li>
             A <strong className="text-pitch-500">real result</strong>, once
             played, replaces the prediction and locks in green.
@@ -388,7 +388,7 @@ P(home) = a/(a+b+d)   P(draw) = d/(a+b+d)   P(away) = b/(a+b+d)`}</Formula>
           <strong className="text-ink-100">Monte Carlo</strong> simulation —
           thousands of full tournaments:
         </p>
-        <ol className="ml-4 list-decimal space-y-1 marker:text-ink-500">
+        <ol className="ml-4 list-decimal space-y-1 marker:text-ink-400">
           <li>
             Sample every unplayed group game (Davidson outcome, then a Poisson
             margin consistent with it) and rebuild the tables.
