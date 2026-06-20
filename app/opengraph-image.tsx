@@ -18,8 +18,8 @@ export const contentType = "image/png";
 export default async function OpengraphImage() {
   // Co-located asset, read inside the handler (so it never runs during build) — a
   // data URI because fetch(file://) isn't supported here.
-  const ball = `data:image/png;base64,${readFileSync(
-    fileURLToPath(new URL("./og-ball.png", import.meta.url)),
+  const mark = `data:image/png;base64,${readFileSync(
+    fileURLToPath(new URL("./og-cup.png", import.meta.url)),
   ).toString("base64")}`;
 
   // Never broadcast an invented pick. When the live feed is down the data facade
@@ -50,7 +50,7 @@ export default async function OpengraphImage() {
           fontFamily: "sans-serif",
         }}
       >
-        <img src={ball} width={232} height={232} alt="" style={{ borderRadius: 48 }} />
+        <img src={mark} width={232} height={232} alt="" style={{ borderRadius: 48 }} />
         <div
           style={{
             display: "flex",
