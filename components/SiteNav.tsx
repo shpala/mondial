@@ -18,11 +18,39 @@ export function SiteNav() {
           aria-label="Mondial home"
           className="mr-4 flex items-center gap-2 py-3"
         >
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-pitch-500 to-pitch-700">
-            <svg viewBox="0 0 24 24" className="h-4 w-4 text-pitch-50" fill="currentColor" aria-hidden>
-              <path d="M19 5h-2V3H7v2H5C3.9 5 3 5.9 3 7v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 16.9V19H7v2h10v-2h-4v-2.1a5.01 5.01 0 0 0 3.61-3.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z" />
-            </svg>
-          </span>
+          {/* The same ball used as the favicon / link-preview icon, so the tab,
+              header and WhatsApp preview all carry one identical mark. */}
+          <svg viewBox="0 0 180 180" className="h-8 w-8" aria-hidden>
+            <defs>
+              <linearGradient id="navBallSquare" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#1eb155" />
+                <stop offset="1" stopColor="#14803d" />
+              </linearGradient>
+              <radialGradient id="navBallSheen" cx="0.38" cy="0.30" r="0.9">
+                <stop offset="0" stopColor="#ffffff" />
+                <stop offset="1" stopColor="#dfe6ee" />
+              </radialGradient>
+              <clipPath id="navBallClip">
+                <circle cx="90" cy="90" r="58" />
+              </clipPath>
+            </defs>
+            <rect width="180" height="180" rx="40" fill="url(#navBallSquare)" />
+            <circle cx="90" cy="90" r="58" fill="url(#navBallSheen)" />
+            <g clipPath="url(#navBallClip)" stroke="#0b1220">
+              <line x1="90" y1="70" x2="90" y2="32" strokeWidth="2.4" strokeLinecap="round" />
+              <line x1="109.02" y1="83.82" x2="145.16" y2="72.08" strokeWidth="2.4" strokeLinecap="round" />
+              <line x1="101.76" y1="106.18" x2="124.09" y2="136.92" strokeWidth="2.4" strokeLinecap="round" />
+              <line x1="78.24" y1="106.18" x2="55.91" y2="136.92" strokeWidth="2.4" strokeLinecap="round" />
+              <line x1="70.98" y1="83.82" x2="34.84" y2="72.08" strokeWidth="2.4" strokeLinecap="round" />
+              <polygon points="108.22,64.92 102.41,47.03 117.63,35.98 132.84,47.03 127.03,64.92" fill="#0b1220" stroke="none" />
+              <polygon points="119.48,99.58 134.70,88.52 149.92,99.58 144.10,117.47 125.30,117.47" fill="#0b1220" stroke="none" />
+              <polygon points="90.00,121.00 105.22,132.06 99.40,149.94 80.60,149.94 74.78,132.06" fill="#0b1220" stroke="none" />
+              <polygon points="60.52,99.58 54.70,117.47 35.90,117.47 30.08,99.58 45.30,88.52" fill="#0b1220" stroke="none" />
+              <polygon points="71.78,64.92 52.97,64.92 47.16,47.03 62.37,35.98 77.59,47.03" fill="#0b1220" stroke="none" />
+              <polygon points="90.00,70.00 109.02,83.82 101.76,106.18 78.24,106.18 70.98,83.82" fill="#0b1220" stroke="none" />
+            </g>
+            <circle cx="90" cy="90" r="58" fill="none" stroke="#0b1220" strokeWidth="1.5" strokeOpacity="0.22" />
+          </svg>
           <span className="font-display text-lg font-extrabold tracking-tight">
             Mondial<span className="text-accent-gold">26</span>
           </span>
