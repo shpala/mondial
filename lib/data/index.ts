@@ -61,9 +61,17 @@ export const getDataStatus = cache(
 // shared by the score overlay and the line-up lookup.
 const espnLive = cache(() => fetchEspnLive());
 
-// Per-request memoized market odds (empty map unless ODDS_API_KEY is set). The
-// de-vigged consensus is overlaid onto upcoming fixtures for sharper win probs.
-const marketOdds = cache(() => fetchWorldCupOdds());
+// Market odds (empty map unless ODDS_API_KEY is set), overlaid onto upcoming
+// fixtures for sharper win probs. Cached ACROSS requests via unstable_cache — not
+// just per-request — because the pages that read this export `force-dynamic`, which
+// disables a plain fetch's own `revalidate`; without this, normal traffic would burn
+// the 500/month odds quota. Stored as entries (unstable_cache can't serialize a Map).
+const cachedOddsEntries = unstable_cache(
+  async () => [...(await fetchWorldCupOdds()).entries()],
+  ["market-odds-h2h"],
+  { revalidate: 3600 },
+);
+const marketOdds = cache(async () => new Map(await cachedOddsEntries()));
 
 /** Chronological fixtures with real live scores overlaid, ratings untouched
  *  (pre-tournament seeds). The basis for live-rating computation. Memoized per
