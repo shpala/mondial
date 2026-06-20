@@ -17,13 +17,27 @@ const display = Space_Grotesk({
   display: "swap",
 });
 
+const DESCRIPTION =
+  "Live 2026 FIFA World Cup bracket, title odds and a transparent, self-grading prediction model.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://cup.shpa.la"),
   title: {
     default: "Mondial — 2026 World Cup",
     template: "%s · Mondial",
   },
-  description:
-    "Current 2026 FIFA World Cup squads, starting lineups, and an interactive prediction bracket.",
+  description: DESCRIPTION,
+  openGraph: {
+    title: "Mondial — 2026 World Cup",
+    description: DESCRIPTION,
+    siteName: "Mondial26",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Mondial — 2026 World Cup",
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({
