@@ -5,10 +5,12 @@ import { getVerdict } from "@/lib/data";
 
 // Rich link-preview card (WhatsApp, Slack, Twitter, …): the app icon + the model's
 // live pick to win the cup + its track record. nodejs runtime so it can read the
-// data layer; generated on demand (rarely scraped) — the 10k-sim it reads is itself
-// cached across requests, so this stays cheap.
+// data layer. ISR (not force-dynamic) is essential here: link crawlers — WhatsApp's
+// especially — have a tight timeout, so the image MUST be served instantly from the
+// edge cache, never regenerated per scrape. Prerendered at build (getVerdict is
+// caught → static fallback if data is unavailable), then refreshed hourly.
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 export const alt = "Mondial26 — the model's pick to win the 2026 World Cup";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
