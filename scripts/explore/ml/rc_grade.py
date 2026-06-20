@@ -55,7 +55,11 @@ def corpus_ratings(cutoff):
         r[h] += d; r[a] -= d
     return dict(r)
 
-REG = {o["name"]: o for o in json.load(open("/tmp/registry_ratings.json")) if o.get("rating")}
+# Pre-tournament World Football Elo seeds — a committed snapshot of the registry
+# (lib/teams/registry.ts) as it stood for these experiments, with the team names the
+# corpus uses. The live registry evolves as qualifiers finalise, so this is a fixed
+# research record kept beside the script (regenerate deliberately, not automatically).
+REG = {o["name"]: o for o in json.load(open(HERE / "registry_ratings.json")) if o.get("rating")}
 def registry_source(name):
     o = REG.get(name)
     return (float(o["rating"]), bool(o["host"])) if o else None

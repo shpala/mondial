@@ -107,8 +107,12 @@ ranking (low — known inferior to Elo), squad market value and club-Elo ensembl
   `e^(·)` and a flat draw term instead of the shipped `10^(·)` with `ν·√(ab)`; its
   internal "baseline" is therefore wrong, but the trained net was verified against
   the *correct* 0.882 baseline, so the conclusion (no reliable gain) stands.
-- The exploration scripts hard-code repo-relative paths and were run from the repo
-  root; they are a research record, not production code (and are excluded from lint).
+- The report-card scripts (`rc_*.py`) read a committed seed snapshot
+  (`registry_ratings.json`, beside the scripts) and reproduce from any checkout. The
+  feature-matrix runners (`m_*.py`) still hard-code an absolute path to the
+  (gitignored) `features.csv`, so reproduce those by running `build_features.py` first
+  and pointing the path at the generated file. All are a research record, not
+  production code (and are excluded from lint).
 
 Whenever the prediction algorithm changes, update both this log and the user-facing
 `/methodology` page (`app/methodology/page.tsx`).

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { ImageResponse } from "next/og";
-import { getVerdict } from "@/lib/data";
+import { getVerdict, getDataStatus } from "@/lib/data";
 
 // Rich link-preview card (WhatsApp, Slack, Twitter, …): the app icon + the model's
 // live pick to win the cup + its track record. nodejs runtime so it can read the
@@ -18,13 +18,18 @@ export const contentType = "image/png";
 export default async function OpengraphImage() {
   // Co-located asset, read inside the handler (so it never runs during build) — a
   // data URI because fetch(file://) isn't supported here.
-  const ball = `data:image/png;base64,${readFileSync(
-    fileURLToPath(new URL("./og-ball.png", import.meta.url)),
+  const mark = `data:image/png;base64,${readFileSync(
+    fileURLToPath(new URL("./og-cup.png", import.meta.url)),
   ).toString("base64")}`;
 
+  // Never broadcast an invented pick. When the live feed is down the data facade
+  // silently serves the bundled snapshot, so getVerdict() returns a sample-data
+  // favourite rather than throwing — render the generic card in that case (and on
+  // any error), so ISR keeps the last good image instead of caching a fake pick.
   let verdict: Awaited<ReturnType<typeof getVerdict>> | null = null;
   try {
-    verdict = await getVerdict();
+    const [v, status] = await Promise.all([getVerdict(), getDataStatus()]);
+    verdict = status.usingSample ? null : v;
   } catch {
     verdict = null;
   }
@@ -45,7 +50,7 @@ export default async function OpengraphImage() {
           fontFamily: "sans-serif",
         }}
       >
-        <img src={ball} width={232} height={232} alt="" style={{ borderRadius: 48 }} />
+        <img src={mark} width={232} height={232} alt="" style={{ borderRadius: 48 }} />
         <div
           style={{
             display: "flex",
