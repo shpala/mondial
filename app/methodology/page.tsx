@@ -30,6 +30,39 @@ const curve = GAPS.map((g) => ({
   wc: winProbability(g, 0, WC_PREDICTION_SCALE),
 }));
 
+/* Other prediction algorithms we benchmarked against the shipped Elo + Davidson
+   model. Each was trained on the same leakage-free history and scored
+   out-of-sample on a broad 2023+ holdout (lower log-loss is better; the shipped
+   model scores ≈ 0.882). None of them transferred to an edge on World Cup
+   matches — the full write-up lives in the repo research log. */
+const ALTERNATIVES: { name: string; loss: string; why: string }[] = [
+  {
+    name: "Logistic regression",
+    loss: "0.870",
+    why: "Edges the baseline on the broad holdout — but the entire gain comes from a 'games played' data-reliability feature, meaningless for a World Cup field where every team is data-rich.",
+  },
+  {
+    name: "Random forest",
+    loss: "0.876",
+    why: "Within noise of the baseline, and only after probability calibration — no real signal beyond the rating gap Elo already captures.",
+  },
+  {
+    name: "Gradient-boosted trees (XGBoost, HistGBM)",
+    loss: "0.90–0.91",
+    why: "Over-confident; they lose to the baseline even after calibration.",
+  },
+  {
+    name: "Support-vector machine (RBF kernel)",
+    loss: "0.96",
+    why: "Far worse than the baseline on every split.",
+  },
+  {
+    name: "Neural nets (MLP, team embeddings, residual-over-Elo)",
+    loss: "0.867–0.868",
+    why: "The best raw numbers — but the embedding net overfit team identities and the residual net's edge was just re-calibration, not new signal, and none beat Elo + Davidson on the World Cup holdout.",
+  },
+];
+
 function Section({
   n,
   id,
@@ -445,15 +478,87 @@ P(home) = a/(a+b+d)   P(draw) = d/(a+b+d)   P(away) = b/(a+b+d)`}</Formula>
           games. Each was graded on results it was never fitted to.
         </p>
         <p>
-          We also checked whether a fancier model would do better. Match-type
-          features (friendly vs qualifier vs finals), random forests, gradient-
-          boosted trees, SVMs, and several neural networks (a multilayer
-          perceptron, learned team embeddings, and a residual-over-Elo net) were
-          all tested out-of-sample on the same World Cup holdouts. None reliably
-          beat this calibrated Elo + Davidson model — on World Cup matches the
-          field is compressed and the sample is small, so the extra complexity
-          just fit noise. So we kept the simple, transparent model. The one
-          outside signal that genuinely sharpens predictions is{" "}
+          We also checked whether a fancier model would do better. Every
+          alternative below was trained on the same leakage-free history and
+          scored <strong className="text-ink-100">out-of-sample</strong> — on a
+          broad 2023+ holdout and, decisively, on the World Cup matches the app
+          actually predicts. The bar to beat is the shipped Elo + Davidson model,
+          at a log-loss of <K>≈ 0.882</K> (lower is better).
+        </p>
+        <div className="card overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-ink-700 text-left text-ink-400">
+                <th className="px-4 py-2 font-medium">Algorithm considered</th>
+                <th className="px-4 py-2 text-right font-medium">Log-loss</th>
+                <th className="px-4 py-2 font-medium">
+                  Why it wasn&rsquo;t chosen
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {ALTERNATIVES.map((a) => (
+                <tr
+                  key={a.name}
+                  className="border-b border-ink-700/50 align-top last:border-0"
+                >
+                  <td className="px-4 py-2 font-medium text-ink-200">
+                    {a.name}
+                  </td>
+                  <td className="px-4 py-2 text-right tabular-nums text-ink-400">
+                    {a.loss}
+                  </td>
+                  <td className="px-4 py-2 text-ink-300">{a.why}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs text-ink-400">
+          Broad-holdout log-loss, versus the shipped model&rsquo;s <K>≈ 0.882</K>.
+          Even the few that edge it there don&rsquo;t transfer to the World Cup
+          split — the field is compressed and the sample is small, so the extra
+          complexity just fits noise.
+        </p>
+        <p>We also tried richer inputs, not just richer models:</p>
+        <ul className="ml-4 list-disc space-y-1 marker:text-ink-600">
+          <li>
+            <strong className="text-ink-100">Match-type features</strong> (friendly
+            vs qualifier vs finals) — no measurable gain, and they hurt the World
+            Cup splits; the Elo rating already absorbs match context.
+          </li>
+          <li>
+            <strong className="text-ink-100">
+              Recent form, rest days, low-data shrinkage
+            </strong>{" "}
+            — real but tiny on the broad corpus, and they don&rsquo;t transfer: the
+            World Cup field is uniformly strong, so shrinkage only removes real
+            rating signal.
+          </li>
+          <li>
+            <strong className="text-ink-100">
+              Alternative pre-tournament ratings
+            </strong>{" "}
+            (corpus-rolled Elo, FIFA-ranking blends, confederation shrinkage) — the
+            registry&rsquo;s World Football Elo graded best; corpus-rolled Elo was
+            significantly worse, and no blend recovered the gap.
+          </li>
+          <li>
+            <strong className="text-ink-100">FIFA world ranking</strong> as the
+            rating — a known weaker predictor than Elo.
+          </li>
+          <li>
+            <strong className="text-ink-100">
+              xG, squad market value, club-Elo ensembles
+            </strong>{" "}
+            — no free national-team xG feed, and the rest add friction without a
+            reliable edge.
+          </li>
+        </ul>
+        <p>
+          Across all of it, nothing reliably beat the calibrated Elo + Davidson
+          model on World Cup matches, so we kept the simple, transparent one. The
+          one outside signal that genuinely sharpens predictions is{" "}
           <strong className="text-ink-100">betting-market odds</strong>, which the
           app blends in for upcoming matches when they&rsquo;re available.
         </p>
