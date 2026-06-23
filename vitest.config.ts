@@ -15,5 +15,13 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    // Informational only — `npm run test:coverage`. No thresholds, so it never
+    // fails the build; `npm test` (and CI) stay coverage-free and fast.
+    coverage: {
+      provider: "v8",
+      reporter: ["text-summary", "html"],
+      include: ["lib/**", "components/**", "store/**"],
+      exclude: ["**/*.d.ts"],
+    },
   },
 });
