@@ -212,6 +212,7 @@ async function overlayLiveScores(fixtures: Fixture[]): Promise<Fixture[]> {
         awayGoals: away,
         minute: live.minute,
         goals: goals.length ? goals : f.goals,
+        liveOverlaid: true,
       };
     }
     // ESPN says full-time but the daily spine hasn't recorded it yet: surface
@@ -224,6 +225,7 @@ async function overlayLiveScores(fixtures: Fixture[]): Promise<Fixture[]> {
         awayGoals: away,
         minute: null,
         goals: goals.length ? goals : f.goals,
+        liveOverlaid: true,
       };
     }
     return f;

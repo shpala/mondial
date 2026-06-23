@@ -22,10 +22,13 @@ export function MatchesBrowser({
   fixtures,
   initialGroup = "",
   initialStatus = "all",
+  sample = false,
 }: {
   fixtures: Fixture[];
   initialGroup?: string;
   initialStatus?: StatusFilter;
+  /** Serving the bundled snapshot — flags fabricated sample results. */
+  sample?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -138,7 +141,7 @@ export function MatchesBrowser({
               </h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {games.map((f) => (
-                  <MatchCard key={f.id} fixture={f} />
+                  <MatchCard key={f.id} fixture={f} sample={sample} />
                 ))}
               </div>
             </section>

@@ -4,13 +4,16 @@ import { TeamFlag } from "@/components/ui/TeamFlag";
 import { Countdown } from "@/components/Countdown";
 import { formatKickoff, isToday } from "@/lib/format";
 import { fixtureHomeWinProb, isMarketBacked } from "@/lib/displayProbs";
+import { isFabricatedResult } from "@/lib/provenance";
 
 function StatusPill({
   status,
   minute,
+  fabricated,
 }: {
   status: Fixture["status"];
   minute?: string | null;
+  fabricated?: boolean;
 }) {
   if (status === "live") {
     return (
@@ -21,6 +24,19 @@ function StatusPill({
     );
   }
   if (status === "finished") {
+    // A fabricated sample result must not wear the emerald "real result" badge —
+    // render it neutral with a "≈" qualifier (the global banner explains why).
+    if (fabricated) {
+      return (
+        <span
+          className="inline-flex items-center gap-1 rounded-full bg-ink-700/70 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-ink-300"
+          title="Sample fixture — illustrative score, not a real result"
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-ink-400" aria-hidden />
+          ≈ Full-time
+        </span>
+      );
+    }
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-300">
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
@@ -106,9 +122,18 @@ function ScoreBlock({
   return <span className="shrink-0 px-1 text-xs font-semibold text-ink-400">v</span>;
 }
 
-export function MatchCard({ fixture }: { fixture: Fixture }) {
+export function MatchCard({
+  fixture,
+  sample = false,
+}: {
+  fixture: Fixture;
+  /** True when serving the bundled snapshot (live feed down) — used to flag a
+   *  finished fixture's illustrative score as not-a-real-result. */
+  sample?: boolean;
+}) {
   const played = fixture.status === "finished" || fixture.status === "live";
   const predicted = fixture.status === "scheduled";
+  const fabricated = isFabricatedResult(fixture, sample);
 
   // Model prediction for upcoming games (skip placeholder knockout slots).
   const realTeams = fixture.home.id !== 0 && fixture.away.id !== 0;
@@ -152,7 +177,11 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
             </span>
           )}
         </span>
-        <StatusPill status={fixture.status} minute={fixture.minute} />
+        <StatusPill
+          status={fixture.status}
+          minute={fixture.minute}
+          fabricated={fabricated}
+        />
       </div>
 
       <div className="flex items-center gap-2">

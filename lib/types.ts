@@ -85,6 +85,11 @@ export interface Fixture {
   /** De-vigged market consensus 1X2 probabilities for an upcoming fixture when
    *  betting odds are available (lib/api/sources/oddsapi); absent otherwise. */
   marketProbs?: { home: number; draw: number; away: number } | null;
+  /** True when the live/final score was overlaid from ESPN (a real result),
+   *  vs. a snapshot-baked or predicted score. Transient, set by the facade's
+   *  `overlayLiveScores`; lets the UI avoid badging fabricated sample scores as
+   *  real (see `isFabricatedResult` in lib/provenance). */
+  liveOverlaid?: boolean;
 }
 
 export interface LineupPlayer {

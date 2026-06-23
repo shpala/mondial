@@ -1,7 +1,14 @@
 import Link from "next/link";
 import type { OutcomeReport } from "@/lib/modelreport";
 
-export function ModelReportCard({ report }: { report: OutcomeReport }) {
+export function ModelReportCard({
+  report,
+  sample = false,
+}: {
+  report: OutcomeReport;
+  /** Serving the bundled snapshot — the calls are graded on sample fixtures. */
+  sample?: boolean;
+}) {
   if (report.n === 0) {
     return (
       <Link href="/model" className="card block p-4 hover:border-accent-gold/50">
@@ -23,7 +30,7 @@ export function ModelReportCard({ report }: { report: OutcomeReport }) {
         <strong>
           {report.hits} of {report.n}
         </strong>{" "}
-        group results — {edge >= 0 ? "beating" : "trailing"} a blind guess by{" "}
+        {sample ? "sample group" : "group"} results — {edge >= 0 ? "beating" : "trailing"} a blind guess by{" "}
         <strong>{Math.abs(edge).toFixed(2)}</strong> log-loss
         {smallSample ? (
           <span className="text-ink-400"> (early days — small sample)</span>

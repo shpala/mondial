@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getFixtures, getMatchLineups } from "@/lib/data";
+import { getFixtures, getMatchLineups, getDataStatus } from "@/lib/data";
 import { PitchLineup } from "@/components/PitchLineup";
 import { GoalList } from "@/components/GoalList";
 import { ScorelinePrediction } from "@/components/ScorelinePrediction";
@@ -12,6 +12,7 @@ import { EstimatedNotice, EstimatedTag } from "@/components/ui/EstimatedData";
 import { formatKickoff } from "@/lib/format";
 import { predictScoreline } from "@/lib/prediction";
 import { fixtureHomeWinProb } from "@/lib/displayProbs";
+import { isFabricatedResult } from "@/lib/provenance";
 
 export const dynamic = "force-dynamic";
 
@@ -85,11 +86,16 @@ export default async function MatchPage({
   const fixtureId = Number(id);
   if (!Number.isFinite(fixtureId)) notFound();
 
-  const fixture = (await getFixtures()).find((f) => f.id === fixtureId);
+  const [fixtures, { usingSample }] = await Promise.all([
+    getFixtures(),
+    getDataStatus(),
+  ]);
+  const fixture = fixtures.find((f) => f.id === fixtureId);
   if (!fixture) notFound();
 
   const played = fixture.homeGoals !== null && fixture.awayGoals !== null;
   const live = fixture.status === "live";
+  const fabricated = isFabricatedResult(fixture, usingSample);
   const predicted = fixture.status === "scheduled";
   const realTeams = fixture.home.id !== 0 && fixture.away.id !== 0;
   const homeProb =
@@ -108,7 +114,9 @@ export default async function MatchPage({
         cls: "bg-red-500/15 text-red-300",
       }
     : played
-      ? { text: "✓ Full-time · result", cls: "bg-emerald-500/15 text-emerald-300" }
+      ? fabricated
+        ? { text: "≈ Full-time · sample", cls: "bg-ink-700/70 text-ink-300" }
+        : { text: "✓ Full-time · result", cls: "bg-emerald-500/15 text-emerald-300" }
       : { text: "◆ Upcoming · predicted", cls: "bg-accent-gold/15 text-amber-300" };
 
   return (

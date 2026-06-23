@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getRawFixtures, getGroups } from "@/lib/data";
+import { getRawFixtures, getGroups, getDataStatus } from "@/lib/data";
 import { gradeOutcomes, gradeQualification } from "@/lib/modelreport";
 import { simulateTournament } from "@/lib/montecarlo";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
@@ -14,7 +14,11 @@ const pct = (p: number) => `${(p * 100).toFixed(0)}%`;
 const num3 = (x: number) => x.toFixed(3);
 
 export default async function ModelPage() {
-  const [fixtures, groups] = await Promise.all([getRawFixtures(), getGroups()]);
+  const [fixtures, groups, { usingSample }] = await Promise.all([
+    getRawFixtures(),
+    getGroups(),
+    getDataStatus(),
+  ]);
   const report = gradeOutcomes(fixtures);
 
   // Pre-tournament odds: strip all group results back to seeds and simulate the
@@ -41,8 +45,16 @@ export default async function ModelPage() {
         Model report card
       </h1>
       <p className="mb-6 max-w-2xl text-sm text-ink-400">
-        How Mondial’s prediction model is doing against the real 2026 results —
-        every call is scored from what the model knew <em>before</em> each match.{" "}
+        How Mondial’s prediction model is doing against{" "}
+        {usingSample ? "sample 2026 fixtures" : "the real 2026 results"} — every
+        call is scored from what the model knew <em>before</em> each match.
+        {usingSample ? (
+          <em className="text-ink-500">
+            {" "}
+            (The live results feed is unavailable, so these grades run on sample
+            fixtures.)
+          </em>
+        ) : null}{" "}
         <Link
           href="/methodology"
           className="font-medium text-accent-gold hover:underline"

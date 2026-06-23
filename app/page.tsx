@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   getDashboardFixtures,
+  getDataStatus,
   getRawFixtures,
   getTeams,
   getTitleOdds,
@@ -51,13 +52,19 @@ function Section({
 }
 
 export default async function DashboardPage() {
-  const [{ live, today, upcoming, recent }, teams, rawFixtures, odds] =
-    await Promise.all([
-      getDashboardFixtures(),
-      getTeams(),
-      getRawFixtures(),
-      getTitleOdds(),
-    ]);
+  const [
+    { live, today, upcoming, recent },
+    teams,
+    rawFixtures,
+    odds,
+    { usingSample },
+  ] = await Promise.all([
+    getDashboardFixtures(),
+    getTeams(),
+    getRawFixtures(),
+    getTitleOdds(),
+    getDataStatus(),
+  ]);
   const report = gradeOutcomes(rawFixtures);
   // The model's current pick to win the cup — leads the hero (the product's thesis).
   const favourite = odds.find((o) => o.champion > 0) ?? null;
@@ -101,7 +108,7 @@ export default async function DashboardPage() {
               </h1>
               <p className="mt-3 max-w-xl text-sm text-ink-300">
                 {report.n > 0
-                  ? `${report.hits} of ${report.n} group calls correct so far — `
+                  ? `${report.hits} of ${report.n} group calls correct${usingSample ? " on sample fixtures" : " so far"} — `
                   : ""}
                 title odds across {teams.length} nations, simulated thousands of
                 times.
@@ -146,7 +153,7 @@ export default async function DashboardPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {live.map((f) => (
-              <MatchCard key={f.id} fixture={f} />
+              <MatchCard key={f.id} fixture={f} sample={usingSample} />
             ))}
           </div>
         </section>
@@ -156,7 +163,7 @@ export default async function DashboardPage() {
       {favourite && <TitleOddsTable odds={odds} limit={5} />}
 
       <section className="mb-8">
-        <ModelReportCard report={report} />
+        <ModelReportCard report={report} sample={usingSample} />
       </section>
 
       {today.length > 0 && (
@@ -170,7 +177,7 @@ export default async function DashboardPage() {
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {today.map((f) => (
-              <MatchCard key={f.id} fixture={f} />
+              <MatchCard key={f.id} fixture={f} sample={usingSample} />
             ))}
           </div>
         </Section>
@@ -180,7 +187,7 @@ export default async function DashboardPage() {
         {upcoming.length ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {upcoming.map((f) => (
-              <MatchCard key={f.id} fixture={f} />
+              <MatchCard key={f.id} fixture={f} sample={usingSample} />
             ))}
           </div>
         ) : (
@@ -192,7 +199,7 @@ export default async function DashboardPage() {
         <Section title="Recent results" href="/matches">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {recent.map((f) => (
-              <MatchCard key={f.id} fixture={f} />
+              <MatchCard key={f.id} fixture={f} sample={usingSample} />
             ))}
           </div>
         </Section>

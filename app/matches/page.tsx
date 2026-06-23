@@ -1,4 +1,4 @@
-import { getFixtures } from "@/lib/data";
+import { getFixtures, getDataStatus } from "@/lib/data";
 import { MatchesBrowser } from "@/components/MatchesBrowser";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { AutoRefresh } from "@/components/AutoRefresh";
@@ -13,9 +13,10 @@ export default async function MatchesPage({
 }: {
   searchParams: Promise<{ group?: string; status?: string }>;
 }) {
-  const [{ group, status }, fixtures] = await Promise.all([
+  const [{ group, status }, fixtures, { usingSample }] = await Promise.all([
     searchParams,
     getFixtures(),
+    getDataStatus(),
   ]);
   const initialGroup = group && /^[A-L]$/.test(group) ? group : "";
   const initialStatus: StatusFilter = STATUS_VALUES.includes(
@@ -39,6 +40,7 @@ export default async function MatchesPage({
         fixtures={fixtures}
         initialGroup={initialGroup}
         initialStatus={initialStatus}
+        sample={usingSample}
       />
     </div>
   );
