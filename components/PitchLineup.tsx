@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Lineup, LineupPlayer } from "@/lib/types";
 
 interface Token {
@@ -103,6 +103,25 @@ export function PitchLineup({
     ...(home ? layout(home, "home", "#16a34a") : []),
   ];
 
+  // Roving tabindex: the ~22 tokens are ONE tab stop, then arrow keys move
+  // between them — instead of 22 separate tab stops. Refs and the active token
+  // are keyed by the stable player.id (the paint order re-sorts the selected
+  // token to the end, so an array index would make focus jump unpredictably).
+  const tokenRefs = useRef(new Map<number, SVGGElement | null>());
+  const [activeId, setActiveId] = useState<number | null>(null);
+  const rovingId = activeId ?? tokens[0]?.player.id ?? null;
+
+  function focusToken(id: number | undefined) {
+    if (id == null) return;
+    setActiveId(id);
+    tokenRefs.current.get(id)?.focus();
+  }
+  function moveFocus(currentId: number, delta: number) {
+    const idx = tokens.findIndex((tk) => tk.player.id === currentId);
+    if (idx === -1) return;
+    focusToken(tokens[(idx + delta + tokens.length) % tokens.length].player.id);
+  }
+
   // viewBox in pitch units; width 100, height 150 (portrait)
   const W = 100;
   const H = 150;
@@ -156,29 +175,58 @@ export function PitchLineup({
         </g>
 
         {/* players — selected token rendered last so it wins overlaps */}
+        <g role="group" aria-label="Players — arrow keys to move, Enter to select">
         {[...tokens]
           .sort(
             (a, b) =>
               (a.player.id === selected?.player.id ? 1 : 0) -
               (b.player.id === selected?.player.id ? 1 : 0),
           )
-          .map((t, i) => {
+          .map((t) => {
           const cx = 6 + t.x * (W - 12);
           const cy = 8 + t.y * (H - 16);
           const isSel = selected?.player.id === t.player.id;
           return (
             <g
-              key={`${t.player.id}-${i}`}
+              key={t.player.id}
+              ref={(el) => {
+                tokenRefs.current.set(t.player.id, el);
+              }}
               transform={`translate(${cx} ${cy})`}
               className="pitch-token cursor-pointer"
               role="button"
-              tabIndex={0}
+              tabIndex={t.player.id === rovingId ? 0 : -1}
               aria-label={`#${t.player.number ?? "–"} ${t.player.name}`}
-              onClick={() => setSelected(isSel ? null : t)}
+              onClick={() => {
+                setSelected(isSel ? null : t);
+                setActiveId(t.player.id);
+              }}
               onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setSelected(isSel ? null : t);
+                switch (e.key) {
+                  case "Enter":
+                  case " ":
+                    e.preventDefault();
+                    setSelected(isSel ? null : t);
+                    setActiveId(t.player.id);
+                    break;
+                  case "ArrowRight":
+                  case "ArrowDown":
+                    e.preventDefault();
+                    moveFocus(t.player.id, 1);
+                    break;
+                  case "ArrowLeft":
+                  case "ArrowUp":
+                    e.preventDefault();
+                    moveFocus(t.player.id, -1);
+                    break;
+                  case "Home":
+                    e.preventDefault();
+                    focusToken(tokens[0]?.player.id);
+                    break;
+                  case "End":
+                    e.preventDefault();
+                    focusToken(tokens[tokens.length - 1]?.player.id);
+                    break;
                 }
               }}
             >
@@ -219,6 +267,7 @@ export function PitchLineup({
             </g>
           );
         })}
+        </g>
       </svg>
 
       <div className="flex items-center justify-between gap-4 border-t border-ink-700 px-4 py-3 text-xs">
