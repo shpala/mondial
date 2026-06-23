@@ -93,7 +93,10 @@ The model grades itself live on the [**/model**](https://cup.shpa.la/model) repo
 card, the full methodology is on
 [**/methodology**](https://cup.shpa.la/methodology), and the alternatives we tried
 and rejected (classical ML, neural nets, match-type features) are logged in
-[`docs/model-research.md`](docs/model-research.md).
+[`docs/model-research.md`](docs/model-research.md) — and reproduced in a zero-setup
+Colab notebook:
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/shpala/mondial/blob/main/docs/research/ml-bakeoff.ipynb)
 
 ## Data notes
 
