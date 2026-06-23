@@ -105,7 +105,7 @@ function Formula({ children }: { children: React.ReactNode }) {
 
 function K({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded bg-ink-700/70 px-1.5 py-0.5 font-mono text-[12px] text-accent-gold">
+    <span className="rounded-sm bg-ink-700/70 px-1.5 py-0.5 font-mono text-[12px] text-accent-gold">
       {children}
     </span>
   );

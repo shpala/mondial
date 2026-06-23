@@ -8,7 +8,7 @@ export function SiteNav() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-ink-700 bg-ink-900/80 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-ink-700 bg-ink-900/80 backdrop-blur-sm">
       <nav
         aria-label="Primary"
         className="mx-auto flex w-full max-w-6xl items-center gap-1 px-4 sm:px-6"

@@ -116,7 +116,7 @@ export function MatchesBrowser({
             ))}
           </div>
           <div
-            className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-ink-900 to-transparent sm:hidden"
+            className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l from-ink-900 to-transparent sm:hidden"
             aria-hidden
           />
         </div>

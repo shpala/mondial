@@ -91,8 +91,8 @@ export function VerdictBandSkeleton() {
     <div className="relative border-b border-ink-700 bg-ink-900/70" aria-hidden>
       <span className="absolute inset-x-0 top-0 h-px bg-accent-gold/40" />
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2 sm:px-6">
-        <div className="skeleton h-4 w-44 rounded" />
-        <div className="skeleton ml-auto h-4 w-24 rounded" />
+        <div className="skeleton h-4 w-44 rounded-sm" />
+        <div className="skeleton ml-auto h-4 w-24 rounded-sm" />
       </div>
     </div>
   );

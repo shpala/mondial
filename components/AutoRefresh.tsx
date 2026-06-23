@@ -34,7 +34,7 @@ export function AutoRefresh({ seconds = 60 }: { seconds?: number }) {
   }, [router, seconds]);
 
   return (
-    <div className="pointer-events-none fixed bottom-20 left-4 z-30 inline-flex items-center gap-1.5 rounded-full border border-ink-700 bg-ink-800/80 px-2.5 py-1 text-[11px] font-medium text-ink-400 backdrop-blur md:bottom-4">
+    <div className="pointer-events-none fixed bottom-20 left-4 z-30 inline-flex items-center gap-1.5 rounded-full border border-ink-700 bg-ink-800/80 px-2.5 py-1 text-[11px] font-medium text-ink-400 backdrop-blur-sm md:bottom-4">
       <span
         aria-hidden
         className={`h-1.5 w-1.5 rounded-full ${

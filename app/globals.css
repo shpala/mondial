@@ -1,17 +1,93 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-:root {
+@theme {
+  --color-pitch-50: #eafff2;
+  --color-pitch-500: #16a34a;
+  --color-pitch-700: #15803d;
+  --color-pitch-900: #052e16;
+
+  --color-ink-50: #f1f5f9;
+  --color-ink-100: #e2e8f0;
+  --color-ink-200: #cbd5e1;
+  --color-ink-300: #aab1c2;
+  --color-ink-400: #8b93a6;
+  --color-ink-500: #3a4255;
+  --color-ink-600: #262d40;
+  --color-ink-700: #1a2030;
+  --color-ink-800: #11151d;
+  --color-ink-900: #0a0e14;
+
+  --color-accent-gold: #d68f2e;
+  --color-accent-ember: #f97316;
+
+  /* Body stays system sans; the display face is the Next-injected Space Grotesk
+     (`--font-display-face` set on <html> in app/layout.tsx), with a system fallback. */
   --font-sans: ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display-face), ui-sans-serif, system-ui, sans-serif;
+
+  --animate-fade-up: fade-up 0.4s ease-out both;
+  --animate-shimmer: shimmer 1.5s infinite;
+
+  @keyframes fade-up {
+    0% {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
 }
 
-html {
-  color-scheme: dark;
-  /* Single source for the sticky-header height so offsets (e.g. the bracket
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility card {
+  @apply rounded-2xl border border-ink-700 bg-ink-800/70 backdrop-blur-sm;
+}
+
+@utility skeleton {
+  @apply relative overflow-hidden bg-ink-700/60 rounded-md;
+  &::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full animate-shimmer;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.06),
+      transparent
+    );
+  }
+}
+
+@layer utilities {
+  html {
+    color-scheme: dark;
+    /* Single source for the sticky-header height so offsets (e.g. the bracket
      round pager) stay aligned if the header padding/logo size changes. */
-  --header-h: 3.5rem;
+    --header-h: 3.5rem;
+  }
 }
 
 @layer base {
@@ -36,57 +112,40 @@ html {
   }
 }
 
-/* Respect users who ask for less motion. */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
+@layer utilities {
+  /* Respect users who ask for less motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
   }
-}
 
-body {
-  @apply bg-ink-900 text-ink-50 antialiased;
-}
+  body {
+    @apply bg-ink-900 text-ink-50 antialiased;
+  }
 
-/* Pitch surnames collide at phone width — hide them there (numbers stay; the
+  /* Pitch surnames collide at phone width — hide them there (numbers stay; the
    full name shows on tap). */
-@media (max-width: 640px) {
-  .pitch-surname {
-    display: none;
+  @media (max-width: 640px) {
+    .pitch-surname {
+      display: none;
+    }
   }
-}
 
-/* Thin custom scrollbar for the horizontal bracket */
-.scroll-slim::-webkit-scrollbar {
-  height: 10px;
-  width: 10px;
-}
-.scroll-slim::-webkit-scrollbar-thumb {
-  @apply bg-ink-600 rounded-full;
-}
-.scroll-slim::-webkit-scrollbar-track {
-  @apply bg-transparent;
-}
-
-@layer components {
-  .card {
-    @apply rounded-2xl border border-ink-700 bg-ink-800/70 backdrop-blur;
+  /* Thin custom scrollbar for the horizontal bracket */
+  .scroll-slim::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
   }
-  .skeleton {
-    @apply relative overflow-hidden bg-ink-700/60 rounded-md;
+  .scroll-slim::-webkit-scrollbar-thumb {
+    @apply bg-ink-600 rounded-full;
   }
-  .skeleton::after {
-    content: "";
-    @apply absolute inset-0 -translate-x-full animate-shimmer;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.06),
-      transparent
-    );
+  .scroll-slim::-webkit-scrollbar-track {
+    @apply bg-transparent;
   }
 }
