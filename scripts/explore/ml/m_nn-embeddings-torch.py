@@ -16,6 +16,7 @@ Regularisation strategy (8k rows, 300*8=2400 team params):
   - Val split: 10% of train (stratified)
 """
 
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
@@ -33,7 +34,7 @@ np.random.seed(SEED)
 torch.manual_seed(SEED)
 
 # ── Load data ─────────────────────────────────────────────────────────────────
-df = pd.read_csv("/home/shpala/dev/mondial/scripts/explore/ml/features_teams.csv")
+df = pd.read_csv(str(Path(__file__).resolve().parent / "features_teams.csv"))
 
 NUMERIC_COLS = [
     "rating_diff", "abs_rating_diff", "raw_rating_diff", "neutral", "imp",

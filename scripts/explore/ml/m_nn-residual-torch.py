@@ -10,6 +10,7 @@ Architecture:
   4. Initialise correction head weights near-zero so the net starts near baseline.
 """
 
+from pathlib import Path
 import math
 import numpy as np
 import pandas as pd
@@ -24,7 +25,7 @@ torch.manual_seed(SEED)
 np.random.seed(SEED)
 
 # ── Data ─────────────────────────────────────────────────────────────────────
-df = pd.read_csv("/home/shpala/dev/mondial/scripts/explore/ml/features.csv")
+df = pd.read_csv(str(Path(__file__).resolve().parent / "features.csv"))
 
 EXTRA_FEATURES = [
     "neutral", "imp",

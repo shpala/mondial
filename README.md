@@ -1,5 +1,9 @@
 # Mondial — 2026 World Cup Companion
 
+[![CI](https://github.com/shpala/mondial/actions/workflows/ci.yml/badge.svg)](https://github.com/shpala/mondial/actions/workflows/ci.yml)
+
+**Live demo → [cup.shpa.la](https://cup.shpa.la)**
+
 A polished web app for the 2026 FIFA World Cup: current squads, per-match
 starting lineups on a pitch, group standings, and an **interactive prediction
 bracket** that combines a model baseline with your own picks.

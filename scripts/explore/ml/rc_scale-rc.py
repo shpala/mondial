@@ -6,8 +6,9 @@ Protocol: scale is chosen on pre-cutoff grounds (WC2022 corpus-rolled analog).
 We sweep on WC2022 to pick the best scale, then report both windows honestly.
 No peeking at WC2026 to pick the scale.
 """
+from pathlib import Path
 import sys
-sys.path.insert(0, "/home/shpala/dev/mondial/scripts/explore/ml")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from rc_grade import (
     WC2026, WC2022, REG, registry_source, corp26, corp22,

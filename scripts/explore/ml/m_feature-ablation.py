@@ -9,6 +9,7 @@ D: A + rest
 E: all features
 """
 
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier
@@ -16,7 +17,7 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import log_loss, brier_score_loss, accuracy_score
 
 # Load data
-df = pd.read_csv('/home/shpala/dev/mondial/scripts/explore/ml/features.csv')
+df = pd.read_csv(str(Path(__file__).resolve().parent / "features.csv"))
 
 train = df[df['split'] == 'train'].copy()
 test_general = df[df['split'] == 'test_general'].copy()

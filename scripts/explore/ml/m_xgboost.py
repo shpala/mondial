@@ -3,6 +3,7 @@ XGBoost experiment: multi:softprob with calibration.
 Slug: xgboost
 """
 
+from pathlib import Path
 import sys
 import numpy as np
 import pandas as pd
@@ -23,7 +24,7 @@ FEATURES = [
     "cat_continental_finals", "cat_confederations", "cat_wc_finals", "cat_other",
 ]
 
-CSV = "/home/shpala/dev/mondial/scripts/explore/ml/features.csv"
+CSV = str(Path(__file__).resolve().parent / "features.csv")
 
 df = pd.read_csv(CSV)
 train = df[df["split"] == "train"].copy()

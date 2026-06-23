@@ -21,8 +21,9 @@ We compare against the standard corp22 baseline to test whether the recency
 window helps on the larger 64-game set.
 """
 
+from pathlib import Path
 import sys, math, json
-sys.path.insert(0, "/home/shpala/dev/mondial/scripts/explore/ml")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from rc_grade import (
     WC2026, WC2022, REG, registry_source, corp22, ROWS,

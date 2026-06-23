@@ -4,6 +4,7 @@ Calibrated with CalibratedClassifierCV (isotonic, internal 5-fold on train).
 If train is too slow with full 8131 rows, subsample to ~3000 (stratified).
 """
 
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.svm import SVC
@@ -13,7 +14,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.metrics import log_loss, brier_score_loss, accuracy_score
 import time
 
-FEATURES_PATH = "/home/shpala/dev/mondial/scripts/explore/ml/features.csv"
+FEATURES_PATH = str(Path(__file__).resolve().parent / "features.csv")
 FEATURE_COLS = [
     "rating_diff", "abs_rating_diff", "raw_rating_diff", "neutral", "imp",
     "home_ppg", "away_ppg", "ppg_diff", "home_gd", "away_gd", "gd_diff",
