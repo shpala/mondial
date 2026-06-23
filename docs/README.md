@@ -13,7 +13,8 @@ re-run).
 | [`scoreline-feasibility.md`](scoreline-feasibility.md) | research | Whether richer scoreline models / new data sources are worth it for the Dixon–Coles layer. |
 | [`wc2022-report.md`](wc2022-report.md) | research | Out-of-sample 2022 World Cup bakeoff (Davidson + Poisson margin vs full-Poisson), with a paired bootstrap CI. |
 | [`wc2022-predictions.json`](wc2022-predictions.json) | data | The 2022 World Cup predictions used by that report. |
-| [`research/ml-bakeoff.ipynb`](research/ml-bakeoff.ipynb) | research | Zero-setup Colab that reproduces the Python ML comparison from `model-research.md`. |
+| [`research/ml-bakeoff.ipynb`](research/ml-bakeoff.ipynb) | research | Zero-setup Colab that reproduces the Python ML comparison from `model-research.md`, with graphs and a feature-selection study. |
+| [`research/deep-learning-literature.md`](research/deep-learning-literature.md) | research | Can deep learning beat the shipped model? Cited literature review + a live re-run of this repo's PyTorch nets. Verdict: no reliable gain — the win is calibration, not capacity. |
 
 The reproducible scripts behind the research docs live in `scripts/explore/` (TypeScript
 algorithm experiments) and `scripts/explore/ml/` (Python ML experiments — see its
