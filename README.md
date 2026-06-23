@@ -8,6 +8,10 @@ A polished web app for the 2026 FIFA World Cup: current squads, per-match
 starting lineups on a pitch, group standings, and an **interactive prediction
 bracket** that combines a model baseline with your own picks.
 
+<p align="center">
+  <a href="https://cup.shpa.la"><img src="docs/assets/bracket.png" alt="Mondial — the prediction bracket, with the model's Round-of-32 candidates and live title odds" width="880"></a>
+</p>
+
 ## Quick start
 
 ```bash
@@ -66,6 +70,30 @@ facade (`lib/data/index.ts`):
 - **`store/bracket.ts`** — Zustand + localStorage; holds your bracket overrides.
 - **`components/PitchLineup.tsx`** — SVG pitch that places the starting XI from
   each team's formation/grid.
+
+## Model results
+
+The prediction model is **calibrated and backtested**, not guesswork. `npm run
+backtest` rolls one Elo table forward over **11,840 real internationals**
+(2014–2026) and scores every match out-of-sample:
+
+| Model | Log-loss ↓ | Brier ↓ |
+| --- | --- | --- |
+| No-skill base-rate baseline | 1.0503 | 0.6333 |
+| **Shipped model** (Elo → Davidson) | **0.8959** | **0.5277** |
+
+That is **+0.154 log-loss of skill** over the no-skill baseline, with reliability
+within a few points per decile (full table in
+[`docs/backtest-report.md`](docs/backtest-report.md)). On the held-out **2022 World
+Cup** the World-Cup probability flattening improves log-loss 1.0666 → **1.0557**,
+and that gain carries **out-of-sample** to the played 2026 games (1.0929 →
+**1.0619**) — see [`docs/algo-bakeoff.md`](docs/algo-bakeoff.md).
+
+The model grades itself live on the [**/model**](https://cup.shpa.la/model) report
+card, the full methodology is on
+[**/methodology**](https://cup.shpa.la/methodology), and the alternatives we tried
+and rejected (classical ML, neural nets, match-type features) are logged in
+[`docs/model-research.md`](docs/model-research.md).
 
 ## Data notes
 
@@ -196,3 +224,21 @@ replace it automatically. A paid TheSportsDB key additionally fills fuller
 pre-match squads/line-ups where ESPN has none yet; the free test key returns
 sparse rosters, so a completeness gate falls back to the generated XI rather than
 show broken data.
+
+## Data sources & attribution
+
+Mondial is an **unofficial, non-commercial** companion app. It is **not affiliated
+with, endorsed by, or sponsored by FIFA** or any participating federation, and all
+predictions — the bracket, the title odds and the upcoming-match line-ups — are
+**modelled estimates, not official information**.
+
+| Source | Used for | Licence / terms |
+| --- | --- | --- |
+| [openfootball/worldcup.json](https://github.com/openfootball/worldcup.json) | Fixtures, groups, standings, results | Public domain |
+| [ESPN](https://www.espn.com/) free site API | Live scores, goal timelines, real starting XIs | Undocumented public endpoint, used read-only with no key — not an official or sanctioned API |
+| [TheSportsDB](https://www.thesportsdb.com/) | Fuller squads & pre-match line-ups | Free tier / optional Patreon key |
+| [martj42/international_results](https://github.com/martj42/international_results) | `data/intl_results.csv` backtest corpus | CC0-1.0 (public domain) |
+| [eloratings.net](https://www.eloratings.net/) | Pre-tournament team ratings (World Football Elo, June 2026 snapshot) | Used as the rating seed |
+
+The MIT [`LICENSE`](LICENSE) covers **this repository's own code** only; the data
+above belongs to its respective sources under the terms listed.

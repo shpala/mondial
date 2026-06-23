@@ -1,0 +1,20 @@
+# Python dependencies for the model-research scripts in this directory.
+#
+# These scripts are a research record (excluded from the app's lint/CI), kept so the
+# experiments in docs/model-research.md and docs/algo-bakeoff.md can be reproduced.
+# Install into a throwaway virtualenv:
+#
+#   python3 -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements.txt
+#   python build_features.py     # regenerates the (gitignored) features.csv
+#   python m_logreg-full.py      # then any m_*.py / rc_*.py experiment
+#
+# torch is only needed for the neural-net experiments (m_nn-*.py) and is by far the
+# heaviest dependency, so it is left commented out — uncomment it if you want those.
+
+numpy
+pandas
+scikit-learn
+scipy
+xgboost
+# torch        # uncomment for the m_nn-*.py neural-net experiments
