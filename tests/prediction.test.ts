@@ -3,9 +3,11 @@ import type { Team } from "@/lib/types";
 import {
   bracketSeedOrder,
   buildBracket,
+  bracketAdvanceProbability,
   davidsonProbs,
   effectiveRating,
   HOST_ADVANTAGE,
+  knockoutAdvanceProbability,
   predictScoreline,
   predictWinProbability,
   resolveBracket,
@@ -96,6 +98,47 @@ describe("bracketSeedOrder", () => {
   it("contains every seed exactly once", () => {
     const order = bracketSeedOrder(32);
     expect(new Set(order).size).toBe(32);
+  });
+});
+
+describe("knockoutAdvanceProbability", () => {
+  it("is 0.5 for evenly matched sides", () => {
+    expect(
+      knockoutAdvanceProbability({ rating: 1800 }, { rating: 1800 }),
+    ).toBeCloseTo(0.5, 6);
+  });
+
+  it("two sides' advancement probabilities sum to 1", () => {
+    const a = { rating: 1950 };
+    const b = { rating: 1720 };
+    expect(
+      knockoutAdvanceProbability(a, b) + knockoutAdvanceProbability(b, a),
+    ).toBeCloseTo(1, 6);
+  });
+
+  it("flattens a favourite vs the proportional two-outcome model (penalties level ties)", () => {
+    const fav = { rating: 1950 };
+    const dog = { rating: 1720 };
+    const adv = knockoutAdvanceProbability(fav, dog);
+    // still favours the stronger side, so the bracket's shown winner is unchanged...
+    expect(adv).toBeGreaterThan(0.5);
+    // ...but the underdog advances more than under predictWinProbability = a/(a+b).
+    expect(adv).toBeLessThan(predictWinProbability(fav, dog));
+  });
+
+  it("applies the host bump like the other predictors", () => {
+    expect(
+      knockoutAdvanceProbability({ rating: 1800, host: true }, { rating: 1800 }),
+    ).toBeGreaterThan(0.5);
+  });
+});
+
+describe("bracketAdvanceProbability (flag gate, off by default)", () => {
+  it("equals the proportional predictWinProbability while the flag is off", () => {
+    const a = { rating: 1950 };
+    const b = { rating: 1720 };
+    // KNOCKOUT_SHOOTOUT_ENABLED defaults to false → live keeps the shipped model.
+    expect(bracketAdvanceProbability(a, b)).toBe(predictWinProbability(a, b));
   });
 });
 

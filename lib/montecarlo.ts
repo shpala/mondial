@@ -14,9 +14,9 @@ import { computeGroupStandings } from "@/lib/standings";
 import { qualifiedTeams } from "@/lib/qualifiers";
 import {
   ROUNDS,
+  bracketAdvanceProbability,
   davidsonProbs,
   effectiveRating,
-  predictWinProbability,
 } from "@/lib/prediction";
 import { buildOfficialBracket } from "@/lib/bracket";
 import {
@@ -188,7 +188,8 @@ export function simulateTournament(
           if (forcedId != null) {
             winnerId = forcedId;
           } else {
-            winnerId = rng() < predictWinProbability(top, bottom) ? top.id : bottom.id;
+            winnerId =
+              rng() < bracketAdvanceProbability(top, bottom) ? top.id : bottom.id;
           }
           resolved.set(m.id, winnerTeam(top, bottom, winnerId));
         } else {

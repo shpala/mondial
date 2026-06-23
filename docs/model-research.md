@@ -88,6 +88,35 @@ attack/defence from the existing corpus (high — a future scoreline upgrade), F
 ranking (low — known inferior to Elo), squad market value and club-Elo ensembles
 (medium, friction-heavy), xG (no free national-team coverage).
 
+### 7. martj42 companion data — goalscorers & shootouts
+
+The shipped corpus (`data/intl_results.csv`) is the `results.csv` from
+[martj42/international_results](https://github.com/martj42/international_results). That repo
+also ships **`goalscorers.csv`** (per-goal: scorer, minute, penalty, own-goal) and
+**`shootouts.csv`** (penalty-shootout winners). We tested whether either improves predictions:
+
+- **goalscorers.csv → no.** Leakage-free per-team traits (career penalty-share and late-goal
+  share, computed strictly pre-match) added to the logistic model moved 1X2 log-loss the
+  *wrong* way on every split (test_general +0.0009, wc2022 +0.0014, wc2026 +0.0011). Goal
+  metadata describes *how* goals happened, not team strength — which Elo already encodes — so
+  it carries no extra outcome signal. (Consistent with §1–4 and
+  [`deep-learning-literature.md`](deep-learning-literature.md): the win is calibration and
+  rating quality, not more features.)
+- **shootouts.csv → not for 1X2, but it informs one *bracket-realism* change.** A penalty
+  shootout is ≈ a coin flip: across 678 international shootouts the home side wins 54.1% and
+  the first kicker 53.1% — small venue/order edges, **no team-strength edge**. The shipped
+  knockout model collapses a drawn tie *proportionally* (`predictWinProbability` = a/(a+b),
+  handing the favourite the draw mass). The refinement (`knockoutAdvanceProbability`,
+  `KNOCKOUT_SHOOTOUT_SPLIT = 0.5`) splits the draw 50/50 instead, so knockout advancement
+  flattens toward the underdog (a +400-Elo favourite's advance drops 86.3% → 78.5%). The
+  *shown* bracket winner is unchanged (favourite still > 0.5); only the probability and the
+  Monte Carlo title odds soften. It ships **behind a flag, `KNOCKOUT_SHOOTOUT_ENABLED`, off by
+  default** (live keeps the proportional model) because it's a modelling-realism choice,
+  **not** a backtestable accuracy gain — the corpus has no knockout-advancement label, and the
+  2026 knockouts haven't been played. Flip the flag to evaluate it.
+- **former_names.csv** (Dahomey → Benin, etc.) is a reconciliation aid; nearly every rename
+  predates the 2014–2026 corpus window, so it's negligible here.
+
 ## What we chose, and why
 
 - **Keep the simple Elo + Davidson + Dixon-Coles model.** Across match-type

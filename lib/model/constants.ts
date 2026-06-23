@@ -54,3 +54,27 @@ export const ELO_K = 45;
  * under-predicted draws; 0.70 captures nearly all the calibration gain.
  */
 export const DRAW_NU = 0.8;
+
+/**
+ * Knockout draw-resolution split. A knockout tie still level after extra time is
+ * decided by a penalty shootout, which is ≈ a coin flip: across 678 international
+ * shootouts (martj42 data) the home side wins 54.1% and the first kicker 53.1% —
+ * small venue/order edges, **no team-strength edge**. So when the Davidson model
+ * leaves a draw mass for a knockout, that mass is split 50/50 rather than in
+ * proportion to the favourite's strength (which is what the raw two-outcome
+ * `winProbability` = a/(a+b) implicitly does). Net effect: knockout advancement
+ * odds flatten slightly toward the underdog — penalties are a leveller. Consumed by
+ * `knockoutAdvanceProbability`; set to 0.5 (pure coin flip).
+ */
+export const KNOCKOUT_SHOOTOUT_SPLIT = 0.5;
+
+/**
+ * Feature flag for the shootout-aware knockout model. **Off by default**: the live
+ * bracket and Monte Carlo keep the shipped proportional two-outcome resolution
+ * (`predictWinProbability` = a/(a+b)). Flip to `true` to route knockout advancement
+ * through `knockoutAdvanceProbability` (splits a drawn tie 50/50 per the shootout
+ * data), flattening title odds toward the underdog. A modelling-realism choice, not a
+ * backtestable accuracy gain — see docs/model-research.md §7. The function and its
+ * tests stay live either way; only this flag changes what the app shows.
+ */
+export const KNOCKOUT_SHOOTOUT_ENABLED = false;
