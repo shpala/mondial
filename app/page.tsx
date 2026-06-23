@@ -70,7 +70,7 @@ export default async function DashboardPage() {
       {/* On a phone, surface the live score above the marketing hero. */}
       <div className="flex flex-col">
       <section className="card mb-8 overflow-hidden">
-        <div className="relative bg-gradient-to-br from-pitch-700/50 via-ink-800 to-ink-800 px-6 py-6 sm:py-12">
+        <div className="relative bg-linear-to-br from-pitch-700/50 via-ink-800 to-ink-800 px-6 py-6 sm:py-12">
           <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-pitch-50/80">
             <span className="inline-flex items-center gap-1">
               {HOSTS.map((h) => (
@@ -136,7 +136,7 @@ export default async function DashboardPage() {
       </section>
 
       {live.length > 0 && (
-        <section className="order-first mb-8 sm:order-none">
+        <section className="order-first mb-8 sm:order-0">
           <div className="mb-3 flex items-center gap-2">
             <h2 className="font-display text-xl font-bold">Live now</h2>
             <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-300">

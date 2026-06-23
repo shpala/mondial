@@ -66,9 +66,9 @@ async function LineupSection({
 function LineupSkeleton({ withSidebar }: { withSidebar: boolean }) {
   return (
     <>
-      <div className="skeleton mb-2 h-5 w-32 rounded" />
+      <div className="skeleton mb-2 h-5 w-32 rounded-sm" />
       <div
-        className={`skeleton mx-auto aspect-[2/3] w-full max-w-md rounded-2xl${
+        className={`skeleton mx-auto aspect-2/3 w-full max-w-md rounded-2xl${
           withSidebar ? " lg:mx-0" : ""
         }`}
       />
@@ -125,7 +125,7 @@ export default async function MatchPage({
       />
 
       <header
-        className={`mb-6 rounded-2xl border bg-ink-800/70 p-5 backdrop-blur ${
+        className={`mb-6 rounded-2xl border bg-ink-800/70 p-5 backdrop-blur-sm ${
           predicted ? "border-dashed border-accent-gold/30" : "border-ink-700"
         }`}
       >

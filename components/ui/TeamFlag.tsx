@@ -42,7 +42,7 @@ export function TeamFlag({
         aria-hidden={decorative || undefined}
         width={size}
         height={size}
-        className="inline-block rounded-sm object-contain align-middle"
+        className="inline-block rounded-xs object-contain align-middle"
         style={{ width: size, height: size }}
       />
     );

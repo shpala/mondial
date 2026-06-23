@@ -27,12 +27,12 @@ export function GoalList({
               <TeamFlag flag={team.flag} alt={team.name} size={16} decorative />
               <span className="font-medium">{g.scorer}</span>
               {g.penalty && (
-                <span className="rounded bg-ink-700 px-1 text-[10px] font-semibold uppercase text-ink-300">
+                <span className="rounded-sm bg-ink-700 px-1 text-[10px] font-semibold uppercase text-ink-300">
                   pen
                 </span>
               )}
               {g.ownGoal && (
-                <span className="rounded bg-ink-700 px-1 text-[10px] font-semibold uppercase text-ink-300">
+                <span className="rounded-sm bg-ink-700 px-1 text-[10px] font-semibold uppercase text-ink-300">
                   og
                 </span>
               )}

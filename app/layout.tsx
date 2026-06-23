@@ -63,7 +63,7 @@ export default function RootLayout({
         <main
           id="main"
           tabIndex={-1}
-          className="mx-auto w-full max-w-6xl px-4 pt-6 pb-24 outline-none sm:px-6 md:pb-20"
+          className="mx-auto w-full max-w-6xl px-4 pt-6 pb-24 outline-hidden sm:px-6 md:pb-20"
         >
           {children}
         </main>

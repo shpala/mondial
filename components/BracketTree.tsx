@@ -476,15 +476,15 @@ export function BracketTree({
       {/* legend */}
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-ink-400">
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded border border-emerald-600/60 bg-emerald-600/40" />
+          <span className="h-3 w-3 rounded-sm border border-emerald-600/60 bg-emerald-600/40" />
           Result
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded border border-dashed border-ink-500 bg-ink-500/80" />
+          <span className="h-3 w-3 rounded-sm border border-dashed border-ink-500 bg-ink-500/80" />
           Predicted
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded border border-accent-gold/60 bg-accent-gold/25" />
+          <span className="h-3 w-3 rounded-sm border border-accent-gold/60 bg-accent-gold/25" />
           Your pick
         </span>
       </div>
@@ -590,7 +590,7 @@ export function BracketTree({
       <div
         className={`${settle} ${mobileView === "rounds" ? "md:hidden" : "hidden"}`}
       >
-        <div className="sticky top-[var(--header-h)] z-20 -mx-4 mb-3 bg-ink-900/90 px-4 py-2 backdrop-blur">
+        <div className="sticky top-(--header-h) z-20 -mx-4 mb-3 bg-ink-900/90 px-4 py-2 backdrop-blur-sm">
           <div
             className="flex gap-1 rounded-lg border border-ink-700 p-0.5"
             role="group"
@@ -703,7 +703,7 @@ export function BracketTree({
           </div>
         </div>
         <div
-          className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-ink-900 to-transparent"
+          className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-linear-to-l from-ink-900 to-transparent"
           aria-hidden
         />
       </div>
@@ -712,7 +712,7 @@ export function BracketTree({
         <div
           role="status"
           aria-live="polite"
-          className="fixed inset-x-0 bottom-20 z-50 mx-auto flex w-fit animate-fade-up items-center gap-3 rounded-full border border-ink-600 bg-ink-800/95 px-4 py-2 text-sm text-ink-100 shadow-lg backdrop-blur md:bottom-6"
+          className="fixed inset-x-0 bottom-20 z-50 mx-auto flex w-fit animate-fade-up items-center gap-3 rounded-full border border-ink-600 bg-ink-800/95 px-4 py-2 text-sm text-ink-100 shadow-lg backdrop-blur-sm md:bottom-6"
         >
           <span>Bracket cleared</span>
           <button
