@@ -8,6 +8,8 @@ import type { Team } from "@/lib/types";
 import {
   DRAW_NU,
   HOST_ADVANTAGE,
+  KNOCKOUT_SHOOTOUT_ENABLED,
+  KNOCKOUT_SHOOTOUT_SPLIT,
   LOGISTIC_SCALE,
   WC_PREDICTION_SCALE,
 } from "@/lib/model/constants";
@@ -87,6 +89,49 @@ export function predictWinProbability(
   b: Pick<Team, "rating" | "host">,
 ): number {
   return winProbability(effectiveRating(a), effectiveRating(b), WC_PREDICTION_SCALE);
+}
+
+/**
+ * Probability that `a` *advances* past `b` in a single knockout tie, accounting for
+ * the penalty-shootout structure. The Davidson model gives win/draw/away masses for
+ * the match; a tie (the draw mass) goes to extra time then penalties, which are ≈ a
+ * coin flip ({@link KNOCKOUT_SHOOTOUT_SPLIT}), so `a` advances with
+ * `P(a wins) + split·P(draw)`.
+ *
+ * This is *flatter* than `predictWinProbability` — which equals `a/(a+b)`, i.e. it
+ * hands the favourite the draw mass in proportion to strength. For evenly matched
+ * sides both give 0.5; for a favourite this returns a value between 0.5 and
+ * `predictWinProbability`, so the underdog advances slightly more often (penalties
+ * level the tie). The winner the bracket *shows* is unchanged (the favourite still
+ * clears 0.5); only the probability — and the Monte Carlo title odds — soften.
+ */
+export function knockoutAdvanceProbability(
+  a: Pick<Team, "rating" | "host">,
+  b: Pick<Team, "rating" | "host">,
+): number {
+  const { home, draw } = davidsonProbs(
+    effectiveRating(a),
+    effectiveRating(b),
+    DRAW_NU,
+    WC_PREDICTION_SCALE,
+  );
+  return home + KNOCKOUT_SHOOTOUT_SPLIT * draw;
+}
+
+/**
+ * Advancement probability the LIVE bracket and Monte Carlo use for a knockout tie.
+ * Gated by {@link KNOCKOUT_SHOOTOUT_ENABLED}: off (default) keeps the shipped
+ * proportional two-outcome model ({@link predictWinProbability}); on switches to the
+ * shootout-aware {@link knockoutAdvanceProbability}. Flip the flag to evaluate it —
+ * the shown bracket winner is identical either way (the favourite stays > 0.5).
+ */
+export function bracketAdvanceProbability(
+  a: Pick<Team, "rating" | "host">,
+  b: Pick<Team, "rating" | "host">,
+): number {
+  return KNOCKOUT_SHOOTOUT_ENABLED
+    ? knockoutAdvanceProbability(a, b)
+    : predictWinProbability(a, b);
 }
 
 export interface ScorelinePrediction {
@@ -266,7 +311,9 @@ export function resolveBracket(bracket: Bracket, overrides: Overrides = {}): Bra
       }
 
       if (m.top && m.bottom) {
-        m.topWinProb = predictWinProbability(m.top, m.bottom);
+        // Live knockout advancement (flag-gated; shootout-aware when enabled), so the
+        // displayed bracket % matches how the Monte Carlo resolves the same tie.
+        m.topWinProb = bracketAdvanceProbability(m.top, m.bottom);
         const override = overrides[m.id];
         if (override === m.top.id || override === m.bottom.id) {
           m.winnerId = override;
