@@ -192,9 +192,12 @@ function MatchupCard({
       : "model";
 
   const winnerIsTop = m.winnerId != null && m.winnerId === m.top?.id;
-  // Number shown next to the winner: a user pick is decided (100%) in your
-  // bracket; a model winner shows the model's head-to-head probability.
-  const displayProb = winnerTone === "pick" ? 1 : wp;
+  // Number shown next to the winner: always the model's head-to-head probability
+  // for that team — `winnerProb` is computed relative to the current winner, so a
+  // user pick shows the model's odds for the team you backed (e.g. you backed a
+  // 32% shot) rather than a meaningless "100%". The fill bar (winnerPct) reflects
+  // the pick at 100% independently.
+  const displayProb = wp;
   // Probability bar fills from the WINNER's side so it never contradicts the pick.
   const winnerPct =
     winnerTone === "model" ? (wp != null ? Math.round(wp * 100) : 50) : 100;

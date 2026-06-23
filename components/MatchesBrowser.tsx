@@ -97,7 +97,11 @@ export function MatchesBrowser({
         </div>
 
         <div className="relative">
-          <div className="scroll-slim flex items-center gap-1 overflow-x-auto">
+          <div
+            className="scroll-slim flex items-center gap-1 overflow-x-auto"
+            role="group"
+            aria-label="Filter by group"
+          >
             <button
               type="button"
               onClick={() => updateFilters("", status)}
@@ -112,6 +116,7 @@ export function MatchesBrowser({
                 type="button"
                 onClick={() => updateFilters(g, status)}
                 aria-pressed={group === g}
+                aria-label={`Group ${g}`}
                 className={chip(group === g)}
               >
                 {g}
@@ -125,8 +130,28 @@ export function MatchesBrowser({
         </div>
       </div>
 
+      {/* Always-mounted live region so filtering announces its result count to
+          screen readers (the visible list updates silently otherwise). */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {filtered.length === 0
+          ? "No matches match these filters."
+          : `${filtered.length} ${filtered.length === 1 ? "match" : "matches"}.`}
+      </p>
+
       {byDate.length === 0 ? (
-        <p className="text-sm text-ink-400">No matches match these filters.</p>
+        <div className="rounded-xl border border-ink-700 bg-ink-800/40 px-4 py-6 text-center">
+          <p className="text-sm text-ink-400">
+            No matches{group ? ` in Group ${group}` : ""}
+            {status !== "all" ? ` under “${status}”` : ""}.
+          </p>
+          <button
+            type="button"
+            onClick={() => updateFilters("", "all")}
+            className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-ink-600 px-3 py-1.5 text-sm font-medium text-ink-200 transition hover:bg-ink-700 md:min-h-0"
+          >
+            Clear filters
+          </button>
+        </div>
       ) : (
         <div className="space-y-6">
           {byDate.map(([day, games]) => (

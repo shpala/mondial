@@ -17,9 +17,15 @@ function StatusPill({
 }) {
   if (status === "live") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-300">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
-        {minute || "Live"}
+      <span
+        className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-300"
+        aria-label={minute ? `Live, ${minute}` : "Live"}
+      >
+        <span
+          className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400"
+          aria-hidden
+        />
+        <span aria-hidden>{minute || "Live"}</span>
       </span>
     );
   }
@@ -144,6 +150,12 @@ export function MatchCard({
   const awayPct = 100 - homePct;
   const today = isToday(fixture.kickoff);
   const live = fixture.status === "live";
+  // Latest goal for a live card's footer (the timeline is chronological, so the
+  // most recent goal is last). Gives a live card context below the running score.
+  const latestGoal =
+    live && fixture.goals.length
+      ? fixture.goals[fixture.goals.length - 1]
+      : null;
   const ring = live
     ? "ring-2 ring-red-500/60"
     : today
@@ -205,6 +217,30 @@ export function MatchCard({
           favored={homeProb != null && homeProb < 0.5}
         />
       </div>
+
+      {live && latestGoal && (
+        <div className="flex items-center gap-1.5 text-[11px] text-ink-300">
+          <span className="sr-only">Latest goal: </span>
+          <span aria-hidden>⚽</span>
+          <span className="font-display font-bold tabular-nums">
+            {latestGoal.minute}&rsquo;
+          </span>
+          <span className="truncate font-medium">{latestGoal.scorer}</span>
+          {latestGoal.penalty && (
+            <span className="rounded-sm bg-ink-700 px-1 text-[10px] font-semibold uppercase text-ink-400">
+              pen
+            </span>
+          )}
+          {latestGoal.ownGoal && (
+            <span className="rounded-sm bg-ink-700 px-1 text-[10px] font-semibold uppercase text-ink-400">
+              og
+            </span>
+          )}
+          <span className="ml-auto shrink-0 text-ink-400">
+            {(latestGoal.side === "home" ? fixture.home : fixture.away).code}
+          </span>
+        </div>
+      )}
 
       {predicted &&
         (homeProb != null ? (
