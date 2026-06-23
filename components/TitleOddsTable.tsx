@@ -46,12 +46,15 @@ export function TitleOddsTable({
             <th scope="col" className="py-1.5 pl-4 text-left font-medium">
               Team
             </th>
-            <th scope="col" className="py-1.5 text-right font-medium">
+            <th
+              scope="col"
+              className="whitespace-nowrap py-1.5 pl-3 text-right font-medium"
+            >
               Win cup
             </th>
             <th
               scope="col"
-              className="hidden py-1.5 text-right font-medium sm:table-cell"
+              className="hidden whitespace-nowrap py-1.5 pl-3 text-right font-medium sm:table-cell"
             >
               Reach final
             </th>
@@ -75,10 +78,10 @@ export function TitleOddsTable({
                   <span className="truncate font-medium">{o.team.name}</span>
                 </Link>
               </td>
-              <td className="py-1.5 text-right font-display text-base font-extrabold tabular-nums text-accent-gold">
+              <td className="py-1.5 pl-3 text-right font-display text-base font-extrabold tabular-nums text-accent-gold">
                 {pct(o.champion)}
               </td>
-              <td className="hidden py-1.5 text-right tabular-nums text-ink-300 sm:table-cell">
+              <td className="hidden py-1.5 pl-3 text-right tabular-nums text-ink-300 sm:table-cell">
                 {pct(o.reachFinal)}
               </td>
               <td className="py-1.5 pl-3 pr-4">
