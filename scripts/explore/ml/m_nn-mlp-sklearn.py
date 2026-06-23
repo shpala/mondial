@@ -5,6 +5,7 @@ early_stopping=True (internal validation from train).
 Optionally calibrated with CalibratedClassifierCV (sigmoid / isotonic).
 """
 
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.neural_network import MLPClassifier
@@ -13,7 +14,7 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import log_loss, accuracy_score
 import time
 
-FEATURES_PATH = "/home/shpala/dev/mondial/scripts/explore/ml/features.csv"
+FEATURES_PATH = str(Path(__file__).resolve().parent / "features.csv")
 FEATURE_COLS = [
     "rating_diff", "abs_rating_diff", "raw_rating_diff", "neutral", "imp",
     "home_ppg", "away_ppg", "ppg_diff", "home_gd", "away_gd", "gd_diff",

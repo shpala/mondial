@@ -4,6 +4,7 @@ Fits on train split only, evaluates on test_general, wc2022, wc2026.
 Applies probability calibration and reports feature importances.
 """
 
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
@@ -19,7 +20,7 @@ FEATURES = [
     "cat_confederations", "cat_wc_finals", "cat_other",
 ]
 
-CSV_PATH = "/home/shpala/dev/mondial/scripts/explore/ml/features.csv"
+CSV_PATH = str(Path(__file__).resolve().parent / "features.csv")
 
 def brier_multiclass(y_true, y_prob):
     """Multiclass Brier score (mean over classes)."""

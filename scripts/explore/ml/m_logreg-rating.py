@@ -3,13 +3,14 @@ Experiment: logreg-rating
 Multinomial logistic regression on rating_diff only.
 Sanity check: does it roughly reproduce the Elo curve?
 """
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import log_loss, brier_score_loss, accuracy_score
 
-CSV = "/home/shpala/dev/mondial/scripts/explore/ml/features.csv"
+CSV = str(Path(__file__).resolve().parent / "features.csv")
 FEATURES = ["rating_diff"]  # optionally add abs_rating_diff
 SEED = 42
 

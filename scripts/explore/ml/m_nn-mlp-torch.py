@@ -4,6 +4,7 @@ nn-mlp-torch: PyTorch feedforward MLP on standardised numeric features.
 cross-entropy, early stopping on train-internal validation slice.
 """
 
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
@@ -29,7 +30,7 @@ LABEL_COL = "y"
 SPLIT_COL = "split"
 
 # ── Load data ─────────────────────────────────────────────────────────────────
-df = pd.read_csv("/home/shpala/dev/mondial/scripts/explore/ml/features.csv")
+df = pd.read_csv(str(Path(__file__).resolve().parent / "features.csv"))
 
 train_df = df[df[SPLIT_COL] == "train"].copy()
 test_df   = df[df[SPLIT_COL] == "test_general"].copy()

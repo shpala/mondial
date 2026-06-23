@@ -3,6 +3,7 @@ Experiment: hist-gbm
 Model: HistGradientBoostingClassifier (sklearn), probability-calibrated
 """
 
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier
@@ -12,7 +13,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import log_loss, brier_score_loss, accuracy_score
 
 # ── Load data ────────────────────────────────────────────────────────────────
-df = pd.read_csv("/home/shpala/dev/mondial/scripts/explore/ml/features.csv")
+df = pd.read_csv(str(Path(__file__).resolve().parent / "features.csv"))
 
 FEATURES = [
     "rating_diff", "abs_rating_diff", "raw_rating_diff", "neutral", "imp",

@@ -4,13 +4,14 @@ Logistic Regression with rating features + match-type (cat_*) one-hots.
 Answers: does match type help over rating alone?
 """
 
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import log_loss, brier_score_loss, accuracy_score
 
-CSV = "/home/shpala/dev/mondial/scripts/explore/ml/features.csv"
+CSV = str(Path(__file__).resolve().parent / "features.csv")
 
 df = pd.read_csv(CSV)
 

@@ -3,6 +3,7 @@ Logistic Regression with all numeric features.
 Slug: logreg-full
 """
 
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
@@ -10,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import log_loss, brier_score_loss, accuracy_score
 
 # Load data
-df = pd.read_csv("/home/shpala/dev/mondial/scripts/explore/ml/features.csv")
+df = pd.read_csv(str(Path(__file__).resolve().parent / "features.csv"))
 
 FEATURE_COLS = [
     "rating_diff", "abs_rating_diff", "raw_rating_diff", "neutral", "imp",
