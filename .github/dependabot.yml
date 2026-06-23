@@ -7,9 +7,14 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     groups:
+      # Group only minor/patch bumps so the routine PR stays green and mergeable.
+      # Major bumps arrive as individual PRs to review and migrate deliberately.
       npm:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
 
   # GitHub Actions used by the CI workflow
   - package-ecosystem: github-actions
@@ -17,6 +22,10 @@ updates:
     schedule:
       interval: weekly
     groups:
+      # Same policy for Actions: group minor/patch, surface majors individually.
       github-actions:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
