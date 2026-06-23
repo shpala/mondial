@@ -159,7 +159,7 @@ export default async function MatchPage({
             {played ? (
               <div
                 className="font-display text-3xl font-extrabold tabular-nums"
-                aria-label={`Final score: ${fixture.home.name} ${fixture.homeGoals}, ${fixture.away.name} ${fixture.awayGoals}`}
+                aria-label={`${live ? "Live score" : "Final score"}: ${fixture.home.name} ${fixture.homeGoals}, ${fixture.away.name} ${fixture.awayGoals}`}
               >
                 {fixture.homeGoals}–{fixture.awayGoals}
               </div>

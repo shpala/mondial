@@ -1,7 +1,11 @@
 import Link from "next/link";
-import { getRawFixtures, getGroups, getDataStatus } from "@/lib/data";
+import {
+  getRawFixtures,
+  getGroups,
+  getDataStatus,
+  getPreTournamentOdds,
+} from "@/lib/data";
 import { gradeOutcomes, gradeQualification } from "@/lib/modelreport";
-import { simulateTournament } from "@/lib/montecarlo";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 import { CalibrationChart } from "@/components/CalibrationChart";
@@ -14,25 +18,15 @@ const pct = (p: number) => `${(p * 100).toFixed(0)}%`;
 const num3 = (x: number) => x.toFixed(3);
 
 export default async function ModelPage() {
-  const [fixtures, groups, { usingSample }] = await Promise.all([
+  const [fixtures, groups, { usingSample }, preOdds] = await Promise.all([
     getRawFixtures(),
     getGroups(),
     getDataStatus(),
+    // Cached from-seeds simulation, reused for both the qualification grade
+    // (escapeGroup) and the title favourites (top 5 by championship probability).
+    getPreTournamentOdds(),
   ]);
   const report = gradeOutcomes(fixtures);
-
-  // Pre-tournament odds: strip all group results back to seeds and simulate the
-  // whole tournament ONCE. Reused for both the qualification grade (escapeGroup)
-  // and the title favourites (top 5 by championship probability).
-  const stripped = fixtures
-    .filter((f) => f.stage === "Group Stage")
-    .map((f) => ({
-      ...f,
-      status: "scheduled" as const,
-      homeGoals: null,
-      awayGoals: null,
-    }));
-  const preOdds = stripped.length ? simulateTournament(stripped) : [];
   const qual = gradeQualification(fixtures, groups, preOdds);
   const favourites = preOdds.slice(0, 5);
 

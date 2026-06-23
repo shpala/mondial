@@ -148,6 +148,34 @@ export const getTitleOdds = cache(async () => {
 });
 
 /**
+ * Pre-tournament Monte Carlo odds: the group fixtures with every result stripped
+ * back to seeds (status → scheduled, scores → null), simulated once. These are
+ * what the /model report card grades qualification against and lists as the
+ * from-seeds title favourites. Because the inputs are seed ratings + fixture
+ * structure (not results), they are constant per deployment — so this caches one
+ * 10k-simulation rather than re-running it on every request. Keyed on the
+ * stripped signature, so sample mode (a different fixture set) gets its own entry.
+ */
+export const getPreTournamentOdds = cache(async () => {
+  const fixtures = await getRawFixtures();
+  const stripped = fixtures
+    .filter((f) => f.stage === "Group Stage")
+    .map((f) => ({
+      ...f,
+      status: "scheduled" as const,
+      homeGoals: null,
+      awayGoals: null,
+    }));
+  if (!stripped.length) return [];
+  const sig = resultsSignature(stripped);
+  return unstable_cache(
+    async () => simulateTournament(stripped),
+    ["pretournament-odds", sig],
+    { revalidate: 3600 },
+  )();
+});
+
+/**
  * Everything the persistent Verdict band shows: the model's current pick to win
  * the cup and its live track record (group calls right + log-loss edge over a
  * no-skill baseline). Null favourite until the bracket can be simulated.

@@ -2,8 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getFixtures, getSquad, getTeam } from "@/lib/data";
-import { simulateTournament } from "@/lib/montecarlo";
+import { getSquad, getTeam, getTitleOdds } from "@/lib/data";
 import { SquadList } from "@/components/SquadList";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
@@ -64,11 +63,11 @@ export default async function TeamPage({
   const teamId = Number(id);
   if (!Number.isFinite(teamId)) notFound();
 
-  const [team, fixtures] = await Promise.all([getTeam(teamId), getFixtures()]);
+  const [team, titleOdds] = await Promise.all([getTeam(teamId), getTitleOdds()]);
   if (!team) notFound();
 
-  // Monte Carlo title odds for this team (same simulation as /bracket).
-  const odds = simulateTournament(fixtures).find((o) => o.team.id === teamId);
+  // Cached Monte Carlo title odds for this team (same simulation as /bracket).
+  const odds = titleOdds.find((o) => o.team.id === teamId);
 
   return (
     <div className="animate-fade-up">

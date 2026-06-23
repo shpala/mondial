@@ -130,7 +130,7 @@ function Slot({
   // activation); model-mode slots aren't actionable either. Render those static.
   if (!clickable) {
     return (
-      <div className={className} aria-label={label}>
+      <div className={className} aria-label={label} title={team.name}>
         {content}
       </div>
     );
@@ -140,6 +140,7 @@ function Slot({
       type="button"
       onClick={onPick}
       aria-label={label}
+      title={team.name}
       className={className}
     >
       {content}

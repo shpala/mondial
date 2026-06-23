@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { getFixtures, getGroups, getLiveRatings } from "@/lib/data";
+import { getFixtures, getGroups, getLiveRatings, getTitleOdds } from "@/lib/data";
 import { qualificationBreakdown } from "@/lib/qualifiers";
 import { withLiveRating } from "@/lib/ratings";
 import { buildOfficialBracket } from "@/lib/bracket";
-import { simulateTournament } from "@/lib/montecarlo";
 import { TitleOddsTable } from "@/components/TitleOddsTable";
 import { BracketTree, type ResultMap } from "@/components/BracketTree";
 import { CandidatesPanel } from "@/components/CandidatesPanel";
@@ -44,10 +43,11 @@ function buildResultMap(
 }
 
 export default async function BracketPage() {
-  const [groups, fixtures, live] = await Promise.all([
+  const [groups, fixtures, live, odds] = await Promise.all([
     getGroups(),
     getFixtures(),
     getLiveRatings(),
+    getTitleOdds(),
   ]);
   // Place teams into the official 2026 bracket by group position; overlay
   // results-adjusted Elo so each tie's win probability reflects form so far.
@@ -58,7 +58,6 @@ export default async function BracketPage() {
   const skeleton = buildOfficialBracket(groupsLive);
   const breakdown = qualificationBreakdown(groups);
   const results = buildResultMap(fixtures);
-  const odds = simulateTournament(fixtures);
 
   return (
     <div className="animate-fade-up">
