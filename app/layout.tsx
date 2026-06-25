@@ -10,11 +10,16 @@ import { VerdictBand, VerdictBandSkeleton } from "@/components/VerdictBand";
 import { VerdictBandSlot } from "@/components/VerdictBandSlot";
 
 // Distinctive display face for headings, scores and stats (body stays system sans).
+// `display: "optional"` (not "swap"): the hero <h1> is the LCP element, and a late
+// swap from the system fallback to Space Grotesk reflows that huge heading — a large,
+// every-load CLS hit on slower connections. "optional" gives the font a ~100ms window
+// (it's preloaded, so most visits still get it with zero shift); anyone slower keeps
+// the metric-matched fallback for the page's life, so the heading never moves.
 const display = Space_Grotesk({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
   variable: "--font-display-face",
-  display: "swap",
+  display: "optional",
 });
 
 const DESCRIPTION =
