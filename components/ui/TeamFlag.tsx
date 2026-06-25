@@ -49,8 +49,12 @@ export function TeamFlag({
   }
 
   return (
+    // Reserve the exact same size×size box the <img> fallback uses, so the
+    // emoji→image swap on emoji-less platforms (Windows) — and the glyph's own
+    // variable advance width — can't shift adjacent layout (a CLS source).
     <span
-      style={{ fontSize: size * 0.9, lineHeight: 1 }}
+      className="inline-flex shrink-0 items-center justify-center align-middle"
+      style={{ width: size, height: size, fontSize: size * 0.9, lineHeight: 1 }}
       aria-label={decorative ? undefined : alt}
       aria-hidden={decorative || undefined}
       role={decorative ? undefined : "img"}
