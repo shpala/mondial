@@ -98,15 +98,16 @@ export default async function MatchPage({
   const fabricated = isFabricatedResult(fixture, usingSample);
   const predicted = fixture.status === "scheduled";
   const realTeams = fixture.home.id !== 0 && fixture.away.id !== 0;
-  const homeProb =
-    predicted && realTeams ? fixtureHomeWinProb(fixture) : null;
+  // The pre-match prediction is status-independent (it's from team ratings, not
+  // the running score), so we keep showing it once a game is live or finished —
+  // labelled "pre-match" — alongside the actual score.
+  const homeProb = realTeams ? fixtureHomeWinProb(fixture) : null;
   // Knockout ties (group == null) are settled by ET/penalties — no draw — so we
   // predict a decisive scoreline there; group games keep the three-way model.
   const decisive = fixture.group == null;
-  const scorePrediction =
-    predicted && realTeams
-      ? predictScoreline(fixture.home, fixture.away, { decisive })
-      : null;
+  const scorePrediction = realTeams
+    ? predictScoreline(fixture.home, fixture.away, { decisive })
+    : null;
 
   const badge = live
     ? {
@@ -198,6 +199,7 @@ export default async function MatchPage({
           home={fixture.home}
           away={fixture.away}
           decisive={decisive}
+          prematch={!predicted}
         />
       )}
 
