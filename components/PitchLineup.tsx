@@ -270,25 +270,32 @@ export function PitchLineup({
         </g>
       </svg>
 
-      <div className="flex items-center justify-between gap-4 border-t border-ink-700 px-4 py-3 text-xs">
-        <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-pitch-500" />
-          <span className="text-ink-400">
-            {home ? `${home.team.name} · ${home.formation}` : "Home"}
-          </span>
-          {home?.source === "generated" && <EstMark />}
-        </div>
+      {/* Footer. On phones the tapped-player readout is the ONLY place the full
+          name shows (pitch surnames are hidden < sm), so it gets its own line on
+          top instead of being squeezed between the two team labels and clipped.
+          sm:contents dissolves the labels wrapper on desktop so the original
+          home | selected | away justify-between row is preserved. */}
+      <div className="flex flex-col gap-1.5 border-t border-ink-700 px-4 py-3 text-xs sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         {selected && (
-          <div className="font-medium text-ink-100">
+          <div className="order-1 min-w-0 truncate text-center font-medium text-ink-100 sm:order-2 sm:text-left">
             #{selected.player.number ?? "–"} {selected.player.name}
           </div>
         )}
-        <div className="flex items-center gap-2">
-          {away?.source === "generated" && <EstMark />}
-          <span className="text-ink-400">
-            {away ? `${away.team.name} · ${away.formation}` : "Away"}
-          </span>
-          <span className="h-2.5 w-2.5 rounded-full bg-accent-ember" />
+        <div className="order-2 flex items-center justify-between gap-3 sm:contents">
+          <div className="flex min-w-0 items-center gap-2 sm:order-1">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-pitch-500" />
+            <span className="min-w-0 truncate text-ink-400">
+              {home ? `${home.team.name} · ${home.formation}` : "Home"}
+            </span>
+            {home?.source === "generated" && <EstMark />}
+          </div>
+          <div className="flex min-w-0 items-center justify-end gap-2 sm:order-3">
+            {away?.source === "generated" && <EstMark />}
+            <span className="min-w-0 truncate text-ink-400">
+              {away ? `${away.team.name} · ${away.formation}` : "Away"}
+            </span>
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent-ember" />
+          </div>
         </div>
       </div>
 

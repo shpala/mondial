@@ -67,8 +67,8 @@ export default async function BracketPage() {
         <h1 className="font-display text-2xl font-extrabold">
           Prediction bracket
         </h1>
-        <span className="rounded-full bg-accent-gold/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-300">
-          ◆ Predicted
+        <span className="rounded-full bg-ink-700/70 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-ink-300">
+          Predicted
         </span>
       </div>
       <p className="mb-6 max-w-2xl text-sm text-ink-400">

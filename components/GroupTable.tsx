@@ -113,10 +113,10 @@ export function GroupTable({
                   />
                   {bar.label && <span className="sr-only">{bar.label}</span>}
                 </td>
-                <td className="w-full max-w-0 py-2 pr-2">
+                <td className="w-full max-w-0 pr-2">
                   <Link
                     href={`/teams/${row.team.id}`}
-                    className="flex min-w-0 items-center gap-2 hover:underline"
+                    className="flex min-h-11 min-w-0 items-center gap-2 py-1 hover:underline sm:min-h-0 sm:py-2"
                   >
                     <TeamFlag flag={row.team.flag} alt={row.team.name} size={18} decorative />
                     <span className="truncate font-medium">{row.team.name}</span>
