@@ -16,6 +16,7 @@ export function ScorelinePrediction({
   home,
   away,
   decisive = false,
+  prematch = false,
 }: {
   prediction: ScorelinePredictionResult;
   home: Team;
@@ -23,6 +24,9 @@ export function ScorelinePrediction({
   /** Knockout tie: no draw, so skip the 3-way bar (the header shows the 2-way win
    *  prob) and the regulation-time over/under + BTTS markets. */
   decisive?: boolean;
+  /** The match is already live/finished, so this is the forecast made *before*
+   *  kickoff (shown next to the real score) — label it as such. */
+  prematch?: boolean;
 }) {
   const { mostLikely, top, grid, outcome } = prediction;
   const over25 = pct(overProb(grid, 2.5));
@@ -33,9 +37,11 @@ export function ScorelinePrediction({
   return (
     <section className="card mb-6 p-4">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-display text-sm font-bold">Predicted scoreline</h2>
+        <h2 className="font-display text-sm font-bold">
+          {prematch ? "Pre-match predicted scoreline" : "Predicted scoreline"}
+        </h2>
         <span className="rounded-full bg-accent-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-300">
-          Model estimate
+          {prematch ? "Pre-match estimate" : "Model estimate"}
         </span>
       </div>
 
@@ -125,7 +131,7 @@ export function ScorelinePrediction({
       )}
 
       <p className="mt-3 text-[11px] leading-snug text-ink-400">
-        Estimated from team ratings.{decisive ? " Knockout ties are settled in extra time or on penalties, so only decisive scores are shown." : ""} Exact scores are noisy — even the
+        {prematch ? "The model's forecast from before kickoff, estimated from team ratings." : "Estimated from team ratings."}{decisive ? " Knockout ties are settled in extra time or on penalties, so only decisive scores are shown." : ""} Exact scores are noisy — even the
         likeliest result is unlikely on its own; these top three together come to {topCombined}%.
       </p>
     </section>

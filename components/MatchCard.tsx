@@ -141,11 +141,13 @@ export function MatchCard({
   const predicted = fixture.status === "scheduled";
   const fabricated = isFabricatedResult(fixture, sample);
 
-  // Model prediction for upcoming games (skip placeholder knockout slots).
+  // The model's pre-match prediction. It's derived from team ratings (not the
+  // running score), so it's status-independent — we surface it for live and
+  // finished games too, labelled "pre-match", not just upcoming ones. Skip
+  // placeholder knockout slots (id 0).
   const realTeams = fixture.home.id !== 0 && fixture.away.id !== 0;
-  const homeProb =
-    predicted && realTeams ? fixtureHomeWinProb(fixture) : null;
-  const marketBacked = predicted && realTeams && isMarketBacked(fixture);
+  const homeProb = realTeams ? fixtureHomeWinProb(fixture) : null;
+  const marketBacked = realTeams && isMarketBacked(fixture);
   const homePct = homeProb != null ? Math.round(homeProb * 100) : 50;
   const awayPct = 100 - homePct;
   const today = isToday(fixture.kickoff);
@@ -242,47 +244,63 @@ export function MatchCard({
         </div>
       )}
 
-      {predicted &&
-        (homeProb != null ? (
-          <div className="mt-0.5">
-            {/* Probability-bar colour convention: a green/ember split = the
-                head-to-head share between two named teams (here). A single gold
-                fill = one team's standalone tournament chance (TitleOddsTable). */}
-            <div
-              role="img"
-              aria-label={`Predicted win probability: ${fixture.home.name} ${homePct} percent, ${fixture.away.name} ${awayPct} percent`}
-              className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-ink-700"
+      {homeProb != null ? (
+        <div className="mt-0.5">
+          {/* Probability-bar colour convention: a green/ember split = the
+              head-to-head share between two named teams (here). A single gold
+              fill = one team's standalone tournament chance (TitleOddsTable). */}
+          <div
+            role="img"
+            aria-label={`${predicted ? "Predicted" : "Pre-match"} win probability: ${fixture.home.name} ${homePct} percent, ${fixture.away.name} ${awayPct} percent`}
+            className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-ink-700"
+          >
+            <div className="bg-pitch-500" style={{ width: `${homePct}%` }} />
+            <div className="bg-accent-ember" style={{ width: `${awayPct}%` }} />
+          </div>
+          <div className="mt-1.5 flex items-baseline justify-between text-[10px] text-ink-400">
+            <span
+              className={`font-display text-sm tabular-nums ${homePct >= awayPct ? "text-ink-50" : "text-ink-300"}`}
             >
-              <div className="bg-pitch-500" style={{ width: `${homePct}%` }} />
-              <div className="bg-accent-ember" style={{ width: `${awayPct}%` }} />
-            </div>
-            <div className="mt-1.5 flex items-baseline justify-between text-[10px] text-ink-400">
-              <span
-                className={`font-display text-sm tabular-nums ${homePct >= awayPct ? "text-ink-50" : "text-ink-300"}`}
-              >
-                {homePct}%
-              </span>
-              <span
-                className={`uppercase tracking-wide ${marketBacked ? "text-accent-gold" : ""}`}
-                title={marketBacked ? "Market-implied (de-vigged betting odds)" : undefined}
-              >
-                {marketBacked ? "◆ market" : "win prob"}
-              </span>
-              <span
-                className={`font-display text-sm tabular-nums ${awayPct > homePct ? "text-ink-50" : "text-ink-300"}`}
-              >
-                {awayPct}%
-              </span>
-            </div>
+              {homePct}%
+            </span>
+            <span
+              className={`uppercase tracking-wide ${marketBacked ? "text-accent-gold" : ""}`}
+              title={
+                marketBacked
+                  ? "Market-implied (de-vigged betting odds)"
+                  : predicted
+                    ? undefined
+                    : "The model's pre-match win probability"
+              }
+            >
+              {predicted
+                ? marketBacked
+                  ? "◆ market"
+                  : "win prob"
+                : marketBacked
+                  ? "◆ pre-match"
+                  : "pre-match"}
+            </span>
+            <span
+              className={`font-display text-sm tabular-nums ${awayPct > homePct ? "text-ink-50" : "text-ink-300"}`}
+            >
+              {awayPct}%
+            </span>
+          </div>
+          {/* Countdown / kickoff time only matters before kickoff. */}
+          {predicted && (
             <div className="text-center text-[10px] uppercase tracking-wide text-ink-400 tabular-nums">
               {kickoffLabel}
             </div>
-          </div>
-        ) : (
+          )}
+        </div>
+      ) : (
+        predicted && (
           <div className="text-center text-[11px] text-ink-400 tabular-nums">
             {kickoffLabel}
           </div>
-        ))}
+        )
+      )}
     </Link>
   );
 }
