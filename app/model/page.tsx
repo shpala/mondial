@@ -143,35 +143,53 @@ export default async function ModelPage() {
                 </tr>
               </thead>
               <tbody>
-                {report.perMatch.map((m, i) => (
-                  <tr
-                    key={`${m.date}-${m.home}-${m.away}-${i}`}
-                    className="border-b border-ink-700/50 last:border-0"
-                  >
-                    <td className="px-4 py-2 text-white">
-                      {m.home} <span className="text-ink-400">v</span> {m.away}
-                    </td>
-                    <td className="px-4 py-2 text-center tabular-nums text-ink-300">
-                      {m.homeGoals}–{m.awayGoals}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-ink-300">
-                      {pct(m.predicted.home)}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-ink-300">
-                      {pct(m.predicted.draw)}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-ink-300">
-                      {pct(m.predicted.away)}
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      {m.correct ? (
-                        <span className="text-pitch-500">✓</span>
-                      ) : (
-                        <span className="text-accent-ember">✗</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {report.perMatch.map((m, i) => {
+                  // Highlight what actually happened (emerald = result) and, when
+                  // it differs, the model's most-likely call (grey = prediction),
+                  // so each row reads "model said X, Y happened" rather than three
+                  // flat percentages with the answer left to the reader.
+                  const fav = (["home", "draw", "away"] as const).reduce(
+                    (mx, k) => (m.predicted[k] > m.predicted[mx] ? k : mx),
+                    "home" as "home" | "draw" | "away",
+                  );
+                  const cellCls = (key: "home" | "draw" | "away") =>
+                    `px-4 py-2 text-right tabular-nums ${
+                      m.actual === key
+                        ? "font-semibold text-emerald-400"
+                        : fav === key
+                          ? "font-semibold text-ink-100"
+                          : "text-ink-300"
+                    }`;
+                  return (
+                    <tr
+                      key={`${m.date}-${m.home}-${m.away}-${i}`}
+                      className="border-b border-ink-700/50 last:border-0"
+                    >
+                      <td className="px-4 py-2 text-white">
+                        {m.home} <span className="text-ink-400">v</span> {m.away}
+                      </td>
+                      <td className="px-4 py-2 text-center tabular-nums text-ink-300">
+                        {m.homeGoals}–{m.awayGoals}
+                      </td>
+                      <td className={cellCls("home")}>{pct(m.predicted.home)}</td>
+                      <td className={cellCls("draw")}>{pct(m.predicted.draw)}</td>
+                      <td className={cellCls("away")}>{pct(m.predicted.away)}</td>
+                      <td className="px-4 py-2 text-center">
+                        <span
+                          className={
+                            m.correct ? "text-pitch-500" : "text-accent-ember"
+                          }
+                          aria-hidden
+                        >
+                          {m.correct ? "✓" : "✗"}
+                        </span>
+                        <span className="sr-only">
+                          {m.correct ? "Correct call" : "Wrong call"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

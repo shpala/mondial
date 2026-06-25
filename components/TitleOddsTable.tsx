@@ -69,10 +69,10 @@ export function TitleOddsTable({
               key={o.team.id}
               className="border-t border-ink-700/60 hover:bg-ink-700/30"
             >
-              <td className="w-full max-w-0 py-1.5 pl-4">
+              <td className="w-full max-w-0 pl-4">
                 <Link
                   href={`/teams/${o.team.id}`}
-                  className="flex min-w-0 items-center gap-2 hover:underline"
+                  className="flex min-h-11 min-w-0 items-center gap-2 py-1 hover:underline sm:min-h-0 sm:py-1.5"
                 >
                   <TeamFlag flag={o.team.flag} alt={o.team.name} size={18} decorative />
                   <span className="truncate font-medium">{o.team.name}</span>

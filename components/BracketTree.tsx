@@ -89,8 +89,14 @@ function Slot({
       : isWinner && winnerTone === "model" && prob != null
         ? `, ${Math.round(prob * 100)} percent model win probability`
         : "";
+  // Re-tapping your current pick clears it (the store toggles), so the action
+  // word must flip — else the label on the gold winner describes the opposite.
+  const isCurrentPick = isWinner && winnerTone === "pick";
+  const action = isCurrentPick
+    ? "activate to remove your pick"
+    : "activate to pick as winner";
   const label = clickable
-    ? `${team.name}, ${stateWord}${metric}, activate to pick as winner`
+    ? `${team.name}, ${stateWord}${metric}, ${action}`
     : `${team.name}, ${stateWord}${metric}`;
   const className = `flex h-11 w-full items-center text-left transition sm:h-9 ${
     compact ? "gap-1 px-1.5 sm:gap-1.5 sm:px-2" : "gap-1.5 px-2"
@@ -206,7 +212,7 @@ function MatchupCard({
       ? "bg-emerald-500/70"
       : winnerTone === "pick"
         ? "bg-accent-gold/70"
-        : "bg-pitch-500/70";
+        : "bg-ink-500/70"; // model prediction — grey, never green (reserved for results)
   const showBar = m.winnerId != null && m.top != null && m.bottom != null;
 
   const border = played
@@ -303,6 +309,11 @@ export function BracketTree({
   // right-edge fade cueing the pan); the one-round "Rounds" pager stays a tap away
   // for anyone who prefers it.
   const [mobileView, setMobileView] = useState<"tree" | "rounds">("tree");
+  // Polite SR announcement after a pick; pickSeq bumps once per pick so the
+  // announce effect fires exactly once and reads the freshly-resolved champion.
+  const [pickMsg, setPickMsg] = useState("");
+  const [pickSeq, setPickSeq] = useState(0);
+  const pendingPick = useRef<string | null>(null);
 
   // On mount, acknowledge any picks restored from localStorage (the bracket
   // re-resolves into them once `mounted` flips — see the fade below).
@@ -364,9 +375,33 @@ export function BracketTree({
       ? teamsById.get(resolved.championId) ?? null
       : null;
 
+  // Announce a pick to assistive tech: the bracket re-resolves silently on tap,
+  // so without this a SR/keyboard user gets no feedback that anything changed.
+  const handlePick = (m: Matchup, teamId: number) => {
+    if (mode !== "you") return;
+    const team = m.top?.id === teamId ? m.top : m.bottom;
+    const removing = overrides[m.id] === teamId; // store toggles a repeat pick off
+    pendingPick.current = removing
+      ? "Pick removed"
+      : `${team?.name ?? "Team"} sent through`;
+    pick(m.id, teamId);
+    setPickSeq((s) => s + 1);
+  };
+
   const overrideCount = Object.keys(overrides).length;
   const playedCount = Object.keys(playedNodes).length;
   const lastRound = resolved.rounds.length - 1;
+
+  // Fire once per pick (keyed on pickSeq, not champion) so it reads the freshly
+  // re-resolved champion and never re-announces on restore or results-load.
+  useEffect(() => {
+    if (pickSeq === 0) return;
+    const what = pendingPick.current ?? "Bracket updated";
+    setPickMsg(
+      champion ? `${what}. Projected champion: ${champion.name}.` : `${what}.`,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickSeq]);
 
   // --- SVG connector lines between rounds (measured from the laid-out cards) ---
   const contentRef = useRef<HTMLDivElement>(null);
@@ -379,7 +414,7 @@ export function BracketTree({
       cardRefs.current[r][i] = el;
     };
   // A connector segment carries the model's flow: stroke class (emerald=played,
-  // pitch=predicted, ink=structural), width and opacity scaled by confidence.
+  // grey=predicted/structural), width and opacity scaled by confidence.
   type Conn = { d: string; cls: string; w: number; o: number };
   const [conns, setConns] = useState<{ segs: Conn[]; w: number; h: number }>({
     segs: [],
@@ -407,7 +442,7 @@ export function BracketTree({
       const PLAYED = { cls: "stroke-emerald-500", w: 2.6, o: 0.9 };
       const modelFlow = (p: number | null) => {
         const k = Math.max(0, Math.min(1, ((p ?? 0.5) - 0.5) / 0.5)); // 0..1 confidence
-        return { cls: "stroke-pitch-500", w: 1.6 + 1.3 * k, o: 0.35 + 0.5 * k };
+        return { cls: "stroke-ink-500", w: 1.6 + 1.3 * k, o: 0.35 + 0.5 * k };
       };
       // Each matchup i in round r+1 is fed by matchups 2i and 2i+1 in round r.
       for (let r = 0; r < refs.length - 1; r++) {
@@ -477,6 +512,10 @@ export function BracketTree({
 
   return (
     <div>
+      {/* Polite SR announcement for bracket picks (the visual feedback is the tree itself). */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {pickMsg}
+      </p>
       {/* legend */}
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-ink-400">
         <span className="inline-flex items-center gap-1.5">
@@ -647,7 +686,7 @@ export function BracketTree({
               interactive={mode === "you"}
               isFinal={selectedRound === lastRound}
               fullWidth
-              onPick={(teamId) => mode === "you" && pick(m.id, teamId)}
+              onPick={(teamId) => handlePick(m, teamId)}
             />
           ))}
         </div>
@@ -697,7 +736,7 @@ export function BracketTree({
                         result={playedNodes[m.id] ?? null}
                         interactive={mode === "you"}
                         isFinal={ri === lastRound}
-                        onPick={(teamId) => mode === "you" && pick(m.id, teamId)}
+                        onPick={(teamId) => handlePick(m, teamId)}
                       />
                     </div>
                   ))}

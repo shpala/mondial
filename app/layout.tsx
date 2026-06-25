@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Space_Grotesk } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import Link from "next/link";
 import "./globals.css";
 import { SiteNav } from "@/components/SiteNav";
 import { MobileTabBar } from "@/components/MobileTabBar";
@@ -73,6 +74,17 @@ export default function RootLayout({
           {children}
         </main>
         <footer className="border-t border-ink-700 py-6 pb-24 text-center text-xs text-ink-400 md:pb-6">
+          <nav
+            aria-label="More"
+            className="mb-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1"
+          >
+            <Link
+              href="/methodology"
+              className="font-medium text-ink-300 transition hover:text-ink-100"
+            >
+              Methodology
+            </Link>
+          </nav>
           Mondial · unofficial 2026 World Cup companion · data via openfootball
           &amp; TheSportsDB
         </footer>
