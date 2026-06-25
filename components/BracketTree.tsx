@@ -405,6 +405,10 @@ export function BracketTree({
     const msg = champion
       ? `${what}. Projected champion: ${champion.name}.`
       : `${what}.`;
+    // Intentional extra render: blank the region this tick, set the message
+    // next tick (the whole point — see comment above). Same pattern the mount
+    // effect uses to opt out of this rule.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPickMsg("");
     const id = setTimeout(() => setPickMsg(msg), 50);
     return () => clearTimeout(id);
