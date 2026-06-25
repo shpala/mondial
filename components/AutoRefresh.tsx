@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 /**
@@ -22,7 +22,10 @@ export function AutoRefresh({ seconds = 60 }: { seconds?: number }) {
   useEffect(() => {
     const id = setInterval(() => {
       if (document.visibilityState !== "visible") return;
-      router.refresh();
+      // Non-urgent: a background re-render of the whole tree shouldn't block or
+      // interrupt the user's interactions (protects INP); React keeps the current
+      // UI live and commits the refreshed content as a low-priority transition.
+      startTransition(() => router.refresh());
       setFlash(true);
       clearTimeout(flashTimer.current);
       flashTimer.current = setTimeout(() => setFlash(false), 2500);
