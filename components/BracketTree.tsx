@@ -394,12 +394,20 @@ export function BracketTree({
 
   // Fire once per pick (keyed on pickSeq, not champion) so it reads the freshly
   // re-resolved champion and never re-announces on restore or results-load.
+  // Clear then set on a later tick: two consecutive picks can produce identical
+  // text (advancing the same team again, champion unchanged), and aria-live only
+  // announces when the text actually changes — so blank it first to force a
+  // re-announcement every time. The two sets must be in separate ticks or React
+  // batches them back into a no-op.
   useEffect(() => {
     if (pickSeq === 0) return;
     const what = pendingPick.current ?? "Bracket updated";
-    setPickMsg(
-      champion ? `${what}. Projected champion: ${champion.name}.` : `${what}.`,
-    );
+    const msg = champion
+      ? `${what}. Projected champion: ${champion.name}.`
+      : `${what}.`;
+    setPickMsg("");
+    const id = setTimeout(() => setPickMsg(msg), 50);
+    return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickSeq]);
 
