@@ -10,6 +10,7 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { EstimatedNotice, EstimatedTag } from "@/components/ui/EstimatedData";
 import { formatKickoff } from "@/lib/format";
+import { LocalKickoff } from "@/components/LocalKickoff";
 import { predictScoreline } from "@/lib/prediction";
 import { fixtureHomeWinProb } from "@/lib/displayProbs";
 import { isFabricatedResult } from "@/lib/provenance";
@@ -178,7 +179,10 @@ export default async function MatchPage({
               </>
             ) : (
               <div className="text-xs text-ink-400">
-                {formatKickoff(fixture.kickoff)}
+                <LocalKickoff
+                  iso={fixture.kickoff}
+                  fallback={formatKickoff(fixture.kickoff)}
+                />
               </div>
             )}
           </div>

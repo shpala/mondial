@@ -41,42 +41,85 @@ export function flagImageUrl(flag: string): string | null {
   return null;
 }
 
-// Pinned to UTC so a kickoff renders identically on the server (Vercel runs in
-// UTC) and the client — a time formatted during SSR then re-formatted on the
-// client in the visitor's own zone would otherwise mismatch on hydration. The
-// short zone name keeps the time unambiguous for a global, multi-venue event.
-const TIME_FMT = new Intl.DateTimeFormat("en-GB", {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "UTC",
-  timeZoneName: "short",
-});
-
-/** UTC YYYY-MM-DD key for a timestamp. Matches the UTC-pinned displayed time and
- *  is computed identically on server and client, so day grouping and "today"
- *  markers don't drift across hydration (and agree with the server-side
- *  "today" fixture bucketing in lib/data). */
-export function utcDateKey(iso: string | Date): string {
-  const d = typeof iso === "string" ? new Date(iso) : iso;
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+// Time formatters, cached per IANA timezone. The default UTC keeps server-
+// rendered output deterministic (Vercel runs in UTC) and is the no-JS /
+// pre-hydration fallback; the client re-renders kickoff times in the viewer's
+// own timezone via <LocalKickoff>. A short zone name keeps every time self-
+// labelled ("…UTC" / "…CEST"), unambiguous for a global, multi-venue event.
+const timeFmtCache = new Map<string, Intl.DateTimeFormat>();
+function timeFmt(timeZone: string): Intl.DateTimeFormat {
+  let fmt = timeFmtCache.get(timeZone);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone,
+      timeZoneName: "short",
+    });
+    timeFmtCache.set(timeZone, fmt);
+  }
+  return fmt;
 }
 
-/** True when the kickoff falls on the current UTC calendar day. */
-export function isToday(iso: string): boolean {
-  return utcDateKey(iso) === utcDateKey(new Date());
-}
-
-export function formatKickoff(iso: string): string {
+/** Format a kickoff for display, in the given IANA timezone (default UTC). */
+export function formatKickoff(iso: string, timeZone = "UTC"): string {
   try {
-    return TIME_FMT.format(new Date(iso));
+    return timeFmt(timeZone).format(new Date(iso));
   } catch {
     return iso;
+  }
+}
+
+// YYYY-MM-DD day keys, cached per timezone. Assembled from formatToParts so the
+// order is locale-independent.
+const keyFmtCache = new Map<string, Intl.DateTimeFormat>();
+function keyFmt(timeZone: string): Intl.DateTimeFormat {
+  let fmt = keyFmtCache.get(timeZone);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone,
+    });
+    keyFmtCache.set(timeZone, fmt);
+  }
+  return fmt;
+}
+
+/** Calendar-day key (YYYY-MM-DD) for a timestamp in the given timezone (default
+ *  UTC). Matches the day of the displayed time and is computed identically on
+ *  server and client for a given zone, so day grouping and "today" don't drift. */
+export function dateKey(iso: string | Date, timeZone = "UTC"): string {
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  const fmt = (() => {
+    try {
+      return keyFmt(timeZone);
+    } catch {
+      return keyFmt("UTC");
+    }
+  })();
+  const parts = fmt.formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+/** True when the kickoff falls on the current calendar day in the given timezone
+ *  (default UTC — used for server-side scheduling buckets in lib/data). */
+export function isToday(iso: string, timeZone = "UTC"): boolean {
+  return dateKey(iso, timeZone) === dateKey(new Date(), timeZone);
+}
+
+/** The viewer's IANA timezone (e.g. "Europe/Madrid"), for client-side display.
+ *  Falls back to UTC if unavailable. */
+export function deviceTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
   }
 }
 

@@ -1,8 +1,11 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Fixture } from "@/lib/types";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 import { Countdown } from "@/components/Countdown";
-import { formatKickoff, isToday } from "@/lib/format";
+import { deviceTimeZone, formatKickoff, isToday } from "@/lib/format";
 import { fixtureHomeWinProb, isMarketBacked } from "@/lib/displayProbs";
 import { isFabricatedResult } from "@/lib/provenance";
 
@@ -137,6 +140,18 @@ export function MatchCard({
    *  finished fixture's illustrative score as not-a-real-result. */
   sample?: boolean;
 }) {
+  // Resolve the viewer's timezone on mount so the displayed kickoff, the "Today"
+  // badge/ring and the countdown branch all agree on the same local day. SSR and
+  // the first client render use UTC (no hydration mismatch), then re-resolve to
+  // the device zone — keeping each card self-consistent on every surface (the
+  // dashboard, the team page, MatchesBrowser) without threading a prop.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+  const tz = mounted ? deviceTimeZone() : "UTC";
+
   const played = fixture.status === "finished" || fixture.status === "live";
   const predicted = fixture.status === "scheduled";
   const fabricated = isFabricatedResult(fixture, sample);
@@ -150,7 +165,7 @@ export function MatchCard({
   const marketBacked = realTeams && isMarketBacked(fixture);
   const homePct = homeProb != null ? Math.round(homeProb * 100) : 50;
   const awayPct = 100 - homePct;
-  const today = isToday(fixture.kickoff);
+  const today = isToday(fixture.kickoff, tz);
   const live = fixture.status === "live";
   // Latest goal for a live card's footer (the timeline is chronological, so the
   // most recent goal is last). Gives a live card context below the running score.
@@ -164,8 +179,10 @@ export function MatchCard({
       ? "ring-1 ring-pitch-500/50"
       : "";
 
-  // For today's upcoming games, count down to kickoff; otherwise show the date.
-  const kickoff = formatKickoff(fixture.kickoff);
+  // For today's upcoming games, count down to kickoff; otherwise show the date
+  // in the viewer's local timezone (UTC pre-mount, per `tz`). The countdown is a
+  // duration, so it's timezone-independent.
+  const kickoff = formatKickoff(fixture.kickoff, tz);
   const kickoffLabel =
     predicted && today ? (
       <Countdown target={fixture.kickoff} fallback={kickoff} />

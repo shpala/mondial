@@ -34,7 +34,8 @@ export default async function MatchesPage({
       <h1 className="mb-1 font-display text-2xl font-extrabold">Matches</h1>
       <p className="mb-6 text-sm text-ink-400">
         The full schedule — {fixtures.length} fixtures. Filter by group or
-        status; tap any match for its lineups. Kickoff times are shown in UTC.
+        status; tap any match for its lineups. Kickoff times are shown in your
+        local time zone where supported, each labelled with its zone.
       </p>
       <MatchesBrowser
         fixtures={fixtures}

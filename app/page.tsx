@@ -8,6 +8,7 @@ import {
 } from "@/lib/data";
 import { gradeOutcomes } from "@/lib/modelreport";
 import { MatchCard } from "@/components/MatchCard";
+import { DashboardSchedule } from "@/components/DashboardSchedule";
 import { ModelReportCard } from "@/components/ModelReportCard";
 import { TitleOddsTable } from "@/components/TitleOddsTable";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
@@ -21,35 +22,6 @@ import { hostNations } from "@/lib/teams/registry";
 const HOSTS = hostNations();
 
 export const dynamic = "force-dynamic";
-
-function Section({
-  title,
-  href,
-  badge,
-  children,
-}: {
-  title: string;
-  href?: string;
-  badge?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="mb-8">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <h2 className="font-display text-xl font-bold">{title}</h2>
-          {badge}
-        </div>
-        {href && (
-          <Link href={href} className="text-sm text-pitch-500 hover:underline">
-            View all →
-          </Link>
-        )}
-      </div>
-      {children}
-    </section>
-  );
-}
 
 export default async function DashboardPage() {
   const [
@@ -176,44 +148,12 @@ export default async function DashboardPage() {
         <ModelReportCard report={report} sample={usingSample} />
       </section>
 
-      {today.length > 0 && (
-        <Section
-          title="Today"
-          badge={
-            <span className="rounded-full bg-pitch-500/20 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-pitch-50/90">
-              {today.length} {today.length === 1 ? "match" : "matches"}
-            </span>
-          }
-        >
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {today.map((f) => (
-              <MatchCard key={f.id} fixture={f} sample={usingSample} />
-            ))}
-          </div>
-        </Section>
-      )}
-
-      <Section title="Upcoming" href="/matches">
-        {upcoming.length ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {upcoming.map((f) => (
-              <MatchCard key={f.id} fixture={f} sample={usingSample} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-ink-400">No upcoming fixtures scheduled.</p>
-        )}
-      </Section>
-
-      {recent.length > 0 && (
-        <Section title="Recent results" href="/matches">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {recent.map((f) => (
-              <MatchCard key={f.id} fixture={f} sample={usingSample} />
-            ))}
-          </div>
-        </Section>
-      )}
+      <DashboardSchedule
+        today={today}
+        upcoming={upcoming}
+        recent={recent}
+        sample={usingSample}
+      />
     </div>
   );
 }
