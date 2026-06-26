@@ -55,9 +55,15 @@ export default async function Image({
         fixture.homeGoals !== null &&
         fixture.awayGoals !== null;
       const realTeams = fixture.home.id !== 0 && fixture.away.id !== 0;
-      const homePct = realTeams
-        ? Math.round(fixtureHomeWinProb(fixture) * 100)
-        : null;
+      // Only predict on real data: in sample mode the ratings have been moved by
+      // the snapshot's fabricated results (computeLiveRatings), so the prediction
+      // itself would be contaminated. Fall through to the neutral line instead
+      // (the tie + group are real and stay). Matches the bracket/team cards and
+      // the root OG, which show no model output in sample mode.
+      const homePct =
+        !usingSample && realTeams
+          ? Math.round(fixtureHomeWinProb(fixture) * 100)
+          : null;
 
       const result =
         played ? (
