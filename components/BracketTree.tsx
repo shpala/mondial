@@ -39,7 +39,7 @@ type WinnerTone = "result" | "pick" | "model";
 
 const WINNER_CLASS: Record<WinnerTone, string> = {
   result: "bg-emerald-600/45 font-semibold text-white", // actually played
-  pick: "bg-accent-gold/25 font-bold text-amber-100", // your override
+  pick: "bg-accent-gold/25 font-bold text-accent-gold-bright", // your override
   model: "bg-ink-500/80 font-semibold text-white", // model prediction
 };
 
@@ -314,6 +314,11 @@ export function BracketTree({
   const [pickMsg, setPickMsg] = useState("");
   const [pickSeq, setPickSeq] = useState(0);
   const pendingPick = useRef<string | null>(null);
+  // Focus choreography for the Reset → Undo flow (both buttons unmount on use,
+  // which would otherwise drop keyboard focus to <body>).
+  const resetBtnRef = useRef<HTMLButtonElement>(null);
+  const undoBtnRef = useRef<HTMLButtonElement>(null);
+  const youToggleRef = useRef<HTMLButtonElement>(null);
 
   // On mount, acknowledge any picks restored from localStorage (the bracket
   // re-resolves into them once `mounted` flips — see the fade below).
@@ -329,10 +334,19 @@ export function BracketTree({
     return () => clearTimeout(id);
   }, []);
 
-  // Auto-dismiss the "Bracket cleared · Undo" toast a few seconds after a reset.
+  // When the toast appears, move focus onto its Undo button so a keyboard user
+  // lands on the recovery action (the Reset button that triggered it has just
+  // unmounted). Auto-dismiss a few seconds later; if the user never acted, hand
+  // focus to the "Your picks" toggle rather than dropping it to <body>.
   useEffect(() => {
     if (!undoToast) return;
-    const id = setTimeout(() => setUndoToast(false), 6000);
+    undoBtnRef.current?.focus();
+    const id = setTimeout(() => {
+      if (document.activeElement === undoBtnRef.current) {
+        youToggleRef.current?.focus();
+      }
+      setUndoToast(false);
+    }, 6000);
     return () => clearTimeout(id);
   }, [undoToast]);
 
@@ -561,6 +575,7 @@ export function BracketTree({
             🤖 Model
           </button>
           <button
+            ref={youToggleRef}
             type="button"
             onClick={() => setMode("you")}
             aria-pressed={mode === "you"}
@@ -582,6 +597,7 @@ export function BracketTree({
           )}
           {mode === "you" && overrideCount > 0 && (
             <button
+              ref={resetBtnRef}
               type="button"
               onClick={() => {
                 reset();
@@ -767,14 +783,18 @@ export function BracketTree({
         <div
           role="status"
           aria-live="polite"
-          className="fixed inset-x-0 bottom-20 z-50 mx-auto flex w-fit animate-fade-up items-center gap-3 rounded-full border border-ink-600 bg-ink-800/95 px-4 py-2 text-sm text-ink-100 shadow-lg backdrop-blur-sm md:bottom-6"
+          className="fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 mx-auto flex w-fit animate-fade-up items-center gap-3 rounded-full border border-ink-600 bg-ink-800/95 px-4 py-2 text-sm text-ink-100 shadow-lg backdrop-blur-sm md:bottom-6"
         >
           <span>Bracket cleared</span>
           <button
+            ref={undoBtnRef}
             type="button"
             onClick={() => {
               undoReset();
               setUndoToast(false);
+              // The Reset button re-mounts once picks are restored — return focus
+              // to it rather than letting it drop to <body>.
+              requestAnimationFrame(() => resetBtnRef.current?.focus());
             }}
             className="font-semibold text-accent-gold hover:underline"
           >

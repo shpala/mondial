@@ -54,7 +54,7 @@ function StatusPill({
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-accent-gold/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-300">
+    <span className="inline-flex items-center gap-1 rounded-full bg-accent-gold/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-accent-gold-bright">
       <span className="h-1.5 w-1.5 rounded-full bg-accent-gold" aria-hidden />
       Predicted
     </span>

@@ -18,6 +18,9 @@
   --color-ink-900: #0a0e14;
 
   --color-accent-gold: #d68f2e;
+  /* Brighter gold for "pick / predicted" text (was scattered as raw amber-300 /
+     amber-100); accent-gold = fills, accent-gold-bright = text. */
+  --color-accent-gold-bright: #fcd34d;
   --color-accent-ember: #f97316;
 
   /* Body stays system sans; the display face is the Next-injected Space Grotesk

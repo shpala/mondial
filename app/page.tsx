@@ -60,7 +60,7 @@ export default async function DashboardPage() {
           </p>
           {favourite ? (
             <>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-400">
+              <p className="text-sm text-ink-300">
                 The model&rsquo;s pick to lift the trophy
               </p>
               <h1 className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -79,11 +79,19 @@ export default async function DashboardPage() {
                 </span>
               </h1>
               <p className="mt-3 max-w-xl text-sm text-ink-300">
-                {report.n > 0
-                  ? `${report.hits} of ${report.n} group calls correct${usingSample ? " on sample fixtures" : " so far"} — `
-                  : ""}
-                title odds across {teams.length} nations, simulated thousands of
-                times.
+                {report.n > 0 ? (
+                  <>
+                    {report.hits} of {report.n} group calls correct
+                    {usingSample ? " on sample fixtures" : " so far"} — title
+                    odds across {teams.length} nations, simulated thousands of
+                    times.
+                  </>
+                ) : (
+                  <>
+                    Title odds across {teams.length} nations, simulated thousands
+                    of times.
+                  </>
+                )}
               </p>
             </>
           ) : (

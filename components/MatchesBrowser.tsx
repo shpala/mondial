@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { Fixture } from "@/lib/types";
 import { MatchCard } from "@/components/MatchCard";
@@ -18,6 +18,8 @@ const DATE_FMT = new Intl.DateTimeFormat("en-GB", {
 type StatusFilter = "all" | "today" | "upcoming" | "results";
 
 const GROUPS = "ABCDEFGHIJKL".split("");
+// Ordered chips for the filter row ("" = All groups); drives roving-tabindex nav.
+const GROUP_CHIPS = ["", ...GROUPS];
 
 export function MatchesBrowser({
   fixtures,
@@ -35,6 +37,8 @@ export function MatchesBrowser({
   const pathname = usePathname();
   const [group, setGroup] = useState(initialGroup);
   const [status, setStatus] = useState<StatusFilter>(initialStatus);
+  // Roving tabindex for the group-filter chip row (one tab stop, arrow keys move).
+  const chipRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Group days by the viewer's local timezone, but only after mount: SSR and the
   // first client render both use UTC (so the hydrated HTML matches), then the
@@ -81,6 +85,9 @@ export function MatchesBrowser({
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [filtered, tz]);
 
+  // Index of the in-tab-order chip (the selected group; All groups when none).
+  const selectedChip = Math.max(0, GROUP_CHIPS.indexOf(group));
+
   const chip = (active: boolean) =>
     `inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition md:min-h-0 ${
       active ? "bg-ink-700 text-white" : "text-ink-400 hover:bg-ink-800 active:bg-ink-800"
@@ -115,26 +122,36 @@ export function MatchesBrowser({
             role="group"
             aria-label="Filter by group"
           >
-            <button
-              type="button"
-              onClick={() => updateFilters("", status)}
-              aria-pressed={group === ""}
-              className={chip(group === "")}
-            >
-              All groups
-            </button>
-            {GROUPS.map((g) => (
-              <button
-                key={g}
-                type="button"
-                onClick={() => updateFilters(g, status)}
-                aria-pressed={group === g}
-                aria-label={`Group ${g}`}
-                className={chip(group === g)}
-              >
-                {g}
-              </button>
-            ))}
+            {GROUP_CHIPS.map((g, i) => {
+              const active = group === g;
+              return (
+                <button
+                  key={g || "all"}
+                  type="button"
+                  ref={(el) => {
+                    chipRefs.current[i] = el;
+                  }}
+                  onClick={() => updateFilters(g, status)}
+                  aria-pressed={active}
+                  aria-label={g ? `Group ${g}` : undefined}
+                  // Roving tabindex: only the selected chip is in the tab order;
+                  // ArrowLeft/Right move the selection along the row.
+                  tabIndex={i === selectedChip ? 0 : -1}
+                  onKeyDown={(e) => {
+                    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+                    e.preventDefault();
+                    const n = GROUP_CHIPS.length;
+                    const next =
+                      e.key === "ArrowRight" ? (i + 1) % n : (i - 1 + n) % n;
+                    updateFilters(GROUP_CHIPS[next], status);
+                    chipRefs.current[next]?.focus();
+                  }}
+                  className={chip(active)}
+                >
+                  {g || "All groups"}
+                </button>
+              );
+            })}
           </div>
           <div
             className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l from-ink-900 to-transparent sm:hidden"

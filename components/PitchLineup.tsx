@@ -197,6 +197,7 @@ export function PitchLineup({
               role="button"
               tabIndex={t.player.id === rovingId ? 0 : -1}
               aria-label={`#${t.player.number ?? "–"} ${t.player.name}`}
+              aria-pressed={isSel}
               onClick={() => {
                 setSelected(isSel ? null : t);
                 setActiveId(t.player.id);

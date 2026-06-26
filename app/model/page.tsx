@@ -68,7 +68,11 @@ export default async function ModelPage() {
       ) : (
         <div className="card mb-6 p-5">
           <p className="text-lg font-semibold text-white">
-            Called {report.hits} of {report.n} group results
+            Called{" "}
+            <span className="font-display tabular-nums">
+              {report.hits} of {report.n}
+            </span>{" "}
+            group results
           </p>
           <p className="mt-1 text-sm text-ink-300">
             {edge >= 0 ? (
@@ -100,11 +104,11 @@ export default async function ModelPage() {
           </h2>
           <p className="mb-1 text-sm text-ink-400">
             log-loss{" "}
-            <span className="font-semibold text-white">
+            <span className="font-display font-semibold tabular-nums text-white">
               {num3(report.logLoss)}
             </span>{" "}
             vs {num3(report.baselineLogLoss)} baseline · Brier{" "}
-            <span className="font-semibold text-white">
+            <span className="font-display font-semibold tabular-nums text-white">
               {num3(report.brier)}
             </span>{" "}
             · lower is better.
@@ -168,7 +172,7 @@ export default async function ModelPage() {
                       <td className="px-4 py-2 text-white">
                         {m.home} <span className="text-ink-400">v</span> {m.away}
                       </td>
-                      <td className="px-4 py-2 text-center tabular-nums text-ink-300">
+                      <td className="px-4 py-2 text-center font-display tabular-nums text-ink-300">
                         {m.homeGoals}–{m.awayGoals}
                       </td>
                       <td className={cellCls("home")}>{pct(m.predicted.home)}</td>
@@ -203,7 +207,7 @@ export default async function ModelPage() {
           <>
             <p className="mb-4 text-sm text-ink-400">
               Brier{" "}
-              <span className="font-semibold text-white">
+              <span className="font-display font-semibold tabular-nums text-white">
                 {num3(qual.brier)}
               </span>{" "}
               over {qual.n} determined team{qual.n === 1 ? "" : "s"} (

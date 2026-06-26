@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Space_Grotesk } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
@@ -46,6 +46,13 @@ export const metadata: Metadata = {
   },
 };
 
+// viewport-fit=cover lets env(safe-area-inset-*) resolve to non-zero on notched
+// iOS — without it the MobileTabBar's bottom inset (and the clearances that
+// depend on it) are inert, leaving the fixed tabs inside the home-indicator strip.
+export const viewport: Viewport = {
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -69,11 +76,11 @@ export default function RootLayout({
         <main
           id="main"
           tabIndex={-1}
-          className="mx-auto w-full max-w-6xl px-4 pt-6 pb-24 outline-hidden sm:px-6 md:pb-20"
+          className="mx-auto w-full max-w-6xl pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))] outline-hidden sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] md:pb-20"
         >
           {children}
         </main>
-        <footer className="border-t border-ink-700 py-6 pb-24 text-center text-xs text-ink-400 md:pb-6">
+        <footer className="border-t border-ink-700 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] text-center text-xs text-ink-400 md:pb-6">
           <nav
             aria-label="More"
             className="mb-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1"

@@ -31,11 +31,18 @@ export function ModelReportCard({
       </h2>
       <p className="mt-1 text-sm text-ink-300">
         Called{" "}
-        <strong>
+        <strong className="font-display tabular-nums">
           {report.hits} of {report.n}
         </strong>{" "}
-        {sample ? "sample group" : "group"} results — {edge >= 0 ? "beating" : "trailing"} a blind guess by{" "}
-        <strong>{Math.abs(edge).toFixed(2)}</strong> log-loss
+        {sample ? "sample group" : "group"} results —{" "}
+        {/* The raw log-loss is jargon on the dashboard (the most casual touch
+            point); keep the legible "blind guess" framing and tuck the number
+            into a tooltip — /model shows it in full. */}
+        <span
+          title={`${edge >= 0 ? "+" : "−"}${Math.abs(edge).toFixed(2)} log-loss vs a no-skill baseline`}
+        >
+          {edge >= 0 ? "beating" : "trailing"} a blind guess
+        </span>
         {smallSample ? (
           <span className="text-ink-400"> (early days — small sample)</span>
         ) : null}

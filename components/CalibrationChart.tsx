@@ -4,8 +4,8 @@ import type { ReliabilityBucket } from "@/lib/modelreport";
  * Reliability diagram: predicted win rate (x) vs observed (y). A perfectly
  * calibrated model sits on the diagonal — "when it says 70%, they win 70%".
  * Dots above the line are cautious (under-confident, pitch); below are
- * over-confident (bronze, = model output colour). Dot size ∝ matches in the band.
- * Pure/server-renderable — the visual replacement for the old reliability table.
+ * over-confident (ember = warm warning); on the line is neutral grey. Dot size ∝
+ * matches in the band. Pure/server-renderable — replaces the old reliability table.
  */
 export function CalibrationChart({
   reliability,
@@ -34,18 +34,36 @@ export function CalibrationChart({
             <line x1="0" y1="50" x2="100" y2="50" className="stroke-ink-800" strokeWidth="0.6" />
             {/* perfect-calibration diagonal (observed = predicted) */}
             <line x1="0" y1="100" x2="100" y2="0" className="stroke-ink-500" strokeWidth="0.8" strokeDasharray="3 3" />
+            {/* numeric scale ticks (0/50/100%) so sighted readers can read the axes;
+                bottom-left "0" is the shared origin of both axes */}
+            <g className="fill-ink-400" fontSize="4">
+              <text x="1.5" y="98.5">0</text>
+              <text x="50" y="98.5" textAnchor="middle">50</text>
+              <text x="98.5" y="98.5" textAnchor="end">100</text>
+              <text x="1.5" y="51">50</text>
+              <text x="1.5" y="5">100</text>
+            </g>
             {pts.map((p) => {
               const cx = p.predicted * 100;
               const cy = 100 - p.observed * 100; // SVG y grows down → flip
               const r = 1.8 + 5.5 * Math.sqrt(p.count / maxN);
-              const overConfident = p.observed < p.predicted - 0.02;
+              const diff = p.observed - p.predicted;
+              // ember = over-confident (below the line), pitch = cautious (above),
+              // neutral grey = on the line. Position already encodes direction, so
+              // colour stays redundant (CVD-safe).
+              const tone =
+                diff < -0.02
+                  ? "fill-accent-ember"
+                  : diff > 0.02
+                    ? "fill-pitch-500"
+                    : "fill-ink-400";
               return (
                 <circle
                   key={p.bucket}
                   cx={cx}
                   cy={cy}
                   r={r}
-                  className={overConfident ? "fill-accent-gold" : "fill-pitch-500"}
+                  className={tone}
                   fillOpacity={0.75}
                   stroke="#0a0e14"
                   strokeWidth="0.6"
@@ -85,7 +103,7 @@ export function CalibrationChart({
       <figcaption className="mt-3 text-xs text-ink-400">
         On the dashed line = perfectly calibrated.{" "}
         <span className="font-medium text-pitch-500">Above</span> = cautious;{" "}
-        <span className="font-medium text-accent-gold">below</span> = over-confident.
+        <span className="font-medium text-accent-ember">below</span> = over-confident.
         Dot size = matches in that band.
       </figcaption>
     </figure>
