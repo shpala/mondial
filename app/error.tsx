@@ -17,11 +17,15 @@ export default function Error({
       <div className="mb-4 text-5xl" aria-hidden>
         🟥
       </div>
-      <h1 className="mb-2 font-display text-2xl font-extrabold">Sent off</h1>
-      <p className="mb-6 text-sm text-ink-400">
-        Something went wrong loading this page. A data source may be temporarily
-        unavailable.
-      </p>
+      {/* role=alert: the error boundary swaps in client-side (not a navigation),
+          so without this a screen-reader user is never told the page failed. */}
+      <div role="alert">
+        <h1 className="mb-2 font-display text-2xl font-extrabold">Sent off</h1>
+        <p className="mb-6 text-sm text-ink-400">
+          Something went wrong loading this page. A data source may be
+          temporarily unavailable.
+        </p>
+      </div>
       <div className="flex items-center justify-center gap-3">
         <button
           type="button"

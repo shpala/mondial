@@ -4,19 +4,20 @@ import { useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { Fixture } from "@/lib/types";
 import { MatchCard } from "@/components/MatchCard";
-import { localDateKey } from "@/lib/format";
+import { utcDateKey } from "@/lib/format";
 
 const DATE_FMT = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
   day: "numeric",
   month: "long",
+  timeZone: "UTC",
 });
 
 type StatusFilter = "all" | "today" | "upcoming" | "results";
 
 const GROUPS = "ABCDEFGHIJKL".split("");
 
-const todayStr = localDateKey(new Date());
+const todayStr = utcDateKey(new Date());
 
 export function MatchesBrowser({
   fixtures,
@@ -50,7 +51,7 @@ export function MatchesBrowser({
   const filtered = useMemo(() => {
     return fixtures.filter((f) => {
       if (group && f.group !== group) return false;
-      if (status === "today" && localDateKey(f.kickoff) !== todayStr) return false;
+      if (status === "today" && utcDateKey(f.kickoff) !== todayStr) return false;
       if (status === "upcoming" && f.status !== "scheduled") return false;
       if (status === "results" && f.status === "scheduled") return false;
       return true;
@@ -61,7 +62,7 @@ export function MatchesBrowser({
   const byDate = useMemo(() => {
     const map = new Map<string, Fixture[]>();
     for (const f of filtered) {
-      const day = localDateKey(f.kickoff);
+      const day = utcDateKey(f.kickoff);
       if (!map.has(day)) map.set(day, []);
       map.get(day)!.push(f);
     }
@@ -157,7 +158,7 @@ export function MatchesBrowser({
           {byDate.map(([day, games]) => (
             <section key={day}>
               <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink-300">
-                {DATE_FMT.format(new Date(`${day}T12:00:00`))}
+                {DATE_FMT.format(new Date(`${day}T12:00:00Z`))}
                 {day === todayStr && (
                   <span className="rounded-full bg-pitch-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pitch-50/90">
                     Today
