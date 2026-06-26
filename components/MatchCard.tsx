@@ -5,20 +5,45 @@ import Link from "next/link";
 import type { Fixture } from "@/lib/types";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 import { Countdown } from "@/components/Countdown";
+import { LiveUpdatedAt } from "@/components/LiveUpdatedAt";
 import { deviceTimeZone, formatKickoff, isToday } from "@/lib/format";
 import { fixtureHomeWinProb, isMarketBacked } from "@/lib/displayProbs";
 import { isFabricatedResult } from "@/lib/provenance";
+import {
+  isFreshLive,
+  reconcileLive,
+  snapshotOf,
+  type LiveSnapshot,
+} from "@/lib/liveFreeze";
 
 function StatusPill({
   status,
   minute,
   fabricated,
+  stale,
 }: {
   status: Fixture["status"];
   minute?: string | null;
   fabricated?: boolean;
+  stale?: boolean;
 }) {
   if (status === "live") {
+    // A frozen score (the live overlay dropped — we're showing the last-known
+    // score, not a fresh tick) must not wear the fresh-live treatment. Downgrade
+    // to a static amber "Delayed" pill so the dominant cue matches reality; the
+    // anchor underneath carries the growing "updated Xs ago · delayed". Mirrors
+    // the fabricated → "≈ Full-time" neutralization below.
+    if (stale) {
+      return (
+        <span
+          className="inline-flex items-center gap-1 rounded-full bg-accent-ember/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-accent-ember"
+          aria-label={minute ? `Delayed, last seen ${minute}` : "Delayed"}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-accent-ember" aria-hidden />
+          <span aria-hidden>{minute ? `Delayed · ${minute}` : "Delayed"}</span>
+        </span>
+      );
+    }
     return (
       <span
         className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-300"
@@ -134,11 +159,16 @@ function ScoreBlock({
 export function MatchCard({
   fixture,
   sample = false,
+  fetchedAt,
 }: {
   fixture: Fixture;
   /** True when serving the bundled snapshot (live feed down) — used to flag a
    *  finished fixture's illustrative score as not-a-real-result. */
   sample?: boolean;
+  /** Server fetch time (ms epoch). Supplied on live-aware surfaces: enables the
+   *  freshness anchor and freezes the last-known live score if the live overlay
+   *  drops (instead of the card snapping back to "Predicted"). Omit elsewhere. */
+  fetchedAt?: number;
 }) {
   // Resolve the viewer's timezone on mount so the displayed kickoff, the "Today"
   // badge/ring and the countdown branch all agree on the same local day. SSR and
@@ -152,29 +182,59 @@ export function MatchCard({
   }, []);
   const tz = mounted ? deviceTimeZone() : "UTC";
 
-  const played = fixture.status === "finished" || fixture.status === "live";
-  const predicted = fixture.status === "scheduled";
-  const fabricated = isFabricatedResult(fixture, sample);
+  // Live-freeze: on a live-aware surface (fetchedAt provided), keep the last-known
+  // live score visible if the ESPN overlay drops — the facade reverts the fixture
+  // to "scheduled", which would otherwise snap the card back to "Predicted". The
+  // remembered snapshot is synced from the server-pushed fixture (the external
+  // system) and persists across router.refresh(); the render reconciles the
+  // incoming fixture against it.
+  const [liveSnap, setLiveSnap] = useState<LiveSnapshot | null>(null);
+  const reconciled =
+    fetchedAt != null
+      ? reconcileLive(fixture, liveSnap, fetchedAt)
+      : { fixture, stale: false, asOf: null as number | null, remember: null };
+  useEffect(() => {
+    if (fetchedAt == null) return;
+    // Remember only a *fresh* live (a real overlay), forget on finish. A dropped
+    // feed — a revert to scheduled OR a bare spine "live" row with no score —
+    // keeps the last snapshot so reconcileLive can freeze it (gating on
+    // isFreshLive here, not status, avoids clobbering it with null/null).
+    if (isFreshLive(fixture)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLiveSnap(snapshotOf(fixture, fetchedAt));
+    } else if (fixture.status === "finished") {
+      setLiveSnap(null);
+    }
+  }, [fixture, fetchedAt]);
+  const fx = reconciled.fixture;
+  const liveStale = reconciled.stale;
+  const liveAsOf = reconciled.asOf;
+
+  const played = fx.status === "finished" || fx.status === "live";
+  const predicted = fx.status === "scheduled";
+  const fabricated = isFabricatedResult(fx, sample);
 
   // The model's pre-match prediction. It's derived from team ratings (not the
   // running score), so it's status-independent — we surface it for live and
   // finished games too, labelled "pre-match", not just upcoming ones. Skip
   // placeholder knockout slots (id 0).
-  const realTeams = fixture.home.id !== 0 && fixture.away.id !== 0;
-  const homeProb = realTeams ? fixtureHomeWinProb(fixture) : null;
-  const marketBacked = realTeams && isMarketBacked(fixture);
+  const realTeams = fx.home.id !== 0 && fx.away.id !== 0;
+  const homeProb = realTeams ? fixtureHomeWinProb(fx) : null;
+  const marketBacked = realTeams && isMarketBacked(fx);
   const homePct = homeProb != null ? Math.round(homeProb * 100) : 50;
   const awayPct = 100 - homePct;
-  const today = isToday(fixture.kickoff, tz);
-  const live = fixture.status === "live";
+  const today = isToday(fx.kickoff, tz);
+  const live = fx.status === "live";
   // Latest goal for a live card's footer (the timeline is chronological, so the
   // most recent goal is last). Gives a live card context below the running score.
   const latestGoal =
-    live && fixture.goals.length
-      ? fixture.goals[fixture.goals.length - 1]
-      : null;
+    live && fx.goals.length ? fx.goals[fx.goals.length - 1] : null;
+  // A live card gets the loud red ring; a frozen (stale) one steps down to a
+  // soft amber ring so it doesn't read as fresh-live.
   const ring = live
-    ? "ring-2 ring-red-500/60"
+    ? liveStale
+      ? "ring-1 ring-accent-ember/40"
+      : "ring-2 ring-red-500/60"
     : today
       ? "ring-1 ring-pitch-500/50"
       : "";
@@ -182,17 +242,17 @@ export function MatchCard({
   // For today's upcoming games, count down to kickoff; otherwise show the date
   // in the viewer's local timezone (UTC pre-mount, per `tz`). The countdown is a
   // duration, so it's timezone-independent.
-  const kickoff = formatKickoff(fixture.kickoff, tz);
+  const kickoff = formatKickoff(fx.kickoff, tz);
   const kickoffLabel =
     predicted && today ? (
-      <Countdown target={fixture.kickoff} fallback={kickoff} />
+      <Countdown target={fx.kickoff} fallback={kickoff} />
     ) : (
       kickoff
     );
 
   return (
     <Link
-      href={`/matches/${fixture.id}`}
+      href={`/matches/${fx.id}`}
       className={`card group flex flex-col gap-2 p-3 transition hover:bg-ink-700/60 active:bg-ink-700/60 ${ring} ${
         predicted
           ? "border-l-2 border-l-accent-gold/70 hover:border-l-accent-gold"
@@ -201,7 +261,7 @@ export function MatchCard({
     >
       <div className="flex items-center justify-between text-[11px] text-ink-400">
         <span className="flex items-center gap-1.5">
-          {fixture.group ? `Group ${fixture.group}` : fixture.stage}
+          {fx.group ? `Group ${fx.group}` : fx.stage}
           {today && (
             <span className="rounded-full bg-pitch-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pitch-50/90">
               Today
@@ -209,29 +269,30 @@ export function MatchCard({
           )}
         </span>
         <StatusPill
-          status={fixture.status}
-          minute={fixture.minute}
+          status={fx.status}
+          minute={fx.minute}
           fabricated={fabricated}
+          stale={liveStale}
         />
       </div>
 
       <div className="flex items-center gap-2">
         <Side
-          flag={fixture.home.flag}
-          name={fixture.home.name}
-          code={fixture.home.code}
+          flag={fx.home.flag}
+          name={fx.home.name}
+          code={fx.home.code}
           align="left"
           favored={homeProb != null && homeProb > 0.5}
         />
         <ScoreBlock
-          home={fixture.homeGoals}
-          away={fixture.awayGoals}
+          home={fx.homeGoals}
+          away={fx.awayGoals}
           played={played}
         />
         <Side
-          flag={fixture.away.flag}
-          name={fixture.away.name}
-          code={fixture.away.code}
+          flag={fx.away.flag}
+          name={fx.away.name}
+          code={fx.away.code}
           align="right"
           favored={homeProb != null && homeProb < 0.5}
         />
@@ -256,8 +317,16 @@ export function MatchCard({
             </span>
           )}
           <span className="ml-auto shrink-0 text-ink-400">
-            {(latestGoal.side === "home" ? fixture.home : fixture.away).code}
+            {(latestGoal.side === "home" ? fx.home : fx.away).code}
           </span>
+        </div>
+      )}
+
+      {/* Freshness anchor for live cards: "updated Xs ago" (+ "delayed" when the
+          live feed dropped and we're showing a frozen score). */}
+      {liveAsOf != null && (
+        <div className="text-right">
+          <LiveUpdatedAt asOf={liveAsOf} stale={liveStale} />
         </div>
       )}
 
@@ -268,7 +337,7 @@ export function MatchCard({
               fill = one team's standalone tournament chance (TitleOddsTable). */}
           <div
             role="img"
-            aria-label={`${predicted ? "Predicted" : "Pre-match"} win probability: ${fixture.home.name} ${homePct} percent, ${fixture.away.name} ${awayPct} percent`}
+            aria-label={`${predicted ? "Predicted" : "Pre-match"} win probability: ${fx.home.name} ${homePct} percent, ${fx.away.name} ${awayPct} percent`}
             className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-ink-700"
           >
             <div className="bg-pitch-500" style={{ width: `${homePct}%` }} />

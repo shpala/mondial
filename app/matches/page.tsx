@@ -2,6 +2,7 @@ import { getFixtures, getDataStatus } from "@/lib/data";
 import { MatchesBrowser } from "@/components/MatchesBrowser";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { requestNow } from "@/lib/serverTime";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,7 @@ export default async function MatchesPage({
         initialGroup={initialGroup}
         initialStatus={initialStatus}
         sample={usingSample}
+        fetchedAt={requestNow()}
       />
     </div>
   );

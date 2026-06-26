@@ -26,12 +26,15 @@ export function MatchesBrowser({
   initialGroup = "",
   initialStatus = "all",
   sample = false,
+  fetchedAt,
 }: {
   fixtures: Fixture[];
   initialGroup?: string;
   initialStatus?: StatusFilter;
   /** Serving the bundled snapshot — flags fabricated sample results. */
   sample?: boolean;
+  /** Server fetch time — enables the live freshness anchor + freeze on cards. */
+  fetchedAt?: number;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -69,6 +72,12 @@ export function MatchesBrowser({
       if (group && f.group !== group) return false;
       if (status === "today" && dateKey(f.kickoff, tz) !== todayStr) return false;
       if (status === "upcoming" && f.status !== "scheduled") return false;
+      // Live-freeze caveat: under "results", a live match that loses its ESPN
+      // overlay reverts to "scheduled" and is filtered out here — its MatchCard
+      // unmounts, so the component-local frozen snapshot is GC'd and it can't
+      // freeze (it vanishes instead). Freeze holds under "all"/"today" (status-
+      // independent grouping keeps the card mounted across the revert); this is
+      // the same intentional non-freeze class as the dashboard "Live now" gate.
       if (status === "results" && f.status === "scheduled") return false;
       return true;
     });
@@ -196,7 +205,12 @@ export function MatchesBrowser({
               </h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {games.map((f) => (
-                  <MatchCard key={f.id} fixture={f} sample={sample} />
+                  <MatchCard
+                    key={f.id}
+                    fixture={f}
+                    sample={sample}
+                    fetchedAt={fetchedAt}
+                  />
                 ))}
               </div>
             </section>
