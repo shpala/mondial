@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { Fixture } from "@/lib/types";
 import { MatchCard } from "@/components/MatchCard";
-import { utcDateKey } from "@/lib/format";
+import { dateKey, deviceTimeZone } from "@/lib/format";
 
+// Pinned to UTC and fed noon-UTC of the (already timezone-resolved) day key, so
+// it labels that calendar day regardless of the viewer's offset.
 const DATE_FMT = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
   day: "numeric",
@@ -16,8 +18,6 @@ const DATE_FMT = new Intl.DateTimeFormat("en-GB", {
 type StatusFilter = "all" | "today" | "upcoming" | "results";
 
 const GROUPS = "ABCDEFGHIJKL".split("");
-
-const todayStr = utcDateKey(new Date());
 
 export function MatchesBrowser({
   fixtures,
@@ -36,6 +36,18 @@ export function MatchesBrowser({
   const [group, setGroup] = useState(initialGroup);
   const [status, setStatus] = useState<StatusFilter>(initialStatus);
 
+  // Group days by the viewer's local timezone, but only after mount: SSR and the
+  // first client render both use UTC (so the hydrated HTML matches), then the
+  // grouping/headers re-resolve to the device zone. Keeps the day headers
+  // coherent with the local kickoff times shown on each card.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+  const tz = mounted ? deviceTimeZone() : "UTC";
+  const todayStr = dateKey(new Date(), tz);
+
   // Keep both filters in the URL so a filtered view is shareable, bookmarkable,
   // and restored by browser back/forward. replace() avoids history spam.
   function updateFilters(nextGroup: string, nextStatus: StatusFilter) {
@@ -51,23 +63,23 @@ export function MatchesBrowser({
   const filtered = useMemo(() => {
     return fixtures.filter((f) => {
       if (group && f.group !== group) return false;
-      if (status === "today" && utcDateKey(f.kickoff) !== todayStr) return false;
+      if (status === "today" && dateKey(f.kickoff, tz) !== todayStr) return false;
       if (status === "upcoming" && f.status !== "scheduled") return false;
       if (status === "results" && f.status === "scheduled") return false;
       return true;
     });
-  }, [fixtures, group, status]);
+  }, [fixtures, group, status, tz, todayStr]);
 
-  // Group the filtered fixtures by calendar date for matchday headers.
+  // Group the filtered fixtures by local calendar date for matchday headers.
   const byDate = useMemo(() => {
     const map = new Map<string, Fixture[]>();
     for (const f of filtered) {
-      const day = utcDateKey(f.kickoff);
+      const day = dateKey(f.kickoff, tz);
       if (!map.has(day)) map.set(day, []);
       map.get(day)!.push(f);
     }
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filtered]);
+  }, [filtered, tz]);
 
   const chip = (active: boolean) =>
     `inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition md:min-h-0 ${
@@ -167,7 +179,12 @@ export function MatchesBrowser({
               </h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {games.map((f) => (
-                  <MatchCard key={f.id} fixture={f} sample={sample} />
+                  <MatchCard
+                    key={f.id}
+                    fixture={f}
+                    sample={sample}
+                    timeZone={tz}
+                  />
                 ))}
               </div>
             </section>

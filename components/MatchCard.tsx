@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Fixture } from "@/lib/types";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 import { Countdown } from "@/components/Countdown";
+import { LocalKickoff } from "@/components/LocalKickoff";
 import { formatKickoff, isToday } from "@/lib/format";
 import { fixtureHomeWinProb, isMarketBacked } from "@/lib/displayProbs";
 import { isFabricatedResult } from "@/lib/provenance";
@@ -131,11 +132,17 @@ function ScoreBlock({
 export function MatchCard({
   fixture,
   sample = false,
+  timeZone = "UTC",
 }: {
   fixture: Fixture;
   /** True when serving the bundled snapshot (live feed down) — used to flag a
    *  finished fixture's illustrative score as not-a-real-result. */
   sample?: boolean;
+  /** Timezone for the "Today" badge/ring + countdown branch. Defaults to UTC
+   *  (matching the server-side today/upcoming/recent bucketing in lib/data).
+   *  MatchesBrowser passes the viewer's device zone so the pill agrees with its
+   *  local day grouping and "Today" filter. */
+  timeZone?: string;
 }) {
   const played = fixture.status === "finished" || fixture.status === "live";
   const predicted = fixture.status === "scheduled";
@@ -150,7 +157,7 @@ export function MatchCard({
   const marketBacked = realTeams && isMarketBacked(fixture);
   const homePct = homeProb != null ? Math.round(homeProb * 100) : 50;
   const awayPct = 100 - homePct;
-  const today = isToday(fixture.kickoff);
+  const today = isToday(fixture.kickoff, timeZone);
   const live = fixture.status === "live";
   // Latest goal for a live card's footer (the timeline is chronological, so the
   // most recent goal is last). Gives a live card context below the running score.
@@ -164,13 +171,15 @@ export function MatchCard({
       ? "ring-1 ring-pitch-500/50"
       : "";
 
-  // For today's upcoming games, count down to kickoff; otherwise show the date.
+  // For today's upcoming games, count down to kickoff; otherwise show the date
+  // in the viewer's local timezone (UTC string is the SSR fallback). The
+  // countdown is a duration, so it's timezone-independent.
   const kickoff = formatKickoff(fixture.kickoff);
   const kickoffLabel =
     predicted && today ? (
       <Countdown target={fixture.kickoff} fallback={kickoff} />
     ) : (
-      kickoff
+      <LocalKickoff iso={fixture.kickoff} fallback={kickoff} />
     );
 
   return (
