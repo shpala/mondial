@@ -41,26 +41,35 @@ export function flagImageUrl(flag: string): string | null {
   return null;
 }
 
+// Pinned to UTC so a kickoff renders identically on the server (Vercel runs in
+// UTC) and the client — a time formatted during SSR then re-formatted on the
+// client in the visitor's own zone would otherwise mismatch on hydration. The
+// short zone name keeps the time unambiguous for a global, multi-venue event.
 const TIME_FMT = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
   day: "numeric",
   month: "short",
   hour: "2-digit",
   minute: "2-digit",
+  timeZone: "UTC",
+  timeZoneName: "short",
 });
 
-/** Local-timezone YYYY-MM-DD key for a timestamp (matches the displayed time). */
-export function localDateKey(iso: string | Date): string {
+/** UTC YYYY-MM-DD key for a timestamp. Matches the UTC-pinned displayed time and
+ *  is computed identically on server and client, so day grouping and "today"
+ *  markers don't drift across hydration (and agree with the server-side
+ *  "today" fixture bucketing in lib/data). */
+export function utcDateKey(iso: string | Date): string {
   const d = typeof iso === "string" ? new Date(iso) : iso;
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
-/** True when the kickoff falls on the current local calendar day. */
+/** True when the kickoff falls on the current UTC calendar day. */
 export function isToday(iso: string): boolean {
-  return localDateKey(iso) === localDateKey(new Date());
+  return utcDateKey(iso) === utcDateKey(new Date());
 }
 
 export function formatKickoff(iso: string): string {

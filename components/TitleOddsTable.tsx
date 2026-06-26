@@ -33,6 +33,15 @@ export function TitleOddsTable({
   }
 
   const max = rows[0].champion || 1;
+  // How much of the title probability mass the listed teams actually cover —
+  // the bars are normalized to the leader (so the favourite always reads ~100%),
+  // which can be misread as near-certainty without this anchor.
+  const coverage = Math.round(
+    rows.reduce((sum, o) => sum + o.champion, 0) * 100,
+  );
+  // Only teams that can still win have champion > 0; once they all fit within the
+  // limit there is no "remaining field" left to mention (true from the QF on).
+  const eligible = odds.filter((o) => o.champion > 0).length;
 
   return (
     <section className="card mb-6 overflow-hidden">
@@ -98,7 +107,11 @@ export function TitleOddsTable({
       </table>
       <p className="border-t border-ink-700 px-4 py-2 text-[11px] leading-snug text-ink-400">
         Chance of winning the cup / reaching the final, from simulating the rest
-        of the tournament 10,000 times — a model estimate, not betting odds.
+        of the tournament 10,000 times — a model estimate, not betting odds.{" "}
+        These {rows.length} teams account for ~{coverage}% of simulated titles
+        {rows.length < eligible
+          ? "; the rest is spread across the remaining field."
+          : "."}
       </p>
     </section>
   );

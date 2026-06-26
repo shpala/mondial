@@ -139,6 +139,16 @@ export default async function DashboardPage() {
               How the model&rsquo;s doing
             </Link>
           </div>
+          {/* Secondary hub links: the dashboard otherwise never routes to the
+              group standings or the full team list. */}
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <Link href="/groups" className="text-pitch-500 hover:underline">
+              Group standings →
+            </Link>
+            <Link href="/teams" className="text-pitch-500 hover:underline">
+              All {teams.length} teams →
+            </Link>
+          </div>
         </div>
       </section>
 

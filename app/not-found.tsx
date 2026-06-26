@@ -3,7 +3,9 @@ import Link from "next/link";
 export default function NotFound() {
   return (
     <div className="animate-fade-up py-20 text-center">
-      <div className="mb-4 text-5xl">🥅</div>
+      <div className="mb-4 text-5xl" aria-hidden>
+        🥅
+      </div>
       <h1 className="mb-2 font-display text-2xl font-extrabold">
         Off target
       </h1>
