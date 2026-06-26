@@ -40,7 +40,7 @@ export function ScorelinePrediction({
         <h2 className="font-display text-sm font-bold">
           {prematch ? "Pre-match predicted scoreline" : "Predicted scoreline"}
         </h2>
-        <span className="rounded-full bg-accent-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-300">
+        <span className="rounded-full bg-accent-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-gold-bright">
           {prematch ? "Pre-match estimate" : "Model estimate"}
         </span>
       </div>
@@ -49,7 +49,7 @@ export function ScorelinePrediction({
         <div className="flex items-center justify-center gap-3">
           <TeamFlag flag={home.flag} alt={home.name} size={24} decorative />
           <span
-            className="font-display text-4xl font-extrabold tabular-nums text-amber-300"
+            className="font-display text-4xl font-extrabold tabular-nums text-accent-gold-bright"
             aria-label={`Most likely score: ${home.name} ${mostLikely.hg}, ${away.name} ${mostLikely.ag}, ${pct(mostLikely.p)} percent`}
           >
             {mostLikely.hg}–{mostLikely.ag}

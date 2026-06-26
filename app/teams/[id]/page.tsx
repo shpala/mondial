@@ -151,7 +151,7 @@ export default async function TeamPage({
           </p>
           {odds && (
             <p className="mt-1 text-sm text-ink-300">
-              <span className="font-semibold text-amber-300">
+              <span className="font-semibold text-accent-gold-bright">
                 {oddsPct(odds.champion)}
               </span>{" "}
               to win the cup · {oddsPct(odds.reachFinal)} to reach the final ·{" "}

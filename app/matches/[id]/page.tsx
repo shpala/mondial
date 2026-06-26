@@ -119,7 +119,7 @@ export default async function MatchPage({
       ? fabricated
         ? { text: "≈ Full-time · sample", cls: "bg-ink-700/70 text-ink-300" }
         : { text: "✓ Full-time · result", cls: "bg-emerald-500/15 text-emerald-300" }
-      : { text: "◆ Upcoming · predicted", cls: "bg-accent-gold/15 text-amber-300" };
+      : { text: "◆ Upcoming · predicted", cls: "bg-accent-gold/15 text-accent-gold-bright" };
 
   return (
     <div className="animate-fade-up">
@@ -168,7 +168,7 @@ export default async function MatchPage({
             ) : homeProb != null ? (
               <>
                 <div
-                  className="font-display text-xl font-extrabold tabular-nums text-amber-300"
+                  className="font-display text-xl font-extrabold tabular-nums text-accent-gold-bright"
                   aria-label={`Predicted win probability if decisive: ${fixture.home.name} ${Math.round(homeProb * 100)} percent, ${fixture.away.name} ${Math.round((1 - homeProb) * 100)} percent`}
                 >
                   {Math.round(homeProb * 100)}%–{Math.round((1 - homeProb) * 100)}%
