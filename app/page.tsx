@@ -15,6 +15,7 @@ import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 import { hostNations } from "@/lib/teams/registry";
+import { requestNow } from "@/lib/serverTime";
 
 // Co-host nations shown in the hero eyebrow. Flags come from the registry (the
 // canonical source) and render through <TeamFlag>, so they fall back to images
@@ -143,7 +144,12 @@ export default async function DashboardPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {live.map((f) => (
-              <MatchCard key={f.id} fixture={f} sample={usingSample} />
+              <MatchCard
+                key={f.id}
+                fixture={f}
+                sample={usingSample}
+                fetchedAt={requestNow()}
+              />
             ))}
           </div>
         </section>

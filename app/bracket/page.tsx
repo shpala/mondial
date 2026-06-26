@@ -61,7 +61,9 @@ export default async function BracketPage() {
 
   return (
     <div className="animate-fade-up">
-      <AutoRefresh seconds={60} />
+      <AutoRefresh
+        seconds={fixtures.some((f) => f.status === "live") ? 20 : 60}
+      />
       <SampleDataBanner />
       <div className="mb-1 flex flex-wrap items-center gap-2">
         <h1 className="font-display text-2xl font-extrabold">

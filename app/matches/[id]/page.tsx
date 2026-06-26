@@ -8,6 +8,7 @@ import { ScorelinePrediction } from "@/components/ScorelinePrediction";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
+import { AutoRefresh } from "@/components/AutoRefresh";
 import { EstimatedNotice, EstimatedTag } from "@/components/ui/EstimatedData";
 import { formatKickoff } from "@/lib/format";
 import { LocalKickoff } from "@/components/LocalKickoff";
@@ -123,6 +124,8 @@ export default async function MatchPage({
 
   return (
     <div className="animate-fade-up">
+      {/* Match detail was fully static after load — self-update it, fast while live. */}
+      <AutoRefresh seconds={live ? 20 : 60} />
       <SampleDataBanner />
       <Breadcrumb
         items={[
