@@ -3,7 +3,6 @@ import { fileURLToPath } from "node:url";
 import { ImageResponse } from "next/og";
 import { getFixtures, getDataStatus } from "@/lib/data";
 import { fixtureHomeWinProb } from "@/lib/displayProbs";
-import { isFabricatedResult } from "@/lib/provenance";
 import { ogCard } from "@/lib/ogCard";
 
 // Per-match link-preview card: the tie + the real score (if played) or the
@@ -45,10 +44,14 @@ export default async function Image({
     const fixture = fixtures.find((f) => f.id === Number(id));
     if (fixture) {
       eyebrow = `Mondial26 · ${fixture.group ? `Group ${fixture.group}` : fixture.stage}`;
-      // Never unfurl a fabricated sample score as a real "Full-time" result —
-      // fall through to the (honest, rating-based) prediction instead.
+      // A score is real only with the live feed up, or a genuine ESPN overlay —
+      // never a bundled-snapshot score, which is RNG-fabricated whether the
+      // inferred status is "finished" OR "live". Otherwise fall through to the
+      // honest, rating-based prediction. (isFabricatedResult is finished-only, so
+      // we gate on the underlying provenance directly here.)
+      const realScore = !usingSample || fixture.liveOverlaid;
       const played =
-        !isFabricatedResult(fixture, usingSample) &&
+        realScore &&
         fixture.homeGoals !== null &&
         fixture.awayGoals !== null;
       const realTeams = fixture.home.id !== 0 && fixture.away.id !== 0;
