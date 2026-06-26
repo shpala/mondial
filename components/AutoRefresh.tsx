@@ -69,7 +69,7 @@ export function AutoRefresh({ seconds = 60 }: { seconds?: number }) {
         type="button"
         onClick={() => refresh(true)}
         aria-label={`${statusWord}, refresh now`}
-        className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-4 z-30 inline-flex items-center gap-1.5 rounded-full border border-ink-700 bg-ink-800/80 px-2.5 py-1 text-[11px] font-medium text-ink-400 backdrop-blur-sm transition hover:text-ink-100 md:bottom-4"
+        className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] z-30 inline-flex items-center gap-1.5 rounded-full border border-ink-700 bg-ink-800/80 px-2.5 py-1 text-[11px] font-medium text-ink-400 backdrop-blur-sm transition hover:text-ink-100 md:bottom-4"
       >
         <span
           aria-hidden

@@ -11,7 +11,7 @@ export function SiteNav() {
     <header className="sticky top-0 z-40 border-b border-ink-700 bg-ink-900/80 backdrop-blur-sm">
       <nav
         aria-label="Primary"
-        className="mx-auto flex w-full max-w-6xl items-center gap-1 px-4 sm:px-6"
+        className="mx-auto flex w-full max-w-6xl items-center gap-1 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]"
       >
         <Link
           href="/"
