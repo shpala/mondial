@@ -179,12 +179,7 @@ export function MatchesBrowser({
               </h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {games.map((f) => (
-                  <MatchCard
-                    key={f.id}
-                    fixture={f}
-                    sample={sample}
-                    timeZone={tz}
-                  />
+                  <MatchCard key={f.id} fixture={f} sample={sample} />
                 ))}
               </div>
             </section>

@@ -1,9 +1,11 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Fixture } from "@/lib/types";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 import { Countdown } from "@/components/Countdown";
-import { LocalKickoff } from "@/components/LocalKickoff";
-import { formatKickoff, isToday } from "@/lib/format";
+import { deviceTimeZone, formatKickoff, isToday } from "@/lib/format";
 import { fixtureHomeWinProb, isMarketBacked } from "@/lib/displayProbs";
 import { isFabricatedResult } from "@/lib/provenance";
 
@@ -132,18 +134,24 @@ function ScoreBlock({
 export function MatchCard({
   fixture,
   sample = false,
-  timeZone = "UTC",
 }: {
   fixture: Fixture;
   /** True when serving the bundled snapshot (live feed down) — used to flag a
    *  finished fixture's illustrative score as not-a-real-result. */
   sample?: boolean;
-  /** Timezone for the "Today" badge/ring + countdown branch. Defaults to UTC
-   *  (matching the server-side today/upcoming/recent bucketing in lib/data).
-   *  MatchesBrowser passes the viewer's device zone so the pill agrees with its
-   *  local day grouping and "Today" filter. */
-  timeZone?: string;
 }) {
+  // Resolve the viewer's timezone on mount so the displayed kickoff, the "Today"
+  // badge/ring and the countdown branch all agree on the same local day. SSR and
+  // the first client render use UTC (no hydration mismatch), then re-resolve to
+  // the device zone — keeping each card self-consistent on every surface (the
+  // dashboard, the team page, MatchesBrowser) without threading a prop.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+  const tz = mounted ? deviceTimeZone() : "UTC";
+
   const played = fixture.status === "finished" || fixture.status === "live";
   const predicted = fixture.status === "scheduled";
   const fabricated = isFabricatedResult(fixture, sample);
@@ -157,7 +165,7 @@ export function MatchCard({
   const marketBacked = realTeams && isMarketBacked(fixture);
   const homePct = homeProb != null ? Math.round(homeProb * 100) : 50;
   const awayPct = 100 - homePct;
-  const today = isToday(fixture.kickoff, timeZone);
+  const today = isToday(fixture.kickoff, tz);
   const live = fixture.status === "live";
   // Latest goal for a live card's footer (the timeline is chronological, so the
   // most recent goal is last). Gives a live card context below the running score.
@@ -172,14 +180,14 @@ export function MatchCard({
       : "";
 
   // For today's upcoming games, count down to kickoff; otherwise show the date
-  // in the viewer's local timezone (UTC string is the SSR fallback). The
-  // countdown is a duration, so it's timezone-independent.
-  const kickoff = formatKickoff(fixture.kickoff);
+  // in the viewer's local timezone (UTC pre-mount, per `tz`). The countdown is a
+  // duration, so it's timezone-independent.
+  const kickoff = formatKickoff(fixture.kickoff, tz);
   const kickoffLabel =
     predicted && today ? (
       <Countdown target={fixture.kickoff} fallback={kickoff} />
     ) : (
-      <LocalKickoff iso={fixture.kickoff} fallback={kickoff} />
+      kickoff
     );
 
   return (
