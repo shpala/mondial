@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { reconcileLive, type LiveSnapshot } from "@/lib/liveFreeze";
+import { isFreshLive, reconcileLive, type LiveSnapshot } from "@/lib/liveFreeze";
 import type { Fixture } from "@/lib/types";
 
 // Minimal fixture builder — reconcileLive only reads status/score/minute/goals.
@@ -46,6 +46,48 @@ describe("reconcileLive", () => {
     expect(r.stale).toBe(true);
     expect(r.asOf).toBe(T0); // anchored to when it was last actually live
     expect(r.remember).toBe(remembered); // keep remembering while frozen
+  });
+
+  it("freezes a bare spine 'live' row (ESPN down mid-window, null score)", () => {
+    // The spine infers 'live' from the kickoff window but carries no score; when
+    // ESPN is down it's served unchanged. This must freeze, not show a score-less
+    // 'Live' — the regression Codex caught (status-only check clobbered the score).
+    const remembered: LiveSnapshot = {
+      homeGoals: 1,
+      awayGoals: 0,
+      minute: "57'",
+      goals: [],
+      asOf: T0,
+    };
+    const spineLive = fx({
+      status: "live",
+      homeGoals: null,
+      awayGoals: null,
+      minute: null,
+    });
+    const r = reconcileLive(spineLive, remembered, T0 + 60_000);
+    expect(r.stale).toBe(true);
+    expect(r.fixture.homeGoals).toBe(1); // frozen, not the spine's null
+    expect(r.fixture.awayGoals).toBe(0);
+    expect(r.fixture.minute).toBe("57'");
+    expect(r.fixture.liveOverlaid).toBe(false);
+    expect(r.asOf).toBe(T0);
+  });
+
+  it("never remembers a bare spine 'live' row (won't store null/null)", () => {
+    const spineLive = fx({ status: "live", homeGoals: null, awayGoals: null });
+    const r = reconcileLive(spineLive, null, T0);
+    expect(r.stale).toBe(false);
+    expect(r.asOf).toBeNull();
+    expect(r.remember).toBeNull(); // crucial: don't overwrite future memory with null/null
+  });
+
+  it("isFreshLive: overlaid/scored live is fresh, bare spine live is not", () => {
+    expect(isFreshLive(fx({ status: "live", liveOverlaid: true, homeGoals: 0, awayGoals: 0 }))).toBe(true);
+    expect(isFreshLive(fx({ status: "live", homeGoals: 2, awayGoals: 1 }))).toBe(true);
+    expect(isFreshLive(fx({ status: "live", homeGoals: null, awayGoals: null }))).toBe(false);
+    expect(isFreshLive(fx({ status: "scheduled" }))).toBe(false);
+    expect(isFreshLive(fx({ status: "finished", homeGoals: 2, awayGoals: 1 }))).toBe(false);
   });
 
   it("stops freezing once the match is finished (real result wins)", () => {

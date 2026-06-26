@@ -10,6 +10,7 @@ import { deviceTimeZone, formatKickoff, isToday } from "@/lib/format";
 import { fixtureHomeWinProb, isMarketBacked } from "@/lib/displayProbs";
 import { isFabricatedResult } from "@/lib/provenance";
 import {
+  isFreshLive,
   reconcileLive,
   snapshotOf,
   type LiveSnapshot,
@@ -194,9 +195,11 @@ export function MatchCard({
       : { fixture, stale: false, asOf: null as number | null, remember: null };
   useEffect(() => {
     if (fetchedAt == null) return;
-    // Remember while live, forget on finish; a dropped (non-live, non-finished)
-    // fixture keeps the last snapshot so reconcileLive can freeze it.
-    if (fixture.status === "live") {
+    // Remember only a *fresh* live (a real overlay), forget on finish. A dropped
+    // feed — a revert to scheduled OR a bare spine "live" row with no score —
+    // keeps the last snapshot so reconcileLive can freeze it (gating on
+    // isFreshLive here, not status, avoids clobbering it with null/null).
+    if (isFreshLive(fixture)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLiveSnap(snapshotOf(fixture, fetchedAt));
     } else if (fixture.status === "finished") {

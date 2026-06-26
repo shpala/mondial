@@ -22,6 +22,22 @@ export interface FreezeResult {
   remember: LiveSnapshot | null;
 }
 
+/**
+ * Whether a `live` fixture carries *fresh* data from a real ESPN overlay.
+ *
+ * The overlay (lib/data/index.ts) sets `liveOverlaid` and a non-null score on
+ * success. But openfootball's spine independently infers "live" purely from a
+ * kickoff time window (lib/api/sources/openfootball.ts) and leaves the score
+ * null — so when ESPN is down *mid-match* the facade returns a bare spine "live"
+ * row. That's a dropped feed, not fresh data: snapshotting it would clobber a
+ * remembered score with null/null. Only the overlaid case is fresh.
+ */
+export function isFreshLive(f: Fixture): boolean {
+  return (
+    f.status === "live" && (f.liveOverlaid === true || f.homeGoals !== null)
+  );
+}
+
 /** Capture a fixture's current live state as a snapshot to remember. */
 export function snapshotOf(f: Fixture, fetchedAt: number): LiveSnapshot {
   return {
@@ -36,9 +52,11 @@ export function snapshotOf(f: Fixture, fetchedAt: number): LiveSnapshot {
 /**
  * Decide how to display a fixture given the last-known live snapshot remembered
  * for it. The live (ESPN) overlay is best-effort: when it drops, the facade
- * returns the spine fixture unchanged, so a live match silently reverts to
- * "scheduled" and the card would vanish back to "Predicted". This keeps showing
- * the last-known live score (marked stale) until the match actually finishes.
+ * returns the spine fixture unchanged — which is either back to "scheduled" (the
+ * inferred live window has closed) or a bare "live" row with a null score (still
+ * inside the window). Either way the card would lose its score (snapping back to
+ * "Predicted" or showing a score-less "Live"). This keeps showing the last-known
+ * live score (marked stale) until the match actually finishes.
  *
  * Pure — no React, no clock — so it's unit-tested; the client wrapper just holds
  * the remembered snapshot across refreshes and renders the result.
@@ -48,8 +66,8 @@ export function reconcileLive(
   remembered: LiveSnapshot | null,
   fetchedAt: number,
 ): FreezeResult {
-  // Genuinely live (a real overlay): show it and (re)remember the snapshot.
-  if (incoming.status === "live") {
+  // Genuinely live (a real ESPN overlay): show it and (re)remember the snapshot.
+  if (isFreshLive(incoming)) {
     return {
       fixture: incoming,
       stale: false,
@@ -63,8 +81,10 @@ export function reconcileLive(
     return { fixture: incoming, stale: false, asOf: null, remember: null };
   }
 
-  // Was live, now reverted to a non-live, non-finished state → the overlay
-  // dropped. Freeze the last-known live score instead of reverting to "Predicted".
+  // Not fresh-live and not finished → the overlay dropped. Covers BOTH a revert
+  // to "scheduled" (the live window closed) AND a bare spine "live" row with no
+  // score (ESPN down mid-window). If we remember a last-known live score, freeze
+  // it instead of reverting to "Predicted" or a score-less "Live".
   if (remembered) {
     return {
       fixture: {
@@ -82,6 +102,8 @@ export function reconcileLive(
     };
   }
 
-  // Never was live → show as-is.
+  // Nothing remembered → show as-is, and crucially DON'T remember: a bare spine
+  // "live" row (no score) must not overwrite memory with null/null. A never-live
+  // scheduled fixture lands here too.
   return { fixture: incoming, stale: false, asOf: null, remember: null };
 }
