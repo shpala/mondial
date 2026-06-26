@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Fixture } from "@/lib/types";
 import { MatchCard } from "@/components/MatchCard";
 import { deviceTimeZone, isToday } from "@/lib/format";
+import { compareTodayFixtures } from "@/lib/dashboardOrder";
 
 function Section({
   title,
@@ -76,7 +77,7 @@ export function DashboardSchedule({
     return {
       today: all
         .filter((f) => f.status !== "live" && isToday(f.kickoff, tz))
-        .sort(byKickoff),
+        .sort(compareTodayFixtures),
       upcoming: all
         .filter(
           (f) =>

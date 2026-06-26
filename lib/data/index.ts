@@ -13,6 +13,7 @@ import { unstable_cache } from "next/cache";
 
 import type { Fixture, Group, Lineup, MatchLineups, Squad, Team } from "@/lib/types";
 import { isToday } from "@/lib/format";
+import { compareTodayFixtures } from "@/lib/dashboardOrder";
 import { fetchOpenfootball } from "@/lib/api/sources/openfootball";
 import {
   fetchEspnLineup,
@@ -362,10 +363,11 @@ export async function getDashboardFixtures(): Promise<{
   const now = Date.now();
   // In-play right now — surfaced on top.
   const live = fixtures.filter((f) => f.status === "live");
-  // The rest of today's matches (live ones get their own section above).
-  const today = fixtures.filter(
-    (f) => isToday(f.kickoff) && f.status !== "live",
-  );
+  // The rest of today's matches (live ones get their own section above), with
+  // the still-to-play fixtures ordered ahead of the ones already finished.
+  const today = fixtures
+    .filter((f) => isToday(f.kickoff) && f.status !== "live")
+    .sort(compareTodayFixtures);
   // Future days only (today lives in its own section), soonest first.
   const upcoming = fixtures
     .filter(
