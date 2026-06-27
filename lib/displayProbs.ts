@@ -15,21 +15,17 @@ import { blendOutcome, decisiveHomeProb, type OutcomeProbs } from "@/lib/odds";
 
 type FixtureProbInput = Pick<Fixture, "home" | "away" | "marketProbs">;
 
-/** The pure model's 1X2 — identical to montecarlo.outcomeProbs (Davidson at the WC
- *  prediction scale), inlined here to keep this client-safe (no montecarlo import). */
-function modelOutcome(f: FixtureProbInput): OutcomeProbs {
-  return davidsonProbs(
+/** 1X2 probabilities to display: market consensus blended with the model when the
+ *  fixture carries odds, else the pure model. The pure model's 1X2 is identical to
+ *  montecarlo.outcomeProbs (Davidson at the WC prediction scale), computed inline
+ *  here to keep this client-safe (no montecarlo import). */
+export function fixtureOutcomeProbs(f: FixtureProbInput): OutcomeProbs {
+  const model = davidsonProbs(
     effectiveRating(f.home),
     effectiveRating(f.away),
     DRAW_NU,
     WC_PREDICTION_SCALE,
   );
-}
-
-/** 1X2 probabilities to display: market consensus blended with the model when the
- *  fixture carries odds, else the pure model. */
-export function fixtureOutcomeProbs(f: FixtureProbInput): OutcomeProbs {
-  const model = modelOutcome(f);
   return f.marketProbs ? blendOutcome(model, f.marketProbs) : model;
 }
 

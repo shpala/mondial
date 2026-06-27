@@ -70,11 +70,7 @@ interface EspnEvent {
 }
 
 function ymd(d: Date): string {
-  return (
-    d.getUTCFullYear().toString() +
-    String(d.getUTCMonth() + 1).padStart(2, "0") +
-    String(d.getUTCDate()).padStart(2, "0")
-  );
+  return d.toISOString().slice(0, 10).replace(/-/g, "");
 }
 
 function teamCode(t: EspnTeam | undefined): string | null {

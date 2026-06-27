@@ -36,7 +36,6 @@ interface Tuple {
   effAway: number;
   hg: number;
   ag: number;
-  tournament: string;
 }
 
 export interface WindowScore {
@@ -91,7 +90,6 @@ export function runWcFlattenBacktest(csv: string): WcFlattenResult {
         effAway,
         hg: m.homeGoals,
         ag: m.awayGoals,
-        tournament: m.tournament,
       };
       if (m.date >= WC2022_START && m.date <= WC2022_END) wc2022.push(t);
       else if (m.date >= WC2026_START && m.date <= WC2026_END) wc2026.push(t);

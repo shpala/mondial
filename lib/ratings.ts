@@ -64,11 +64,9 @@ function isCompleted(f: Fixture): boolean {
  */
 export function computeLiveRatings(fixtures: Fixture[]): Map<number, number> {
   const base = new Map<number, number>();
-  const host = new Map<number, boolean>();
   const record = (t: Team) => {
     if (t.id !== 0 && !base.has(t.id)) {
       base.set(t.id, t.rating);
-      host.set(t.id, !!t.host);
     }
   };
   for (const f of fixtures) {
@@ -90,8 +88,8 @@ export function computeLiveRatings(fixtures: Fixture[]): Map<number, number> {
     const b = f.away.id;
     // Symmetric Elo delta from the host-adjusted ratings at this point in time.
     const change = eloUpdate(
-      effectiveRating({ rating: at(a), host: host.get(a) }),
-      effectiveRating({ rating: at(b), host: host.get(b) }),
+      effectiveRating({ rating: at(a), host: f.home.host }),
+      effectiveRating({ rating: at(b), host: f.away.host }),
       f.homeGoals!,
       f.awayGoals!,
     );

@@ -129,10 +129,10 @@ export function buildOfficialBracket(groups: Group[]): Bracket {
     return group ? thirdByGroup.get(group) ?? null : null;
   };
 
-  const slotted: (Team | null)[] = [];
-  R32_TEMPLATE.forEach(([top, bottom], i) => {
-    slotted.push(teamForSlot(top, i), teamForSlot(bottom, i));
-  });
+  const slotted: (Team | null)[] = R32_TEMPLATE.flatMap(([top, bottom], i) => [
+    teamForSlot(top, i),
+    teamForSlot(bottom, i),
+  ]);
 
   return buildBracketFromSlots(slotted);
 }

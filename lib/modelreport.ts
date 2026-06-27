@@ -169,7 +169,7 @@ export function gradeQualification(
   for (const g of complete) {
     // rows are rank-ordered by computeGroupStandings (1st..4th).
     g.rows.forEach((row, rank) => {
-      const determined = rank === 0 || rank === 1 || rank === 3 || allComplete;
+      const determined = rank !== 2 || allComplete;
       if (!determined) return; // 3rd place: defer until every group is done
       const advanced =
         rank <= 1 ? true : rank === 3 ? false : actualQualifiers.has(row.team.id);

@@ -95,13 +95,12 @@ function keyFmt(timeZone: string): Intl.DateTimeFormat {
  *  server and client for a given zone, so day grouping and "today" don't drift. */
 export function dateKey(iso: string | Date, timeZone = "UTC"): string {
   const d = typeof iso === "string" ? new Date(iso) : iso;
-  const fmt = (() => {
-    try {
-      return keyFmt(timeZone);
-    } catch {
-      return keyFmt("UTC");
-    }
-  })();
+  let fmt: Intl.DateTimeFormat;
+  try {
+    fmt = keyFmt(timeZone);
+  } catch {
+    fmt = keyFmt("UTC");
+  }
   const parts = fmt.formatToParts(d);
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
   return `${get("year")}-${get("month")}-${get("day")}`;

@@ -84,7 +84,7 @@ function normalize(name: string): string {
 }
 
 // Stable team id = position in code-sorted order (1..48).
-const SORTED_CODES = [...COUNTRIES.map((c) => c.code)].sort();
+const SORTED_CODES = COUNTRIES.map((c) => c.code).sort();
 const ID_BY_CODE = new Map(SORTED_CODES.map((code, i) => [code, i + 1]));
 
 const BY_NORM = new Map<string, Country>();
