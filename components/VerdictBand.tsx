@@ -34,12 +34,9 @@ function ScoreboardPct({ p }: { p: number }) {
 }
 
 export async function VerdictBand() {
-  let verdict: Awaited<ReturnType<typeof getVerdict>>;
-  try {
-    verdict = await getVerdict();
-  } catch {
-    return null; // never break the layout if the sim/data is unavailable
-  }
+  // never break the layout if the sim/data is unavailable
+  const verdict = await getVerdict().catch(() => null);
+  if (!verdict) return null;
   const { favourite, hits, n, edge } = verdict;
   if (!favourite) return null;
 
