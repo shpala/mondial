@@ -165,11 +165,9 @@ export function predictScoreline(
 ): ScorelinePrediction {
   const effHome = effectiveRating(home);
   const effAway = effectiveRating(away);
+  const decisiveHomeWin = winProbability(effHome, effAway, WC_PREDICTION_SCALE);
   const outcome = decisive
-    ? (() => {
-        const home = winProbability(effHome, effAway, WC_PREDICTION_SCALE);
-        return { home, draw: 0, away: 1 - home };
-      })()
+    ? { home: decisiveHomeWin, draw: 0, away: 1 - decisiveHomeWin }
     : davidsonProbs(effHome, effAway, DRAW_NU, WC_PREDICTION_SCALE);
   const { lambdaHome, lambdaAway } = goalRates(effHome, effAway);
   const grid = conditionScorelineGrid(
@@ -212,12 +210,7 @@ export function bracketSeedOrder(n: number): number[] {
   let order = [1, 2];
   while (order.length < n) {
     const size = order.length * 2;
-    const next: number[] = [];
-    for (const seed of order) {
-      next.push(seed);
-      next.push(size + 1 - seed);
-    }
-    order = next;
+    order = order.flatMap((seed) => [seed, size + 1 - seed]);
   }
   return order;
 }

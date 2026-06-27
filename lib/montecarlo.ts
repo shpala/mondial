@@ -54,7 +54,7 @@ function isFinished(f: Fixture): boolean {
   );
 }
 
-const pairKey = (x: number, y: number) => [x, y].sort((m, n) => m - n).join("-");
+const pairKey = (x: number, y: number) => (x < y ? `${x}-${y}` : `${y}-${x}`);
 
 /**
  * Sample a finished scoreline for an unplayed group game. The calibrated
@@ -101,8 +101,7 @@ interface Tally {
 /** Round index (in ROUNDS) → tally field a *participant* of that round earns. */
 const ROUND_FIELD: (keyof Tally)[] = ["q", "r16", "qf", "sf", "fin"];
 
-function winnerTeam(top: Team | null, bottom: Team | null, winnerId: number | null) {
-  if (winnerId == null) return null;
+function winnerTeam(top: Team | null, bottom: Team | null, winnerId: number) {
   if (top?.id === winnerId) return top;
   if (bottom?.id === winnerId) return bottom;
   return null;

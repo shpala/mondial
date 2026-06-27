@@ -13,6 +13,7 @@
 import { parseResults } from "@/lib/backtest/parse";
 import { davidsonProbs } from "@/lib/prediction";
 import { eloUpdate } from "@/lib/ratings";
+import { outcomeOf } from "@/lib/outcome";
 import { goalRates, poissonPmf, poissonOutcome, poissonJoint } from "@/lib/scoreline";
 import { mulberry32 } from "@/lib/rng";
 
@@ -77,9 +78,6 @@ export interface Wc2022Result {
     avgGoalsPerSide: number;
   };
 }
-
-const actualOf = (hg: number, ag: number): Region =>
-  hg > ag ? "home" : hg < ag ? "away" : "draw";
 
 function regionMassOf(grid: number[][], region: Region): number {
   let m = 0;
@@ -219,7 +217,7 @@ export function runWc2022Backtest(csv: string): Wc2022Result {
   const preds: Wc2022Pred[] = [];
 
   for (const t of test) {
-    const actual = actualOf(t.hg, t.ag);
+    const actual = outcomeOf(t.hg, t.ag);
     const A = davidsonProbs(t.effHome, t.effAway, NU, SCALE);
     const { lambdaHome, lambdaAway } = goalRates(t.effHome, t.effAway, bestBase, bestGamma);
     const B = poissonOutcome(lambdaHome, lambdaAway); // raw independent (rho=0)
