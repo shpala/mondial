@@ -324,6 +324,61 @@ export function resolveBracket(bracket: Bracket, overrides: Overrides = {}): Bra
   return { rounds, championId: final?.winnerId ?? null };
 }
 
+// A real, already-played knockout result, keyed by the unordered pair of team
+// ids. Lets a predicted node flip to an actual result as the tournament unfolds.
+export interface PlayedResult {
+  winnerId: number;
+  homeId: number;
+  awayId: number;
+  homeGoals: number;
+  awayGoals: number;
+  fixtureId: number;
+}
+export type ResultMap = Record<string, PlayedResult>;
+
+function resultPairKey(a: number, b: number): string {
+  return [a, b].sort((x, y) => x - y).join("-");
+}
+
+/**
+ * Resolve a bracket with real played knockout results taking precedence over
+ * the model prediction and any user picks. Returns the resolved bracket plus the
+ * matchup-node ids whose outcome is an actual result (so the UI can render them
+ * as settled rather than predicted).
+ */
+export function resolveBracketWithResults(
+  skeleton: Bracket,
+  overrides: Overrides,
+  results: ResultMap,
+): { resolved: Bracket; playedNodes: Record<string, PlayedResult> } {
+  const forced: Overrides = {};
+  const played: Record<string, PlayedResult> = {};
+  let resolved = resolveBracket(skeleton, overrides);
+  // Iterate to a fixed point: a real result is keyed by the ACTUAL team pair, so
+  // forcing one round's true winner can change the next round's pairing and only
+  // then reveal that round's real result. A single detection pass against the
+  // model/user-resolved bracket would miss every later-round result that sits on
+  // a branch where an upstream actual outcome diverged from the baseline.
+  for (;;) {
+    let grew = false;
+    for (const round of resolved.rounds) {
+      for (const m of round) {
+        if (m.id in forced || !m.top?.id || !m.bottom?.id) continue;
+        const r = results[resultPairKey(m.top.id, m.bottom.id)];
+        if (r) {
+          forced[m.id] = r.winnerId;
+          played[m.id] = r;
+          grew = true;
+        }
+      }
+    }
+    if (!grew) break;
+    // Forced winners take precedence over model + user picks (spread last).
+    resolved = resolveBracket(skeleton, { ...overrides, ...forced });
+  }
+  return { resolved, playedNodes: played };
+}
+
 /** Probability the resolved winner of a matchup wins it (for display). */
 export function winnerProb(m: Matchup): number | null {
   if (m.topWinProb == null || m.winnerId == null) return null;
