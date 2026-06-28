@@ -4,29 +4,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Team } from "@/lib/types";
 import {
-  resolveBracket,
+  resolveBracketWithResults,
   winnerProb,
   type Bracket,
   type Matchup,
+  type PlayedResult,
+  type ResultMap,
 } from "@/lib/prediction";
 import { bracketStorageOk, useBracketStore } from "@/store/bracket";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 
-// A real, already-played knockout result, keyed by the unordered pair of team
-// ids. Lets a predicted node flip to an actual result as the tournament unfolds.
-export interface PlayedResult {
-  winnerId: number;
-  homeId: number;
-  awayId: number;
-  homeGoals: number;
-  awayGoals: number;
-  fixtureId: number;
-}
-export type ResultMap = Record<string, PlayedResult>;
-
-function pairKey(a: number, b: number): string {
-  return [a, b].sort((x, y) => x - y).join("-");
-}
+// The bracket's result contract lives with resolveBracketWithResults in lib;
+// re-exported so consumers (app/bracket/page.tsx) import it from the component.
+export type { PlayedResult, ResultMap };
 
 // Short labels for the phone round pager (one per round, R32 → Final).
 const SHORT_ROUNDS = ["R32", "R16", "QF", "SF", "Final"];
@@ -352,28 +342,14 @@ export function BracketTree({
 
   const effectiveOverrides = mode === "you" && mounted ? overrides : NO_OVERRIDES;
 
-  // Resolve once for pairings, derive forced winners from real results, resolve
-  // again so actual outcomes take precedence over model + user picks.
-  const { resolved, playedNodes } = useMemo(() => {
-    const base = resolveBracket(skeleton, effectiveOverrides);
-    const forced: Record<string, number> = {};
-    const played: Record<string, PlayedResult> = {};
-    for (const round of base.rounds) {
-      for (const mm of round) {
-        if (mm.top && mm.bottom && mm.top.id && mm.bottom.id) {
-          const r = results[pairKey(mm.top.id, mm.bottom.id)];
-          if (r) {
-            forced[mm.id] = r.winnerId;
-            played[mm.id] = r;
-          }
-        }
-      }
-    }
-    const finalBracket = Object.keys(forced).length
-      ? resolveBracket(skeleton, { ...effectiveOverrides, ...forced })
-      : base;
-    return { resolved: finalBracket, playedNodes: played };
-  }, [skeleton, effectiveOverrides, results]);
+  // Resolve the bracket with real results taking precedence over model + user
+  // picks. Detection iterates to a fixed point (see resolveBracketWithResults),
+  // so a later-round result still locks in when an upstream upset changed who
+  // actually reached that tie.
+  const { resolved, playedNodes } = useMemo(
+    () => resolveBracketWithResults(skeleton, effectiveOverrides, results),
+    [skeleton, effectiveOverrides, results],
+  );
 
   // Team lookup for the champion badge, drawn from the placed R32 field.
   const teamsById = useMemo(() => {
