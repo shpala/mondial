@@ -19,7 +19,7 @@
 // slots, correct tree); the specific slot among valid options may differ from
 // Annex C's exact row.
 
-import type { Group, Team } from "@/lib/types";
+import type { Fixture, Group, Team } from "@/lib/types";
 import { qualificationBreakdown } from "@/lib/qualifiers";
 import { buildBracketFromSlots, type Bracket } from "@/lib/prediction";
 
@@ -106,12 +106,91 @@ export function assignThirds(
 }
 
 /**
- * Build the bracket skeleton from the current group standings using the official
- * 2026 slotting. Group winners and runners-up go to their fixed slots; the 8
- * best thirds are matched to the third slots. The teams carry whatever rating
- * the caller put on the group rows (e.g. live Elo), which drives win probability.
+ * Decide which best-third team fills each of the 8 third-place R32 slots.
+ *
+ * Once the knockout draw is published, the spine carries the REAL Round-of-32
+ * fixtures (`r32Draw`: resolved home/away team-id pairs). Every third-place slot
+ * faces a group winner, so the third placed there is simply that winner's actual
+ * opponent — this reproduces FIFA's exact draw (its Annex C third assignment
+ * included) instead of the arbitrary-but-valid reconstruction. Before the draw
+ * exists, or if any slot can't be resolved from it (pre-draw placeholder ids, or
+ * a partial draw), fall back to the deterministic matching {@link assignThirds}.
  */
-export function buildOfficialBracket(groups: Group[]): Bracket {
+function resolveThirdSlots(
+  winnerByGroup: Map<string, Team>,
+  thirdByGroup: Map<string, Team>,
+  thirdGroups: string[],
+  r32Draw?: ReadonlyArray<readonly [number, number]>,
+): Map<number, Team | null> {
+  const slots = Object.keys(THIRD_SLOT_GROUPS).map(Number);
+
+  if (r32Draw && r32Draw.length) {
+    const opponentOf = new Map<number, number>();
+    for (const [a, b] of r32Draw) {
+      opponentOf.set(a, b);
+      opponentOf.set(b, a);
+    }
+    const thirdById = new Map(
+      [...thirdByGroup.values()].map((t) => [t.id, t] as const),
+    );
+    const winnerGroupAt = (i: number): string | null => {
+      const spec = R32_TEMPLATE[i].find((s) => s.kind === "winner");
+      return spec && spec.kind === "winner" ? spec.group : null;
+    };
+
+    const fromDraw = new Map<number, Team | null>();
+    let complete = true;
+    for (const i of slots) {
+      const group = winnerGroupAt(i);
+      const winner = group ? winnerByGroup.get(group) : undefined;
+      const oppId = winner ? opponentOf.get(winner.id) : undefined;
+      const third = oppId != null ? thirdById.get(oppId) : undefined;
+      if (!third) {
+        complete = false;
+        break;
+      }
+      fromDraw.set(i, third);
+    }
+    if (complete) return fromDraw;
+  }
+
+  // Pre-draw fallback: a valid (but possibly non-Annex-C) constrained matching.
+  const assign = assignThirds(thirdGroups);
+  const out = new Map<number, Team | null>();
+  for (const i of slots) {
+    const group = assign?.[i];
+    out.set(i, group ? thirdByGroup.get(group) ?? null : null);
+  }
+  return out;
+}
+
+/** The published Round-of-32 draw as resolved home/away team-id pairs, taken from
+ *  the spine's knockout fixtures (real teams only; placeholder slots with id 0 and
+ *  later rounds are skipped). Empty until the draw is published — callers then fall
+ *  back to the reconstructed slotting. */
+export function r32DrawFromFixtures(
+  fixtures: readonly Pick<Fixture, "stage" | "home" | "away">[],
+): [number, number][] {
+  return fixtures
+    .filter(
+      (f) =>
+        f.stage === "Round of 32" && f.home.id !== 0 && f.away.id !== 0,
+    )
+    .map((f) => [f.home.id, f.away.id]);
+}
+
+/**
+ * Build the bracket skeleton from the current group standings using the official
+ * 2026 slotting. Group winners and runners-up go to their fixed slots; the 8 best
+ * thirds are placed from the published `r32Draw` when available (so the bracket
+ * matches the real draw exactly), else by the deterministic matching. The teams
+ * carry whatever rating the caller put on the group rows (e.g. live Elo), which
+ * drives win probability.
+ */
+export function buildOfficialBracket(
+  groups: Group[],
+  r32Draw?: ReadonlyArray<readonly [number, number]>,
+): Bracket {
   const breakdown = qualificationBreakdown(groups);
   const winnerByGroup = new Map(breakdown.winners.map((c) => [c.group, c.team]));
   const runnerByGroup = new Map(
@@ -120,13 +199,17 @@ export function buildOfficialBracket(groups: Group[]): Bracket {
   const thirdByGroup = new Map(
     breakdown.bestThirds.map((c) => [c.group, c.team]),
   );
-  const slotAssign = assignThirds(breakdown.bestThirds.map((c) => c.group));
+  const thirdForSlot = resolveThirdSlots(
+    winnerByGroup,
+    thirdByGroup,
+    breakdown.bestThirds.map((c) => c.group),
+    r32Draw,
+  );
 
   const teamForSlot = (spec: SlotSpec, matchIndex: number): Team | null => {
     if (spec.kind === "winner") return winnerByGroup.get(spec.group) ?? null;
     if (spec.kind === "runnerUp") return runnerByGroup.get(spec.group) ?? null;
-    const group = slotAssign?.[matchIndex];
-    return group ? thirdByGroup.get(group) ?? null : null;
+    return thirdForSlot.get(matchIndex) ?? null;
   };
 
   const slotted: (Team | null)[] = R32_TEMPLATE.flatMap(([top, bottom], i) => [
