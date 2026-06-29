@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getFixtures, getGroups, getLiveRatings, getTitleOdds } from "@/lib/data";
 import { qualificationBreakdown } from "@/lib/qualifiers";
 import { withLiveRating } from "@/lib/ratings";
-import { buildOfficialBracket } from "@/lib/bracket";
+import { buildOfficialBracket, r32DrawFromFixtures } from "@/lib/bracket";
 import { TitleOddsTable } from "@/components/TitleOddsTable";
 import { BracketTree, type ResultMap } from "@/components/BracketTree";
 import { CandidatesPanel } from "@/components/CandidatesPanel";
@@ -55,7 +55,10 @@ export default async function BracketPage() {
     ...g,
     rows: g.rows.map((r) => ({ ...r, team: withLiveRating(r.team, live) })),
   }));
-  const skeleton = buildOfficialBracket(groupsLive);
+  // Once the knockout draw is published, slot the best-thirds from the real R32
+  // fixtures so the bracket matches the actual draw (not a valid-but-different
+  // reconstruction); falls back to the deterministic matching pre-draw.
+  const skeleton = buildOfficialBracket(groupsLive, r32DrawFromFixtures(fixtures));
   const breakdown = qualificationBreakdown(groups);
   const results = buildResultMap(fixtures);
 

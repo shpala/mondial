@@ -3,6 +3,7 @@ import type { Group, GroupRow, Team } from "@/lib/types";
 import {
   assignThirds,
   buildOfficialBracket,
+  r32DrawFromFixtures,
   R32_TEMPLATE,
   THIRD_SLOT_GROUPS,
 } from "@/lib/bracket";
@@ -144,5 +145,57 @@ describe("buildOfficialBracket", () => {
     expect(first[2].bottom!.code).toBe("B2");
     // Match 15 (M87): Winner K vs a best third.
     expect(first[15].top!.code).toBe("K1");
+  });
+
+  it("honors the published R32 draw for best-third placement, overriding the default matching", () => {
+    const groups = makeGroups();
+    const def = buildOfficialBracket(groups).rounds[0];
+    // Slot 0 = Winner E; the deterministic matching gave it some best-third.
+    const winnerE = def[0].top!;
+    const defaultThird = def[0].bottom!;
+    // A different best-third, currently slotted at another third-slot.
+    const thirdSlots = [1, 6, 7, 10, 11, 14, 15];
+    const otherSlot = thirdSlots.find((i) => def[i].bottom!.id !== defaultThird.id)!;
+    const desiredThird = def[otherSlot].bottom!;
+    expect(desiredThird.id).not.toBe(defaultThird.id);
+
+    // Published draw: swap the two thirds between their slots, everything else as-is.
+    const draw = def.map((m) => [m.top!.id, m.bottom!.id] as [number, number]);
+    draw[0] = [winnerE.id, desiredThird.id];
+    draw[otherSlot] = [def[otherSlot].top!.id, defaultThird.id];
+
+    const out = buildOfficialBracket(groups, draw).rounds[0];
+    expect(out[0].top!.id).toBe(winnerE.id); // winner unchanged
+    expect(out[0].bottom!.id).toBe(desiredThird.id); // third now follows the draw
+  });
+
+  it("falls back to the deterministic matching when the draw can't be resolved (pre-draw placeholders)", () => {
+    const groups = makeGroups();
+    const def = buildOfficialBracket(groups).rounds[0];
+    // Unresolved knockout slots carry placeholder id 0 — no real team to match.
+    const placeholderDraw: [number, number][] = [[0, 0], [0, 0]];
+    const out = buildOfficialBracket(groups, placeholderDraw).rounds[0];
+    out.forEach((m, i) => {
+      expect(m.top?.id).toBe(def[i].top?.id);
+      expect(m.bottom?.id).toBe(def[i].bottom?.id);
+    });
+  });
+});
+
+describe("r32DrawFromFixtures", () => {
+  const fx = (stage: string, hid: number, aid: number) =>
+    ({ stage, home: { id: hid }, away: { id: aid } }) as never;
+  it("extracts only resolved Round-of-32 pairings (real teams)", () => {
+    const draw = r32DrawFromFixtures([
+      fx("Round of 32", 5, 9),
+      fx("Round of 32", 0, 3), // unresolved slot (placeholder id 0) → skipped
+      fx("Group Stage", 5, 6), // not a knockout → skipped
+      fx("Round of 16", 7, 8), // later round → skipped
+    ]);
+    expect(draw).toEqual([[5, 9]]);
+  });
+
+  it("is empty before the draw is published", () => {
+    expect(r32DrawFromFixtures([])).toEqual([]);
   });
 });

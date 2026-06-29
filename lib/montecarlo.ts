@@ -18,7 +18,7 @@ import {
   davidsonProbs,
   effectiveRating,
 } from "@/lib/prediction";
-import { buildOfficialBracket } from "@/lib/bracket";
+import { buildOfficialBracket, r32DrawFromFixtures } from "@/lib/bracket";
 import {
   goalRates,
   sampleScoreline,
@@ -137,6 +137,13 @@ export function simulateTournament(
     );
   }
 
+  // Published R32 draw (real teams once the group stage is decided). Used to slot
+  // best-thirds per the actual draw; self-gates per run — when a simulated group
+  // stage produces different winners/thirds, the id lookups miss and the bracket
+  // falls back to the deterministic matching, so this only binds once results fix
+  // the real qualifiers.
+  const r32Draw = r32DrawFromFixtures(fixtures);
+
   // Seed the RNG from the current results state so odds only shift when results do.
   let seed = groupFixtures.length * 2654435761;
   for (const f of fixtures) {
@@ -169,7 +176,7 @@ export function simulateTournament(
     for (const t of qualified) tally(t).q++;
 
     // --- Knockouts: resolve the official bracket as weighted coin flips.
-    const bracket = buildOfficialBracket(groups);
+    const bracket = buildOfficialBracket(groups, r32Draw);
     const resolved = new Map<string, Team | null>();
     for (let r = 0; r < bracket.rounds.length; r++) {
       for (const m of bracket.rounds[r]) {
