@@ -7,7 +7,7 @@
 //
 //   R' = R + K · G · (W − We)
 //
-// with K = 60 for World Cup finals and G a goal-difference multiplier. Host
+// with K = 45 for World Cup finals and G a goal-difference multiplier. Host
 // advantage is applied to the *expected* result We (via effectiveRating) but is
 // never baked into the stored rating — it travels with the team's `host` flag.
 // Pure and chronological, so it runs identically on the server and in tests.
@@ -27,7 +27,7 @@ function goalMultiplier(goalDiff: number): number {
 /**
  * Symmetric per-match Elo delta for the home side (away gets the negation).
  * `effHome`/`effAway` are already host/home-adjusted ratings; `k` is the gain
- * (default 60, the World Cup finals weight).
+ * (default 45, the World Cup finals weight).
  */
 export function eloUpdate(
   effHome: number,

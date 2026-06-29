@@ -180,8 +180,8 @@ model out-of-sample (log-loss, Brier, a reliability table) against a no-skill
 base-rate baseline and a grid-search best — see `docs/backtest-report.md`. It
 confirmed the model beats the baseline by ~0.15 log-loss and that the shipping
 constants were already near-optimal; its one actionable finding — the model
-under-predicted draws — is why `ν` was nudged 0.63 → 0.70. The host bump (100) and
-K (60) tested near-optimal and are left as-is. Pass `--no-friendlies` to see the
+under-predicted draws — is why `ν` was nudged 0.63 → 0.70. The host bump (87.5) and
+K (45) tested near-optimal and are left as-is. Pass `--no-friendlies` to see the
 fit without low-intensity games.
 
 ### Where the ratings come from
@@ -192,7 +192,7 @@ snapshot June 2026) rather than hand-authored guesses — the *pre-tournament*
 strength shown on each team page.
 
 **Ratings move with results (live Elo).** As real matches finish, `lib/ratings.ts`
-folds each result back into the ratings — `R' = R + K·G·(W − We)` with `K = 60`
+folds each result back into the ratings — `R' = R + K·G·(W − We)` with `K = 45`
 (World Cup weight) and a goal-difference multiplier `G`, applied in kickoff order.
 So a 7–1 win now lifts a team's *predicted* strength too, and an upset ripples
 forward into later-round predictions and bracket seeding. The fold is computed
@@ -200,9 +200,10 @@ from finished fixtures (`getLiveRatings`) and overlaid on the seed wherever a wi
 probability is formed; the displayed pre-tournament rating is left untouched.
 
 **Host advantage.** The three co-hosts (USA, Mexico, Canada) carry a `host` flag
-and get a **+100 Elo home-field bump** (`HOST_ADVANTAGE` in `lib/prediction.ts`)
-applied at prediction time — eloratings.net's standard home constant, worth ~+14
-percentage points between otherwise-even sides. The stored `rating` stays the
+and get a **+87.5 Elo home-field bump** (`HOST_ADVANTAGE` in `lib/model/constants.ts`)
+applied at prediction time — a tuned-down take on eloratings.net's standard
+~100-point home constant, worth ~+10 percentage points between otherwise-even
+sides at the World Cup prediction scale. The stored `rating` stays the
 team's true strength; the bump is layered on only when computing a win
 probability (`predictWinProbability`). Beyond that the model uses nothing but the
 two ratings: no current form, injuries, head-to-head or live data.
