@@ -75,6 +75,27 @@ const KO_BASELINE_LOGLOSS = Math.log(2);
 const MIN_RELIABILITY_BINS = 4;
 const MIN_RELIABILITY_EVENTS = 30;
 
+/**
+ * Greedy first-fit row assignment for strip marks. Given ascending x positions,
+ * return a row index per mark such that no two marks in the same row are closer
+ * than `minDx` — so glyphs never overlap, and a cluster of similar values stacks
+ * onto extra rows instead of colliding. Used by the small-sample advance-call
+ * strip (where vertical position carries no meaning, only x = confidence does).
+ */
+export function packStripRows(xs: number[], minDx: number): number[] {
+  const rowLastX: number[] = [];
+  return xs.map((x) => {
+    let row = rowLastX.findIndex((lastX) => x - lastX >= minDx);
+    if (row === -1) {
+      row = rowLastX.length;
+      rowLastX.push(x);
+    } else {
+      rowLastX[row] = x;
+    }
+    return row;
+  });
+}
+
 /** Whether a reliability sample is large enough to plot as a calibration curve
  *  (vs. a misleading small-n scatter). Counts populated bins and total events. */
 export function reliabilityIsAdequate(reliability: ReliabilityBucket[]): boolean {

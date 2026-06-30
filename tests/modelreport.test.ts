@@ -3,6 +3,7 @@ import type { Fixture, Team } from "@/lib/types";
 import {
   gradeOutcomes,
   gradeQualification,
+  packStripRows,
   reliabilityIsAdequate,
 } from "@/lib/modelreport";
 import type { ReliabilityBucket } from "@/lib/modelreport";
@@ -151,6 +152,39 @@ describe("reliabilityIsAdequate", () => {
     expect(
       reliabilityIsAdequate([{ bucket: 0, predicted: 0, observed: 0, count: 0 }]),
     ).toBe(false);
+  });
+});
+
+describe("packStripRows", () => {
+  // Group placed x-values by their assigned row (xs are ascending, appended in
+  // order, so each row's list is ascending too).
+  const byRow = (xs: number[], minDx: number) => {
+    const rows = packStripRows(xs, minDx);
+    const map = new Map<number, number[]>();
+    rows.forEach((r, i) => map.set(r, [...(map.get(r) ?? []), xs[i]]));
+    return map;
+  };
+
+  it("never places two marks in the same row closer than minDx", () => {
+    const xs = [59, 60, 61, 65, 77];
+    for (const arr of byRow(xs, 6).values()) {
+      for (let i = 1; i < arr.length; i++) {
+        expect(arr[i] - arr[i - 1]).toBeGreaterThanOrEqual(6);
+      }
+    }
+  });
+
+  it("stacks (near-)identical x onto separate rows", () => {
+    expect(new Set(packStripRows([60, 60, 60], 6)).size).toBe(3);
+  });
+
+  it("keeps well-spaced marks on a single row", () => {
+    expect(packStripRows([50, 60, 70, 80], 6)).toEqual([0, 0, 0, 0]);
+  });
+
+  it("packs greedily into the fewest rows (first-fit)", () => {
+    // 59,60 collide → 60 to row1; 65 fits row0 (gap6); 77 fits row0.
+    expect(packStripRows([59, 60, 65, 77], 6)).toEqual([0, 1, 0, 0]);
   });
 });
 

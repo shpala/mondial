@@ -1,4 +1,4 @@
-import { reliabilityIsAdequate, type MatchGrade, type ReliabilityBucket } from "@/lib/modelreport";
+import { packStripRows, reliabilityIsAdequate, type MatchGrade, type ReliabilityBucket } from "@/lib/modelreport";
 
 /**
  * Reliability diagram: predicted win rate (x) vs observed (y). A perfectly
@@ -165,13 +165,20 @@ export function CalibrationChart({
  */
 function AdvanceCallStrip({ perMatch }: { perMatch: MatchGrade[] }) {
   const hits = perMatch.filter((m) => m.correct).length;
-  // Confidence the model placed on the side it picked = the larger advance prob.
-  // Sorted by confidence so that alternating the vertical row (below) keeps the
-  // closest-x marks on different rows — they never overlap, and x still reads as
-  // the exact confidence (y carries no meaning here).
+  // Confidence the model placed on the side it picked = the larger advance prob,
+  // sorted ascending. x = confidence; y carries no meaning, so we pack marks into
+  // rows (packStripRows) such that close confidences never overlap — clustered
+  // calls stack onto extra rows rather than colliding.
   const calls = perMatch
     .map((m) => ({ m, conf: Math.max(m.predicted.home, m.predicted.away) }))
     .sort((a, b) => a.conf - b.conf);
+  const MIN_DX = 6; // min x-gap between marks sharing a row (clears the ~5.5 glyph)
+  const ROW_H = 7;
+  const TOP = 6; // baseline of the top row
+  const rows = packStripRows(calls.map((c) => c.conf * 100), MIN_DX);
+  const rowCount = rows.length ? Math.max(...rows) + 1 : 1;
+  const axisY = TOP + (rowCount - 1) * ROW_H + 6;
+  const tickY = axisY + 5;
 
   return (
     <figure className="card mb-6 p-4">
@@ -184,26 +191,26 @@ function AdvanceCallStrip({ perMatch }: { perMatch: MatchGrade[] }) {
       </p>
       <div className="mx-auto w-full max-w-[440px]">
         <svg
-          viewBox="-2 -3 104 28"
+          viewBox={`-2 -1 104 ${tickY + 5}`}
           className="w-full"
           role="img"
           aria-label="Each knockout call placed at the model's confidence in the side it picked; tick = correct, cross = wrong"
         >
           {/* coin-flip reference + confidence axis (0–100%) */}
-          <line x1="50" y1="1" x2="50" y2="17" className="stroke-ink-700" strokeWidth="0.5" strokeDasharray="2 2" />
-          <line x1="0" y1="17" x2="100" y2="17" className="stroke-ink-700" strokeWidth="0.5" />
+          <line x1="50" y1="1" x2="50" y2={axisY} className="stroke-ink-700" strokeWidth="0.5" strokeDasharray="2 2" />
+          <line x1="0" y1={axisY} x2="100" y2={axisY} className="stroke-ink-700" strokeWidth="0.5" />
           <g className="fill-ink-400" fontSize="3.6">
-            <text x="0" y="23">0</text>
-            <text x="50" y="23" textAnchor="middle">50% (coin flip)</text>
-            <text x="100" y="23" textAnchor="end">100%</text>
+            <text x="0" y={tickY}>0</text>
+            <text x="50" y={tickY} textAnchor="middle">50% (coin flip)</text>
+            <text x="100" y={tickY} textAnchor="end">100%</text>
           </g>
           {calls.map(({ m, conf }, i) => (
             <text
               key={`${m.date}-${m.home}-${m.away}-${i}`}
               x={conf * 100}
-              y={i % 2 === 0 ? 9 : 15}
+              y={TOP + rows[i] * ROW_H}
               textAnchor="middle"
-              fontSize="6"
+              fontSize="5.5"
               className={m.correct ? "fill-pitch-500" : "fill-accent-ember"}
             >
               {m.correct ? "✓" : "✗"}
