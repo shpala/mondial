@@ -96,6 +96,22 @@ export function packStripRows(xs: number[], minDx: number): number[] {
   });
 }
 
+/**
+ * Wilson score interval for a binomial proportion k/n at confidence `z` (default
+ * 95%). Returns the [lo, hi] band clamped to [0,1]. Used by the small-sample
+ * knockout calibration view to draw an honest uncertainty whisker — wide when n
+ * is tiny, narrowing as games accrue. n=0 → the whole [0,1] (nothing observed).
+ */
+export function wilsonInterval(k: number, n: number, z = 1.96): { lo: number; hi: number } {
+  if (n <= 0) return { lo: 0, hi: 1 };
+  const p = k / n;
+  const z2 = z * z;
+  const denom = 1 + z2 / n;
+  const center = (p + z2 / (2 * n)) / denom;
+  const half = (z * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n))) / denom;
+  return { lo: Math.max(0, center - half), hi: Math.min(1, center + half) };
+}
+
 /** Whether a reliability sample is large enough to plot as a calibration curve
  *  (vs. a misleading small-n scatter). Counts populated bins and total events. */
 export function reliabilityIsAdequate(reliability: ReliabilityBucket[]): boolean {
