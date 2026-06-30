@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Fixture, Team } from "@/lib/types";
-import { gradeOutcomes, gradeQualification } from "@/lib/modelreport";
+import {
+  gradeOutcomes,
+  gradeQualification,
+  packStripRows,
+  reliabilityIsAdequate,
+} from "@/lib/modelreport";
+import type { ReliabilityBucket } from "@/lib/modelreport";
 import { simulateTournament } from "@/lib/montecarlo";
 import { computeGroupStandings } from "@/lib/standings";
 
@@ -113,6 +119,72 @@ describe("gradeOutcomes — knockouts (advance calls)", () => {
     expect(r.totalN).toBe(2);
     expect(r.totalHits).toBe(r.hits + r.knockout.hits);
     expect(r.totalHits).toBe(2);
+  });
+});
+
+describe("reliabilityIsAdequate", () => {
+  const bins = (specs: [number, number][]): ReliabilityBucket[] =>
+    specs.map(([bucket, count]) => ({
+      bucket,
+      predicted: bucket / 10,
+      observed: 0.5,
+      count,
+    }));
+
+  it("is adequate for a group-scale sample (enough bins AND events)", () => {
+    expect(
+      reliabilityIsAdequate(bins([[2, 40], [3, 40], [4, 40], [5, 40], [6, 30], [7, 26]])),
+    ).toBe(true);
+  });
+
+  it("is NOT adequate for a tiny binary sample (knockout-scale: few events)", () => {
+    // 6 populated bins (passes the bin floor) but only ~8 events total → fails.
+    expect(
+      reliabilityIsAdequate(bins([[2, 1], [3, 2], [4, 1], [5, 2], [6, 1], [7, 1]])),
+    ).toBe(false);
+  });
+
+  it("is NOT adequate with too few populated bins, even if events are plentiful", () => {
+    expect(reliabilityIsAdequate(bins([[5, 80]]))).toBe(false);
+  });
+
+  it("ignores empty bins", () => {
+    expect(
+      reliabilityIsAdequate([{ bucket: 0, predicted: 0, observed: 0, count: 0 }]),
+    ).toBe(false);
+  });
+});
+
+describe("packStripRows", () => {
+  // Group placed x-values by their assigned row (xs are ascending, appended in
+  // order, so each row's list is ascending too).
+  const byRow = (xs: number[], minDx: number) => {
+    const rows = packStripRows(xs, minDx);
+    const map = new Map<number, number[]>();
+    rows.forEach((r, i) => map.set(r, [...(map.get(r) ?? []), xs[i]]));
+    return map;
+  };
+
+  it("never places two marks in the same row closer than minDx", () => {
+    const xs = [59, 60, 61, 65, 77];
+    for (const arr of byRow(xs, 6).values()) {
+      for (let i = 1; i < arr.length; i++) {
+        expect(arr[i] - arr[i - 1]).toBeGreaterThanOrEqual(6);
+      }
+    }
+  });
+
+  it("stacks (near-)identical x onto separate rows", () => {
+    expect(new Set(packStripRows([60, 60, 60], 6)).size).toBe(3);
+  });
+
+  it("keeps well-spaced marks on a single row", () => {
+    expect(packStripRows([50, 60, 70, 80], 6)).toEqual([0, 0, 0, 0]);
+  });
+
+  it("packs greedily into the fewest rows (first-fit)", () => {
+    // 59,60 collide → 60 to row1; 65 fits row0 (gap6); 77 fits row0.
+    expect(packStripRows([59, 60, 65, 77], 6)).toEqual([0, 1, 0, 0]);
   });
 });
 

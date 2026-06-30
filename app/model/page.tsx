@@ -188,7 +188,7 @@ export default async function ModelPage() {
             ln 3 above.
           </p>
           <h3 className="mb-1 text-sm font-semibold text-ink-300">Reliability</h3>
-          <CalibrationChart reliability={ko.reliability} />
+          <CalibrationChart reliability={ko.reliability} perMatch={ko.perMatch} advanceCalls />
         </section>
       )}
 
