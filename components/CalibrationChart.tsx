@@ -1,5 +1,4 @@
 import {
-  packStripRows,
   reliabilityIsAdequate,
   wilsonInterval,
   type MatchGrade,
@@ -53,8 +52,8 @@ export function CalibrationChart({
   const maxN = Math.max(...pts.map((p) => p.count), 1);
 
   return (
-    <figure className="card mb-6 p-4 md:flex md:items-center md:gap-6">
-      <div className="mx-auto w-full max-w-[420px] md:mx-0 md:shrink-0">
+    <figure className="card mb-6 p-4 md:mx-auto md:max-w-3xl">
+      <div className="mx-auto w-full max-w-[420px]">
         {/* viewBox margins (left/bottom for axis titles, all sides ≥ the 7.3 max
             dot radius) so rail dots show as full circles. Plot math stays 0..100. */}
         <svg
@@ -153,7 +152,7 @@ export function CalibrationChart({
           ))}
         </tbody>
       </table>
-      <figcaption className="mt-4 text-xs text-ink-400 md:mt-0 md:flex-1 md:text-sm">
+      <figcaption className="mt-3 text-xs text-ink-400">
         On the dashed line = perfectly calibrated.{" "}
         <span className="font-medium text-pitch-500">Above</span> = cautious;{" "}
         <span className="font-medium text-accent-ember">below</span> = over-confident.
@@ -197,33 +196,24 @@ function FavouriteCalibrationDot({ perMatch }: { perMatch: MatchGrade[] }) {
   const ciTopY = 100 - hi * 100;
   const ciBotY = 100 - lo * 100;
 
-  // Per-tie rug below the plot, aligned to the predicted x-axis; pack rows so
-  // close confidences never overlap.
-  const RUG_TOP = 108;
-  const RUG_H = 6;
-  const rugRows = packStripRows(calls.map((c) => c.conf * 100), 6);
-  const rugRowCount = rugRows.length ? Math.max(...rugRows) + 1 : 1;
-  const predictedLabelY = RUG_TOP + (rugRowCount - 1) * RUG_H + 9;
-  const vbHeight = predictedLabelY + 14;
-
   return (
-    <figure className="card mb-6 p-4 md:flex md:items-center md:gap-6">
-      <div className="mx-auto w-full max-w-[420px] md:mx-0 md:shrink-0">
+    <figure className="card mb-6 p-4 md:mx-auto md:max-w-3xl">
+      <div className="mx-auto w-full max-w-[420px]">
         <svg
-          viewBox={`-18 -10 128 ${vbHeight}`}
+          viewBox="-18 -10 128 130"
           className="w-full"
           role="img"
           aria-label={`Knockout calibration: the model's favourites were predicted to advance ${Math.round(
             meanConf * 100,
           )} percent on average and ${k} of ${n} (${Math.round(
             observed * 100,
-          )} percent) did, with a 95 percent uncertainty band; each tie marked below.`}
+          )} percent) did, with a 95 percent uncertainty band.`}
         >
           {/* axis titles */}
           <text transform="rotate(-90 -13 50)" x="-13" y="50" textAnchor="middle" className="fill-ink-400 font-semibold uppercase" fontSize="4.5" letterSpacing="0.4">
             Observed
           </text>
-          <text x="50" y={predictedLabelY} textAnchor="middle" className="fill-ink-400 font-semibold uppercase" fontSize="4.5" letterSpacing="0.4">
+          <text x="50" y="116" textAnchor="middle" className="fill-ink-400 font-semibold uppercase" fontSize="4.5" letterSpacing="0.4">
             Predicted →
           </text>
           {/* plot box + 50% gridlines */}
@@ -246,19 +236,6 @@ function FavouriteCalibrationDot({ perMatch }: { perMatch: MatchGrade[] }) {
           <line x1={dotX - 3} y1={ciBotY} x2={dotX + 3} y2={ciBotY} className="stroke-ink-400" strokeWidth="0.8" />
           {/* the favourites' aggregate calibration point */}
           <circle cx={dotX} cy={dotY} r="2.8" className="fill-ink-100" stroke="#0a0e14" strokeWidth="0.6" />
-          {/* per-tie rug along the predicted axis */}
-          {calls.map(({ m, conf }, i) => (
-            <text
-              key={`${m.date}-${m.home}-${m.away}-${i}`}
-              x={conf * 100}
-              y={RUG_TOP + rugRows[i] * RUG_H}
-              textAnchor="middle"
-              fontSize="4.5"
-              className={m.correct ? "fill-pitch-500" : "fill-accent-ember"}
-            >
-              {m.correct ? "✓" : "✗"}
-            </text>
-          ))}
         </svg>
       </div>
       {/* Screen-reader equivalent (the visible chip list is aria-hidden, so this
@@ -293,13 +270,13 @@ function FavouriteCalibrationDot({ perMatch }: { perMatch: MatchGrade[] }) {
           ))}
         </tbody>
       </table>
-      <figcaption className="mt-4 md:mt-0 md:flex-1">
+      <figcaption className="mt-4">
         <p className="text-sm text-ink-300">
           Too few games for a full calibration curve — here&rsquo;s how the
           model&rsquo;s knockout favourites have fared so far ({n}{" "}
           {n === 1 ? "tie" : "ties"}).
         </p>
-        <p className="mt-3 text-xs text-ink-400">
+        <p className="mt-2 text-xs text-ink-400">
           The dot is the model&rsquo;s knockout favourites: predicted to advance{" "}
           <span className="font-medium text-ink-200">{Math.round(meanConf * 100)}%</span>{" "}
           on average, {k} of {n} ({Math.round(observed * 100)}%) did. The bar is how
@@ -310,12 +287,12 @@ function FavouriteCalibrationDot({ perMatch }: { perMatch: MatchGrade[] }) {
               ? "it sits below the dashed line, an early hint the model has been over-confident."
               : "it sits above the dashed line, an early hint the model has been cautious."}{" "}
           Each <span className="font-medium text-pitch-500">✓</span>/
-          <span className="font-medium text-accent-ember">✗</span>{" "}is one tie at the
-          model&rsquo;s confidence in its pick.
+          <span className="font-medium text-accent-ember">✗</span>{" "}below is one tie —
+          the model&rsquo;s pick and how sure it was.
         </p>
         {/* Per-tie list (the rug's labelled counterpart): the model's pick + how
             sure it was + whether it advanced. */}
-        <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs" aria-hidden>
+        <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4" aria-hidden>
           {[...calls]
             .sort((a, b) => b.conf - a.conf)
             .map(({ m, conf, fav }, i) => (
