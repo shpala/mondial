@@ -53,8 +53,8 @@ export function CalibrationChart({
   const maxN = Math.max(...pts.map((p) => p.count), 1);
 
   return (
-    <figure className="card mb-6 p-4">
-      <div className="mx-auto w-full max-w-[420px]">
+    <figure className="card mb-6 p-4 md:flex md:items-center md:gap-6">
+      <div className="mx-auto w-full max-w-[420px] md:mx-0 md:shrink-0">
         {/* viewBox margins (left/bottom for axis titles, all sides ≥ the 7.3 max
             dot radius) so rail dots show as full circles. Plot math stays 0..100. */}
         <svg
@@ -153,7 +153,7 @@ export function CalibrationChart({
           ))}
         </tbody>
       </table>
-      <figcaption className="mt-3 text-xs text-ink-400">
+      <figcaption className="mt-4 text-xs text-ink-400 md:mt-0 md:flex-1 md:text-sm">
         On the dashed line = perfectly calibrated.{" "}
         <span className="font-medium text-pitch-500">Above</span> = cautious;{" "}
         <span className="font-medium text-accent-ember">below</span> = over-confident.
@@ -176,7 +176,11 @@ export function CalibrationChart({
 function FavouriteCalibrationDot({ perMatch }: { perMatch: MatchGrade[] }) {
   // Each tie: the model's confidence in its pick = the favourite's advance prob.
   const calls = perMatch
-    .map((m) => ({ m, conf: Math.max(m.predicted.home, m.predicted.away) }))
+    .map((m) => ({
+      m,
+      conf: Math.max(m.predicted.home, m.predicted.away),
+      fav: m.predicted.home >= m.predicted.away ? m.home : m.away,
+    }))
     .sort((a, b) => a.conf - b.conf);
   const n = calls.length;
   const k = calls.filter((c) => c.m.correct).length; // favourites that advanced
@@ -203,13 +207,8 @@ function FavouriteCalibrationDot({ perMatch }: { perMatch: MatchGrade[] }) {
   const vbHeight = predictedLabelY + 14;
 
   return (
-    <figure className="card mb-6 p-4">
-      <p className="mb-3 text-sm text-ink-300">
-        Too few games for a full calibration curve — here&rsquo;s how the
-        model&rsquo;s knockout favourites have fared so far ({n}{" "}
-        {n === 1 ? "tie" : "ties"}).
-      </p>
-      <div className="mx-auto w-full max-w-[420px]">
+    <figure className="card mb-6 p-4 md:flex md:items-center md:gap-6">
+      <div className="mx-auto w-full max-w-[420px] md:mx-0 md:shrink-0">
         <svg
           viewBox={`-18 -10 128 ${vbHeight}`}
           className="w-full"
@@ -262,6 +261,47 @@ function FavouriteCalibrationDot({ perMatch }: { perMatch: MatchGrade[] }) {
           ))}
         </svg>
       </div>
+      <div className="mt-4 md:mt-0 md:flex-1">
+        <p className="text-sm text-ink-300">
+          Too few games for a full calibration curve — here&rsquo;s how the
+          model&rsquo;s knockout favourites have fared so far ({n}{" "}
+          {n === 1 ? "tie" : "ties"}).
+        </p>
+        <figcaption className="mt-3 text-xs text-ink-400">
+          The dot is the model&rsquo;s knockout favourites: predicted to advance{" "}
+          <span className="font-medium text-ink-200">{Math.round(meanConf * 100)}%</span>{" "}
+          on average, {k} of {n} ({Math.round(observed * 100)}%) did. The bar is how
+          uncertain that is with so few games —{" "}
+          {bandCrossesDiagonal
+            ? "it still crosses the dashed line, so there's no clear over- or under-confidence yet."
+            : observed < meanConf
+              ? "it sits below the dashed line, an early hint the model has been over-confident."
+              : "it sits above the dashed line, an early hint the model has been cautious."}{" "}
+          Each <span className="font-medium text-pitch-500">✓</span>/
+          <span className="font-medium text-accent-ember">✗</span>{" "}is one tie at the
+          model&rsquo;s confidence in its pick.
+        </figcaption>
+        {/* Per-tie list (the rug's labelled counterpart): the model's pick + how
+            sure it was + whether it advanced. */}
+        <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs" aria-hidden>
+          {[...calls]
+            .sort((a, b) => b.conf - a.conf)
+            .map(({ m, conf, fav }, i) => (
+              <li
+                key={`${m.date}-${m.home}-${m.away}-${i}`}
+                className="flex items-center gap-1.5"
+              >
+                <span className={m.correct ? "text-pitch-500" : "text-accent-ember"}>
+                  {m.correct ? "✓" : "✗"}
+                </span>
+                <span className="truncate text-ink-200">{fav}</span>
+                <span className="ml-auto shrink-0 tabular-nums text-ink-400">
+                  {Math.round(conf * 100)}%
+                </span>
+              </li>
+            ))}
+        </ul>
+      </div>
       {/* Screen-reader equivalent. */}
       <table className="sr-only">
         <caption>
@@ -286,20 +326,6 @@ function FavouriteCalibrationDot({ perMatch }: { perMatch: MatchGrade[] }) {
           ))}
         </tbody>
       </table>
-      <figcaption className="mt-3 text-xs text-ink-400">
-        The dot is the model&rsquo;s knockout favourites: predicted to advance{" "}
-        <span className="font-medium text-ink-200">{Math.round(meanConf * 100)}%</span>{" "}
-        on average, {k} of {n} ({Math.round(observed * 100)}%) did. The bar is how
-        uncertain that is with so few games —{" "}
-        {bandCrossesDiagonal
-          ? "it still crosses the dashed line, so there's no clear over- or under-confidence yet."
-          : observed < meanConf
-            ? "it sits below the dashed line, an early hint the model has been over-confident."
-            : "it sits above the dashed line, an early hint the model has been cautious."}{" "}
-        Each <span className="font-medium text-pitch-500">✓</span>/
-        <span className="font-medium text-accent-ember">✗</span>{" "}below is one tie
-        at the model&rsquo;s confidence.
-      </figcaption>
     </figure>
   );
 }
