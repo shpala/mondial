@@ -30,8 +30,10 @@ const FORM_CLS: Record<FormResult, string> = {
 
 const FORM_WORD: Record<FormResult, string> = { W: "win", D: "draw", L: "loss" };
 
-/** The team's last five finished results (oldest→newest), from the full-time
- *  score. Penalty-decided knockout ties read as the FT draw they were. */
+/** The team's last five finished results (oldest→newest), from the on-field
+ *  result — the post-extra-time score where a knockout went to ET, so an
+ *  ET-decided tie counts as the win/loss it became. A tie still level after
+ *  extra time and settled only on penalties reads as the draw it was (D). */
 function teamForm(fixtures: Fixture[], teamId: number): FormResult[] {
   return fixtures
     .filter(

@@ -3,44 +3,14 @@ import { getFixtures, getGroups, getLiveRatings, getTitleOdds } from "@/lib/data
 import { qualificationBreakdown } from "@/lib/qualifiers";
 import { withLiveRating } from "@/lib/ratings";
 import { buildOfficialBracket, r32DrawFromFixtures } from "@/lib/bracket";
+import { buildResultMap } from "@/lib/bracket-results";
 import { TitleOddsTable } from "@/components/TitleOddsTable";
-import { BracketTree, type ResultMap } from "@/components/BracketTree";
+import { BracketTree } from "@/components/BracketTree";
 import { CandidatesPanel } from "@/components/CandidatesPanel";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { AutoRefresh } from "@/components/AutoRefresh";
 
 export const dynamic = "force-dynamic";
-
-function buildResultMap(
-  fixtures: Awaited<ReturnType<typeof getFixtures>>,
-): ResultMap {
-  const map: ResultMap = {};
-  for (const f of fixtures) {
-    const isKnockout = f.stage !== "Group Stage";
-    const realTeams = f.home.id !== 0 && f.away.id !== 0;
-    if (
-      !isKnockout ||
-      !realTeams ||
-      f.status !== "finished" ||
-      f.homeGoals == null ||
-      f.awayGoals == null ||
-      f.homeGoals === f.awayGoals // settled on penalties; winner unknown from FT
-    ) {
-      continue;
-    }
-    const winnerId = f.homeGoals > f.awayGoals ? f.home.id : f.away.id;
-    const key = [f.home.id, f.away.id].sort((a, b) => a - b).join("-");
-    map[key] = {
-      winnerId,
-      homeId: f.home.id,
-      awayId: f.away.id,
-      homeGoals: f.homeGoals,
-      awayGoals: f.awayGoals,
-      fixtureId: f.id,
-    };
-  }
-  return map;
-}
 
 export default async function BracketPage() {
   const [groups, fixtures, live, odds] = await Promise.all([

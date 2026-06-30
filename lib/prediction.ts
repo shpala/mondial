@@ -333,6 +333,10 @@ export interface PlayedResult {
   homeGoals: number;
   awayGoals: number;
   fixtureId: number;
+  /** Penalty-shootout tally (home/away) when the tie was level after extra time
+   *  and decided on penalties; absent/null otherwise. The `winnerId` already
+   *  names who advanced — this is for display ("4–3 pens"). */
+  shootout?: { home: number; away: number } | null;
 }
 export type ResultMap = Record<string, PlayedResult>;
 

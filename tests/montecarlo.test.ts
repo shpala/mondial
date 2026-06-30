@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Fixture, Team } from "@/lib/types";
-import { outcomeProbs, simulateTournament } from "@/lib/montecarlo";
+import {
+  forcedKnockoutWinners,
+  outcomeProbs,
+  simulateTournament,
+} from "@/lib/montecarlo";
 import { winProbability } from "@/lib/prediction";
 import { WC_PREDICTION_SCALE } from "@/lib/model/constants";
 
@@ -123,5 +127,52 @@ describe("simulateTournament", () => {
     // Three heavy losses crater its title odds versus the all-unplayed baseline.
     expect(topAfter.champion).toBeLessThan(odds[0].champion);
     expect(topAfter.escapeGroup).toBeLessThan(odds[0].escapeGroup);
+  });
+});
+
+describe("forcedKnockoutWinners", () => {
+  const a = team(901, 1800, "A");
+  const b = team(902, 1700, "B");
+  const c = team(903, 1600, "C");
+  const d = team(904, 1500, "D");
+
+  function ko(home: Team, away: Team, o: Partial<Fixture>): Fixture {
+    return {
+      id: 73,
+      stage: "Round of 32",
+      group: null,
+      kickoff: "2026-06-29T20:30:00Z",
+      status: "finished",
+      venue: null,
+      home,
+      away,
+      homeGoals: null,
+      awayGoals: null,
+      minute: null,
+      goals: [],
+      shootout: null,
+      ...o,
+    };
+  }
+  const pk = (x: number, y: number) => (x < y ? `${x}-${y}` : `${y}-${x}`);
+
+  it("forces the shootout winner of a knockout tie level after extra time", () => {
+    // a 1-1 b, b wins 4-3 on penalties.
+    const f = ko(a, b, { homeGoals: 1, awayGoals: 1, shootout: { home: 3, away: 4 } });
+    const forced = forcedKnockoutWinners([f]);
+    expect(forced.get(pk(a.id, b.id))).toBe(b.id);
+  });
+
+  it("forces a decisive winner and leaves a winner-unknown level tie unforced", () => {
+    const decisive = ko(c, d, { id: 80, homeGoals: 2, awayGoals: 0 });
+    const unknown = ko(a, b, { id: 73, homeGoals: 1, awayGoals: 1 }); // no shootout
+    const forced = forcedKnockoutWinners([decisive, unknown]);
+    expect(forced.get(pk(c.id, d.id))).toBe(c.id);
+    expect(forced.has(pk(a.id, b.id))).toBe(false);
+  });
+
+  it("ignores group-stage games", () => {
+    const grp = ko(a, b, { id: 1, stage: "Group Stage", homeGoals: 3, awayGoals: 0 });
+    expect(forcedKnockoutWinners([grp]).size).toBe(0);
   });
 });

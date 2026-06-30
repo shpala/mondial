@@ -24,7 +24,12 @@ interface OfMatch {
   time?: string;
   team1: string;
   team2: string;
-  score?: { ft?: [number, number]; ht?: [number, number] };
+  score?: {
+    ft?: [number, number];
+    ht?: [number, number];
+    et?: [number, number]; // aggregate score after extra time
+    p?: [number, number]; // penalty-shootout tally
+  };
   goals1?: OfGoal[];
   goals2?: OfGoal[];
   group?: string;
@@ -95,15 +100,23 @@ function mapMatch(m: OfMatch, index: number): Fixture {
     resolveTeam(m.team2, groupLetter ?? "?") ??
     placeholderTeam(m.team2, groupLetter ?? "?");
 
-  const ft = m.score?.ft;
+  // A valid 2-number score pair (ft, et or p), else null.
+  const pair = (s?: [number, number]): [number, number] | null =>
+    Array.isArray(s) && s.length === 2 && Number.isFinite(s[0]) && Number.isFinite(s[1])
+      ? [s[0], s[1]]
+      : null;
+
+  const ft = pair(m.score?.ft);
   // Only treat a match as finished when both full-time goals are real numbers —
   // a partial/malformed ft array must not produce a "finished" fixture with a
   // null score.
-  const finished =
-    Array.isArray(ft) &&
-    ft.length === 2 &&
-    Number.isFinite(ft[0]) &&
-    Number.isFinite(ft[1]);
+  const finished = ft != null;
+  // A knockout decided in extra time carries `et` as the final pre-shootout
+  // score (e.g. 1-1 at 90', 2-1 a.e.t.); prefer it over the 90-minute `ft` so
+  // the displayed/Elo score and the goal timeline agree. `p` is the shootout
+  // tally for a tie still level after extra time — it names who advanced.
+  const result = pair(m.score?.et) ?? ft;
+  const shootout = pair(m.score?.p);
   const kickoff = kickoffIso(m.date, m.time);
 
   // openfootball has no live field, so we infer "in play": kickoff has passed,
@@ -124,10 +137,12 @@ function mapMatch(m: OfMatch, index: number): Fixture {
     venue: m.ground ?? null,
     home,
     away,
-    homeGoals: finished ? ft![0] : null,
-    awayGoals: finished ? ft![1] : null,
+    homeGoals: finished ? result![0] : null,
+    awayGoals: finished ? result![1] : null,
     minute: null,
     goals: parseGoals(m),
+    shootout:
+      finished && shootout ? { home: shootout[0], away: shootout[1] } : null,
   };
 }
 
