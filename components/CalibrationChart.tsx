@@ -261,49 +261,10 @@ function FavouriteCalibrationDot({ perMatch }: { perMatch: MatchGrade[] }) {
           ))}
         </svg>
       </div>
-      <div className="mt-4 md:mt-0 md:flex-1">
-        <p className="text-sm text-ink-300">
-          Too few games for a full calibration curve — here&rsquo;s how the
-          model&rsquo;s knockout favourites have fared so far ({n}{" "}
-          {n === 1 ? "tie" : "ties"}).
-        </p>
-        <figcaption className="mt-3 text-xs text-ink-400">
-          The dot is the model&rsquo;s knockout favourites: predicted to advance{" "}
-          <span className="font-medium text-ink-200">{Math.round(meanConf * 100)}%</span>{" "}
-          on average, {k} of {n} ({Math.round(observed * 100)}%) did. The bar is how
-          uncertain that is with so few games —{" "}
-          {bandCrossesDiagonal
-            ? "it still crosses the dashed line, so there's no clear over- or under-confidence yet."
-            : observed < meanConf
-              ? "it sits below the dashed line, an early hint the model has been over-confident."
-              : "it sits above the dashed line, an early hint the model has been cautious."}{" "}
-          Each <span className="font-medium text-pitch-500">✓</span>/
-          <span className="font-medium text-accent-ember">✗</span>{" "}is one tie at the
-          model&rsquo;s confidence in its pick.
-        </figcaption>
-        {/* Per-tie list (the rug's labelled counterpart): the model's pick + how
-            sure it was + whether it advanced. */}
-        <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs" aria-hidden>
-          {[...calls]
-            .sort((a, b) => b.conf - a.conf)
-            .map(({ m, conf, fav }, i) => (
-              <li
-                key={`${m.date}-${m.home}-${m.away}-${i}`}
-                className="flex items-center gap-1.5"
-              >
-                <span className={m.correct ? "text-pitch-500" : "text-accent-ember"}>
-                  {m.correct ? "✓" : "✗"}
-                </span>
-                <span className="truncate text-ink-200">{fav}</span>
-                <span className="ml-auto shrink-0 tabular-nums text-ink-400">
-                  {Math.round(conf * 100)}%
-                </span>
-              </li>
-            ))}
-        </ul>
-      </div>
       {/* Screen-reader equivalent (the visible chip list is aria-hidden, so this
-          is the only per-tie listing for SR users — it names the model's pick). */}
+          is the only per-tie listing for SR users — it names the model's pick).
+          A <figcaption> must be a direct child of <figure>, so the explanatory
+          right column IS the figcaption (the figure's last child). */}
       <table className="sr-only">
         <caption>
           Knockout favourites: the model&rsquo;s pick, its confidence, and whether
@@ -332,6 +293,47 @@ function FavouriteCalibrationDot({ perMatch }: { perMatch: MatchGrade[] }) {
           ))}
         </tbody>
       </table>
+      <figcaption className="mt-4 md:mt-0 md:flex-1">
+        <p className="text-sm text-ink-300">
+          Too few games for a full calibration curve — here&rsquo;s how the
+          model&rsquo;s knockout favourites have fared so far ({n}{" "}
+          {n === 1 ? "tie" : "ties"}).
+        </p>
+        <p className="mt-3 text-xs text-ink-400">
+          The dot is the model&rsquo;s knockout favourites: predicted to advance{" "}
+          <span className="font-medium text-ink-200">{Math.round(meanConf * 100)}%</span>{" "}
+          on average, {k} of {n} ({Math.round(observed * 100)}%) did. The bar is how
+          uncertain that is with so few games —{" "}
+          {bandCrossesDiagonal
+            ? "it still crosses the dashed line, so there's no clear over- or under-confidence yet."
+            : observed < meanConf
+              ? "it sits below the dashed line, an early hint the model has been over-confident."
+              : "it sits above the dashed line, an early hint the model has been cautious."}{" "}
+          Each <span className="font-medium text-pitch-500">✓</span>/
+          <span className="font-medium text-accent-ember">✗</span>{" "}is one tie at the
+          model&rsquo;s confidence in its pick.
+        </p>
+        {/* Per-tie list (the rug's labelled counterpart): the model's pick + how
+            sure it was + whether it advanced. */}
+        <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs" aria-hidden>
+          {[...calls]
+            .sort((a, b) => b.conf - a.conf)
+            .map(({ m, conf, fav }, i) => (
+              <li
+                key={`${m.date}-${m.home}-${m.away}-${i}`}
+                className="flex items-center gap-1.5"
+              >
+                <span className={m.correct ? "text-pitch-500" : "text-accent-ember"}>
+                  {m.correct ? "✓" : "✗"}
+                </span>
+                <span className="truncate text-ink-200">{fav}</span>
+                <span className="ml-auto shrink-0 tabular-nums text-ink-400">
+                  {Math.round(conf * 100)}%
+                </span>
+              </li>
+            ))}
+        </ul>
+      </figcaption>
     </figure>
   );
 }
