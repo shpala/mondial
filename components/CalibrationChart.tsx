@@ -302,26 +302,32 @@ function FavouriteCalibrationDot({ perMatch }: { perMatch: MatchGrade[] }) {
             ))}
         </ul>
       </div>
-      {/* Screen-reader equivalent. */}
+      {/* Screen-reader equivalent (the visible chip list is aria-hidden, so this
+          is the only per-tie listing for SR users — it names the model's pick). */}
       <table className="sr-only">
         <caption>
-          Knockout favourites: predicted vs observed advance, and each tie
+          Knockout favourites: the model&rsquo;s pick, its confidence, and whether
+          that pick advanced
         </caption>
         <thead>
           <tr>
             <th>Match</th>
-            <th>Confidence in pick</th>
+            <th>Model&rsquo;s pick</th>
+            <th>Confidence</th>
             <th>Result</th>
           </tr>
         </thead>
         <tbody>
-          {calls.map(({ m, conf }, i) => (
+          {calls.map(({ m, conf, fav }, i) => (
             <tr key={`${m.date}-${m.home}-${m.away}-${i}`}>
               <td>
                 {m.home} v {m.away}
               </td>
+              <td>{fav}</td>
               <td>{Math.round(conf * 100)}%</td>
-              <td>{m.correct ? "Advanced (correct)" : "Out (upset)"}</td>
+              <td>
+                {fav} {m.correct ? "advanced (correct)" : "eliminated (upset)"}
+              </td>
             </tr>
           ))}
         </tbody>
