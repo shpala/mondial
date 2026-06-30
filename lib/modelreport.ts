@@ -23,6 +23,9 @@ export interface MatchGrade {
   actual: MatchOutcome;
   correct: boolean;
   stage: string; // "Group Stage" | "Round of 32" | … — lets the UI tag each row
+  /** Penalty-shootout tally (home/away) for a knockout decided on penalties, so
+   *  the match history can show "1–1 (4–3 pens)"; null otherwise. */
+  shootout?: { home: number; away: number } | null;
 }
 
 export interface ReliabilityBucket {
@@ -166,6 +169,7 @@ export function gradeOutcomes(fixtures: Fixture[]): OutcomeReport {
           home: f.home.name, away: f.away.name,
           homeGoals: f.homeGoals!, awayGoals: f.awayGoals!,
           predicted: { home: pHome, draw: 0, away: pAway }, actual, correct, stage: f.stage,
+          shootout: f.shootout ?? null,
         });
       }
     }
