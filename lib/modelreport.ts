@@ -67,6 +67,22 @@ export interface OutcomeReport {
 const BASELINE_LOGLOSS = Math.log(3);
 const KO_BASELINE_LOGLOSS = Math.log(2);
 
+// A reliability diagram is only meaningful with enough events spread across
+// enough probability bins — below this a few games pin every bin's observed
+// rate to 0% or 100% (a misleading scatter on the chart's rails). The group
+// stage (~216 events over ~6 bins) clears it; an early knockout stage (~8
+// events) does not, and should fall back to a per-match view instead.
+const MIN_RELIABILITY_BINS = 4;
+const MIN_RELIABILITY_EVENTS = 30;
+
+/** Whether a reliability sample is large enough to plot as a calibration curve
+ *  (vs. a misleading small-n scatter). Counts populated bins and total events. */
+export function reliabilityIsAdequate(reliability: ReliabilityBucket[]): boolean {
+  const pts = reliability.filter((r) => r.count > 0);
+  const events = pts.reduce((s, p) => s + p.count, 0);
+  return pts.length >= MIN_RELIABILITY_BINS && events >= MIN_RELIABILITY_EVENTS;
+}
+
 /** Reliability diagram rows from per-bucket sums (predicted mass, observed hits,
  *  count), keeping only populated buckets. */
 function buildReliability(

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Fixture, Team } from "@/lib/types";
-import { gradeOutcomes, gradeQualification } from "@/lib/modelreport";
+import {
+  gradeOutcomes,
+  gradeQualification,
+  reliabilityIsAdequate,
+} from "@/lib/modelreport";
+import type { ReliabilityBucket } from "@/lib/modelreport";
 import { simulateTournament } from "@/lib/montecarlo";
 import { computeGroupStandings } from "@/lib/standings";
 
@@ -113,6 +118,39 @@ describe("gradeOutcomes — knockouts (advance calls)", () => {
     expect(r.totalN).toBe(2);
     expect(r.totalHits).toBe(r.hits + r.knockout.hits);
     expect(r.totalHits).toBe(2);
+  });
+});
+
+describe("reliabilityIsAdequate", () => {
+  const bins = (specs: [number, number][]): ReliabilityBucket[] =>
+    specs.map(([bucket, count]) => ({
+      bucket,
+      predicted: bucket / 10,
+      observed: 0.5,
+      count,
+    }));
+
+  it("is adequate for a group-scale sample (enough bins AND events)", () => {
+    expect(
+      reliabilityIsAdequate(bins([[2, 40], [3, 40], [4, 40], [5, 40], [6, 30], [7, 26]])),
+    ).toBe(true);
+  });
+
+  it("is NOT adequate for a tiny binary sample (knockout-scale: few events)", () => {
+    // 6 populated bins (passes the bin floor) but only ~8 events total → fails.
+    expect(
+      reliabilityIsAdequate(bins([[2, 1], [3, 2], [4, 1], [5, 2], [6, 1], [7, 1]])),
+    ).toBe(false);
+  });
+
+  it("is NOT adequate with too few populated bins, even if events are plentiful", () => {
+    expect(reliabilityIsAdequate(bins([[5, 80]]))).toBe(false);
+  });
+
+  it("ignores empty bins", () => {
+    expect(
+      reliabilityIsAdequate([{ bucket: 0, predicted: 0, observed: 0, count: 0 }]),
+    ).toBe(false);
   });
 });
 
