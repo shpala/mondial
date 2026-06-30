@@ -191,11 +191,15 @@ export const getVerdict = cache(async () => {
   const [odds, raw] = await Promise.all([getTitleOdds(), getRawFixtures()]);
   const favourite = odds.find((o) => o.champion > 0) ?? null;
   const report = gradeOutcomes(raw);
+  const ko = report.knockout;
   return {
     favourite,
-    hits: report.hits,
-    n: report.n,
-    edge: report.n ? report.baselineLogLoss - report.logLoss : 0,
+    // Combined track record across every game up to the final.
+    hits: report.totalHits,
+    n: report.totalN,
+    // Per-stage skill vs the appropriate no-skill baseline (>0 beats it).
+    group: { n: report.n, edge: report.n ? report.baselineLogLoss - report.logLoss : 0 },
+    knockout: { n: ko.n, edge: ko.n ? ko.baselineLogLoss - ko.logLoss : 0 },
   };
 });
 
