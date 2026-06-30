@@ -242,7 +242,12 @@ export default async function ModelPage() {
                       </td>
                       <td className="px-4 py-2 text-center font-display tabular-nums text-ink-300">
                         {m.homeGoals}–{m.awayGoals}
-                        {isKo ? <span className="text-ink-500"> *</span> : null}
+                        {m.shootout ? (
+                          <span className="text-[11px] font-semibold text-ink-400">
+                            {" "}
+                            ({m.shootout.home}–{m.shootout.away} pens)
+                          </span>
+                        ) : null}
                       </td>
                       <td className={cellCls("home")}>{pct(m.predicted.home)}</td>
                       {isKo ? (
@@ -270,10 +275,13 @@ export default async function ModelPage() {
               </tbody>
             </table>
           </div>
-          <p className="mt-2 text-xs text-ink-400">
-            Knockout rows (<span className="text-ink-500">*</span>) show the
-            score before penalties and are graded on which side won; Home / Away
-            are the model&rsquo;s two-way probabilities, not win / draw / loss.
+          <p className="mt-2 max-w-2xl text-xs text-ink-400">
+            Knockout matches (Round of 32 onward) are graded on which side won
+            the tie — penalties included — so Home / Away are the model&rsquo;s
+            two-way advance probabilities, not win / draw / loss. A shootout is
+            rated a <strong>draw</strong>{" "}for team strength (penalties
+            don&rsquo;t measure quality), so a side can win the tie without its
+            rating rising.
           </p>
         </section>
       )}

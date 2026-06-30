@@ -90,6 +90,12 @@ describe("gradeOutcomes — knockouts (advance calls)", () => {
     expect(m.actual).toBe("away"); // B advanced on penalties
     expect(m.correct).toBe(false); // model favoured A
     expect(r.knockout.logLoss).toBeCloseTo(-Math.log(m.predicted.away), 9);
+    expect(m.shootout).toEqual({ home: 2, away: 4 }); // carried for display
+  });
+
+  it("leaves shootout null on a decisive knockout (no penalties)", () => {
+    const r = gradeOutcomes([ko(8, A, B, 2, 0, "2026-07-01T00:00:00Z")]);
+    expect(r.knockout.perMatch[0].shootout ?? null).toBeNull();
   });
 
   it("skips a knockout still level with no recorded shootout (winner unknown)", () => {
