@@ -160,7 +160,7 @@ export default async function ModelPage() {
             better-calibrated the model.
           </p>
           {/* Reliability diagram — are 70%-calls right ~70% of the time? */}
-          <CalibrationChart reliability={report.reliability} perMatch={report.perMatch} />
+          <CalibrationChart reliability={report.reliability} />
         </section>
       )}
 
@@ -188,7 +188,7 @@ export default async function ModelPage() {
             ln 3 above.
           </p>
           <h3 className="mb-1 text-sm font-semibold text-ink-300">Reliability</h3>
-          <CalibrationChart reliability={ko.reliability} perMatch={ko.perMatch} />
+          <CalibrationChart reliability={ko.reliability} perMatch={ko.perMatch} advanceCalls />
         </section>
       )}
 

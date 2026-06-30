@@ -21,14 +21,25 @@ import { reliabilityIsAdequate, type MatchGrade, type ReliabilityBucket } from "
 export function CalibrationChart({
   reliability,
   perMatch,
+  advanceCalls = false,
 }: {
   reliability: ReliabilityBucket[];
   /** Per-match grades for the same slice; used for the small-sample fallback. */
   perMatch?: MatchGrade[];
+  /** This slice is graded as binary "who advances" calls (knockouts). Only then
+   *  does the small-sample fallback make sense — a 3-way W/D/L group stage must
+   *  never render the advance-call strip (it would mislabel max(home,away) and the
+   *  draw mass), so it falls back to its own (sparse) scatter instead. */
+  advanceCalls?: boolean;
 }) {
   const pts = reliability.filter((r) => r.count > 0);
 
-  if (!reliabilityIsAdequate(reliability) && perMatch && perMatch.length > 0) {
+  if (
+    advanceCalls &&
+    !reliabilityIsAdequate(reliability) &&
+    perMatch &&
+    perMatch.length > 0
+  ) {
     return <AdvanceCallStrip perMatch={perMatch} />;
   }
 
