@@ -5,6 +5,7 @@ import {
   gradeQualification,
   packStripRows,
   reliabilityIsAdequate,
+  wilsonInterval,
 } from "@/lib/modelreport";
 import type { ReliabilityBucket } from "@/lib/modelreport";
 import { simulateTournament } from "@/lib/montecarlo";
@@ -185,6 +186,33 @@ describe("packStripRows", () => {
   it("packs greedily into the fewest rows (first-fit)", () => {
     // 59,60 collide → 60 to row1; 65 fits row0 (gap6); 77 fits row0.
     expect(packStripRows([59, 60, 65, 77], 6)).toEqual([0, 1, 0, 0]);
+  });
+});
+
+describe("wilsonInterval", () => {
+  it("matches the known 95% interval for 2 of 4", () => {
+    const { lo, hi } = wilsonInterval(2, 4);
+    expect(lo).toBeCloseTo(0.15, 2);
+    expect(hi).toBeCloseTo(0.85, 2);
+  });
+
+  it("clamps within [0,1] at the extremes", () => {
+    const all = wilsonInterval(4, 4);
+    expect(all.hi).toBeLessThanOrEqual(1);
+    expect(all.lo).toBeGreaterThan(0.4); // 4/4 → lower bound well above 0
+    const none = wilsonInterval(0, 4);
+    expect(none.lo).toBe(0);
+    expect(none.hi).toBeLessThan(0.6);
+  });
+
+  it("returns the full band for n=0 (nothing observed)", () => {
+    expect(wilsonInterval(0, 0)).toEqual({ lo: 0, hi: 1 });
+  });
+
+  it("narrows as n grows at the same proportion", () => {
+    const small = wilsonInterval(1, 2);
+    const big = wilsonInterval(50, 100);
+    expect(big.hi - big.lo).toBeLessThan(small.hi - small.lo);
   });
 });
 
