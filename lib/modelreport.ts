@@ -2,7 +2,8 @@
 // Date/Math.random — so it runs identically on the server and in tests. Reuses
 // the live-Elo roll and the Davidson outcome model; never mutates inputs.
 import type { Fixture, Group, MatchOutcome, Team } from "@/lib/types";
-import { effectiveRating } from "@/lib/prediction";
+import { bracketAdvanceProbability, effectiveRating } from "@/lib/prediction";
+import { decidedWinnerId } from "@/lib/bracket-results";
 import { eloUpdate } from "@/lib/ratings";
 import { outcomeOf } from "@/lib/outcome";
 import { outcomeProbs, simulateTournament, type TeamOdds } from "@/lib/montecarlo";
@@ -14,9 +15,14 @@ export interface MatchGrade {
   away: string;
   homeGoals: number;
   awayGoals: number;
+  /** Group games: 3-way win/draw/away masses. Knockouts: advance probabilities
+   *  (home = P(home advances), away = its complement, draw always 0). */
   predicted: { home: number; draw: number; away: number };
+  /** Group games: "home"|"draw"|"away" from the score. Knockouts: "home"|"away"
+   *  for the side that advanced (penalties included) — never "draw". */
   actual: MatchOutcome;
   correct: boolean;
+  stage: string; // "Group Stage" | "Round of 32" | … — lets the UI tag each row
 }
 
 export interface ReliabilityBucket {
@@ -26,17 +32,54 @@ export interface ReliabilityBucket {
   count: number;
 }
 
-export interface OutcomeReport {
+/** A graded slice of the schedule (one prediction task). Group games and knockout
+ *  ties are scored as different tasks — 3-way vs binary-advance — so each carries
+ *  its own no-skill baseline (ln 3 vs ln 2) and calibration curve. */
+export interface StageOutcome {
   n: number;
   logLoss: number;
   brier: number;
-  baselineLogLoss: number; // ln 3 — the uniform no-skill forecast
+  baselineLogLoss: number;
   hits: number; // matches where the model's most-likely outcome was correct
   reliability: ReliabilityBucket[];
   perMatch: MatchGrade[];
 }
 
+export interface OutcomeReport {
+  // Group stage (3-way W/D/L). Top-level for backward-compat with existing callers.
+  n: number;
+  logLoss: number;
+  brier: number;
+  baselineLogLoss: number; // ln 3 — the uniform no-skill 3-way forecast
+  hits: number;
+  reliability: ReliabilityBucket[];
+  perMatch: MatchGrade[];
+  // Knockout ties graded as advance calls (binary, baseline ln 2).
+  knockout: StageOutcome;
+  // Combined across every game up to the final (the headline track record).
+  totalN: number;
+  totalHits: number;
+}
+
 const BASELINE_LOGLOSS = Math.log(3);
+const KO_BASELINE_LOGLOSS = Math.log(2);
+
+/** Reliability diagram rows from per-bucket sums (predicted mass, observed hits,
+ *  count), keeping only populated buckets. */
+function buildReliability(
+  relP: number[],
+  relH: number[],
+  relN: number[],
+): ReliabilityBucket[] {
+  return relN
+    .map((cnt, i) => ({
+      bucket: i,
+      predicted: cnt ? relP[i] / cnt : 0,
+      observed: cnt ? relH[i] / cnt : 0,
+      count: cnt,
+    }))
+    .filter((r) => r.count > 0);
+}
 
 function isFinishedReal(f: Fixture): boolean {
   return (
@@ -58,69 +101,105 @@ export function gradeOutcomes(fixtures: Fixture[]): OutcomeReport {
   };
   for (const f of fixtures) { seed(f.home); seed(f.away); }
 
+  // Every finished real game, oldest first, so Elo rolls forward through the
+  // group stage AND into the knockouts before each later game is predicted.
   const finished = fixtures
-    .filter((f) => f.stage === "Group Stage" && isFinishedReal(f))
+    .filter(isFinishedReal)
     .sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff));
 
-  let logLoss = 0, brier = 0, hits = 0;
-  const relP = new Array(10).fill(0);
-  const relH = new Array(10).fill(0);
-  const relN = new Array(10).fill(0);
-  const perMatch: MatchGrade[] = [];
+  // Group stage — 3-way (W/D/L) scoring.
+  let gLogLoss = 0, gBrier = 0, gHits = 0;
+  const gRelP = new Array(10).fill(0), gRelH = new Array(10).fill(0), gRelN = new Array(10).fill(0);
+  const gPerMatch: MatchGrade[] = [];
+  // Knockouts — binary "who advanced" scoring (penalties included).
+  let kLogLoss = 0, kBrier = 0, kHits = 0;
+  const kRelP = new Array(10).fill(0), kRelH = new Array(10).fill(0), kRelN = new Array(10).fill(0);
+  const kPerMatch: MatchGrade[] = [];
 
   for (const f of finished) {
     const h = f.home.id, a = f.away.id;
-    const eh = effectiveRating({ rating: rating.get(h)!, host: host.get(h) });
-    const ea = effectiveRating({ rating: rating.get(a)!, host: host.get(a) });
-    const p = outcomeProbs(
-      { rating: rating.get(h)!, host: host.get(h) },
-      { rating: rating.get(a)!, host: host.get(a) },
-    );
-    const actual = outcomeOf(f.homeGoals!, f.awayGoals!);
+    const homeT = { rating: rating.get(h)!, host: host.get(h) };
+    const awayT = { rating: rating.get(a)!, host: host.get(a) };
+    const eh = effectiveRating(homeT);
+    const ea = effectiveRating(awayT);
 
-    logLoss += -Math.log(Math.max(p[actual], 1e-15));
-    for (const key of ["home", "draw", "away"] as MatchOutcome[]) {
-      const y = actual === key ? 1 : 0;
-      brier += (p[key] - y) ** 2;
-      const b = Math.min(9, Math.floor(p[key] * 10));
-      relP[b] += p[key]; relH[b] += y; relN[b] += 1;
+    if (f.stage === "Group Stage") {
+      const p = outcomeProbs(homeT, awayT);
+      const actual = outcomeOf(f.homeGoals!, f.awayGoals!);
+      gLogLoss += -Math.log(Math.max(p[actual], 1e-15));
+      for (const key of ["home", "draw", "away"] as MatchOutcome[]) {
+        const y = actual === key ? 1 : 0;
+        gBrier += (p[key] - y) ** 2;
+        const b = Math.min(9, Math.floor(p[key] * 10));
+        gRelP[b] += p[key]; gRelH[b] += y; gRelN[b] += 1;
+      }
+      const fav = (["home", "draw", "away"] as MatchOutcome[]).reduce((m, k) =>
+        p[k] > p[m] ? k : m, "home" as MatchOutcome);
+      const correct = fav === actual;
+      if (correct) gHits++;
+      gPerMatch.push({
+        date: f.kickoff.slice(0, 10),
+        home: f.home.name, away: f.away.name,
+        homeGoals: f.homeGoals!, awayGoals: f.awayGoals!,
+        predicted: p, actual, correct, stage: f.stage,
+      });
+    } else {
+      // Knockout: grade the binary advance call. A tie still level with no
+      // recorded shootout has no known winner yet — roll Elo but don't score it.
+      const advancer = decidedWinnerId(f);
+      if (advancer != null) {
+        const pHome = bracketAdvanceProbability(homeT, awayT);
+        const pAway = 1 - pHome;
+        const actual: MatchOutcome = advancer === h ? "home" : "away";
+        const pActual = actual === "home" ? pHome : pAway;
+        kLogLoss += -Math.log(Math.max(pActual, 1e-15));
+        for (const [key, pk] of [["home", pHome], ["away", pAway]] as const) {
+          const y = actual === key ? 1 : 0;
+          kBrier += (pk - y) ** 2;
+          const b = Math.min(9, Math.floor(pk * 10));
+          kRelP[b] += pk; kRelH[b] += y; kRelN[b] += 1;
+        }
+        const correct = (pHome >= pAway ? "home" : "away") === actual;
+        if (correct) kHits++;
+        kPerMatch.push({
+          date: f.kickoff.slice(0, 10),
+          home: f.home.name, away: f.away.name,
+          homeGoals: f.homeGoals!, awayGoals: f.awayGoals!,
+          predicted: { home: pHome, draw: 0, away: pAway }, actual, correct, stage: f.stage,
+        });
+      }
     }
-    const fav = (["home", "draw", "away"] as MatchOutcome[]).reduce((m, k) =>
-      p[k] > p[m] ? k : m, "home" as MatchOutcome);
-    const correct = fav === actual;
-    if (correct) hits++;
-
-    perMatch.push({
-      date: f.kickoff.slice(0, 10),
-      home: f.home.name, away: f.away.name,
-      homeGoals: f.homeGoals!, awayGoals: f.awayGoals!,
-      predicted: p, actual, correct,
-    });
 
     // Roll the result in AFTER scoring (host-adjusted Elo, same K as the model).
+    // Penalty-decided ties are level on the field → eloUpdate scores them a draw,
+    // matching computeLiveRatings (the rating the live model actually carries).
     const d = eloUpdate(eh, ea, f.homeGoals!, f.awayGoals!);
     rating.set(h, rating.get(h)! + d);
     rating.set(a, rating.get(a)! - d);
   }
 
-  const n = finished.length;
-  const reliability = relN
-    .map((cnt, i) => ({
-      bucket: i,
-      predicted: cnt ? relP[i] / cnt : 0,
-      observed: cnt ? relH[i] / cnt : 0,
-      count: cnt,
-    }))
-    .filter((r) => r.count > 0);
+  const gN = gPerMatch.length, kN = kPerMatch.length;
+  const knockout: StageOutcome = {
+    n: kN,
+    logLoss: kN ? kLogLoss / kN : 0,
+    brier: kN ? kBrier / kN : 0,
+    baselineLogLoss: KO_BASELINE_LOGLOSS,
+    hits: kHits,
+    reliability: buildReliability(kRelP, kRelH, kRelN),
+    perMatch: kPerMatch,
+  };
 
   return {
-    n,
-    logLoss: n ? logLoss / n : 0,
-    brier: n ? brier / n : 0,
+    n: gN,
+    logLoss: gN ? gLogLoss / gN : 0,
+    brier: gN ? gBrier / gN : 0,
     baselineLogLoss: BASELINE_LOGLOSS,
-    hits,
-    reliability,
-    perMatch,
+    hits: gHits,
+    reliability: buildReliability(gRelP, gRelH, gRelN),
+    perMatch: gPerMatch,
+    knockout,
+    totalN: gN + kN,
+    totalHits: gHits + kHits,
   };
 }
 

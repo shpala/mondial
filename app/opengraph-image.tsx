@@ -97,7 +97,7 @@ export default async function OpengraphImage() {
                 </div>
               </div>
               <div style={{ display: "flex", marginTop: 22, fontSize: 26, color: "#8b93a6" }}>
-                {n > 0 ? `${verdict!.hits}/${n} group calls correct · ` : ""}cup.shpa.la
+                {n > 0 ? `${verdict!.hits}/${n} calls correct · ` : ""}cup.shpa.la
               </div>
             </div>
           ) : (

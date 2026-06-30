@@ -37,8 +37,9 @@ export async function VerdictBand() {
   // never break the layout if the sim/data is unavailable
   const verdict = await getVerdict().catch(() => null);
   if (!verdict) return null;
-  const { favourite, hits, n, edge } = verdict;
+  const { favourite, hits, n, group, knockout } = verdict;
   if (!favourite) return null;
+  const fmtEdge = (e: number) => `${e >= 0 ? "+" : ""}${e.toFixed(2)}`;
 
   return (
     <aside aria-label="Model verdict" className="relative border-b border-ink-700 bg-ink-900/70">
@@ -64,7 +65,7 @@ export async function VerdictBand() {
           <Link
             href="/model"
             className="ml-auto shrink-0 text-[11px] tabular-nums text-ink-300 transition hover:text-ink-100"
-            title="The model's live track record on group games"
+            title="The model's live track record across every game up to the final"
           >
             <span className="font-semibold text-ink-100">
               {hits}/{n}
@@ -72,8 +73,8 @@ export async function VerdictBand() {
             called
             <span className="hidden sm:inline">
               {" "}
-              · {edge >= 0 ? "+" : ""}
-              {edge.toFixed(2)} vs baseline
+              · {fmtEdge(group.edge)} group
+              {knockout.n > 0 ? ` / ${fmtEdge(knockout.edge)} KO` : ""}
             </span>
           </Link>
         )}

@@ -80,9 +80,9 @@ export default async function DashboardPage() {
                 </span>
               </h1>
               <p className="mt-3 max-w-xl text-sm text-ink-300">
-                {report.n > 0 ? (
+                {report.totalN > 0 ? (
                   <>
-                    {report.hits} of {report.n} group calls correct
+                    {report.totalHits} of {report.totalN} calls correct
                     {usingSample ? " on sample fixtures" : " so far"} — title
                     odds across {teams.length} nations, simulated thousands of
                     times.

@@ -43,12 +43,6 @@ describe("gradeOutcomes", () => {
     expect(r.hits).toBe(1); // A was favourite and won
   });
 
-  it("ignores knockout matches (group stage only)", () => {
-    const ko = gx(9, A, B, 1, 0, "2026-07-01T00:00:00Z");
-    ko.stage = "Round of 16";
-    expect(gradeOutcomes([ko]).n).toBe(0);
-  });
-
   it("is leak-free: a later match's prediction ignores its own result", () => {
     const g1a = gx(1, A, B, 1, 0, "2026-06-11T00:00:00Z");
     const g2a = gx(2, A, B, 1, 0, "2026-06-15T00:00:00Z");
@@ -56,6 +50,63 @@ describe("gradeOutcomes", () => {
     const p1 = gradeOutcomes([g1a, g2a]).perMatch[1].predicted;
     const p2 = gradeOutcomes([g1a, g2b]).perMatch[1].predicted;
     expect(p2).toEqual(p1);
+  });
+});
+
+describe("gradeOutcomes — knockouts (advance calls)", () => {
+  const A = team(1, 1900), B = team(2, 1700);
+  // A knockout fixture (decisive or, with `shootout`, level after extra time).
+  function ko(
+    id: number,
+    home: Team,
+    away: Team,
+    hg: number,
+    ag: number,
+    kickoff: string,
+    shootout: { home: number; away: number } | null = null,
+  ): Fixture {
+    return { ...gx(id, home, away, hg, ag, kickoff), stage: "Round of 16", group: null, shootout };
+  }
+
+  it("grades a decisive knockout as an advance call (ln2 baseline), not a 3-way draw", () => {
+    const r = gradeOutcomes([ko(9, A, B, 1, 0, "2026-07-01T00:00:00Z")]);
+    expect(r.n).toBe(0); // group count unchanged
+    expect(r.knockout.n).toBe(1);
+    expect(r.totalN).toBe(1);
+    expect(r.knockout.baselineLogLoss).toBeCloseTo(Math.log(2), 9);
+    const m = r.knockout.perMatch[0];
+    expect(m.actual).toBe("home"); // A advanced
+    expect(m.predicted.draw).toBe(0); // no draw in a knockout
+    expect(m.stage).toBe("Round of 16");
+    expect(m.correct).toBe(true); // A (favourite) advanced
+    expect(r.knockout.logLoss).toBeCloseTo(-Math.log(m.predicted.home), 9);
+  });
+
+  it("credits the shootout advancer when a tie is level after extra time", () => {
+    // 1-1, B wins the shootout 4-2 → B advances; the higher-rated A does not.
+    const r = gradeOutcomes([ko(9, A, B, 1, 1, "2026-07-01T00:00:00Z", { home: 2, away: 4 })]);
+    expect(r.knockout.n).toBe(1);
+    const m = r.knockout.perMatch[0];
+    expect(m.actual).toBe("away"); // B advanced on penalties
+    expect(m.correct).toBe(false); // model favoured A
+    expect(r.knockout.logLoss).toBeCloseTo(-Math.log(m.predicted.away), 9);
+  });
+
+  it("skips a knockout still level with no recorded shootout (winner unknown)", () => {
+    const r = gradeOutcomes([ko(9, A, B, 1, 1, "2026-07-01T00:00:00Z")]);
+    expect(r.knockout.n).toBe(0);
+    expect(r.totalN).toBe(0);
+  });
+
+  it("combines group + knockout into totalN / totalHits", () => {
+    const g = gx(1, A, B, 2, 0, "2026-06-11T00:00:00Z"); // A wins group game
+    const k = ko(9, A, B, 1, 0, "2026-07-01T00:00:00Z"); // A advances KO
+    const r = gradeOutcomes([g, k]);
+    expect(r.n).toBe(1);
+    expect(r.knockout.n).toBe(1);
+    expect(r.totalN).toBe(2);
+    expect(r.totalHits).toBe(r.hits + r.knockout.hits);
+    expect(r.totalHits).toBe(2);
   });
 });
 
