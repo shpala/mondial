@@ -19,6 +19,7 @@ import {
   effectiveRating,
 } from "@/lib/prediction";
 import { buildOfficialBracket, r32DrawFromFixtures } from "@/lib/bracket";
+import { decidedWinnerId } from "@/lib/bracket-results";
 import {
   goalRates,
   sampleScoreline,
@@ -55,6 +56,25 @@ function isFinished(f: Fixture): boolean {
 }
 
 const pairKey = (x: number, y: number) => (x < y ? `${x}-${y}` : `${y}-${x}`);
+
+/**
+ * Winners of already-played knockout ties, keyed by team-pair, so the simulation
+ * holds real results fixed instead of re-flipping them. A tie level after extra
+ * time is forced to its shootout winner (via {@link decidedWinnerId}); one still
+ * level with no recorded shootout is left out — its winner isn't known yet.
+ */
+export function forcedKnockoutWinners(
+  fixtures: readonly Fixture[],
+): Map<string, number> {
+  const forced = new Map<string, number>();
+  for (const f of fixtures) {
+    if (f.stage === "Group Stage" || !isFinished(f)) continue;
+    const winnerId = decidedWinnerId(f);
+    if (winnerId == null) continue;
+    forced.set(pairKey(f.home.id, f.away.id), winnerId);
+  }
+  return forced;
+}
 
 /**
  * Sample a finished scoreline for an unplayed group game. The calibrated
@@ -126,16 +146,9 @@ export function simulateTournament(
   }
   const teamList = [...teams.values()];
 
-  // Forced knockout winners from already-played knockout ties (keyed team-pair).
-  const forced = new Map<string, number>();
-  for (const f of fixtures) {
-    if (f.stage === "Group Stage" || !isFinished(f)) continue;
-    if (f.homeGoals === f.awayGoals) continue; // settled on pens; winner unknown
-    forced.set(
-      pairKey(f.home.id, f.away.id),
-      f.homeGoals! > f.awayGoals! ? f.home.id : f.away.id,
-    );
-  }
+  // Forced knockout winners from already-played knockout ties (keyed team-pair),
+  // including penalty-shootout outcomes for ties level after extra time.
+  const forced = forcedKnockoutWinners(fixtures);
 
   // Published R32 draw (real teams once the group stage is decided). Used to slot
   // best-thirds per the actual draw; self-gates per run — when a simulated group

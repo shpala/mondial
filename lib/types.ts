@@ -82,6 +82,10 @@ export interface Fixture {
   minute: string | null;
   /** Goal timeline (scorer + minute), when the source provides it. */
   goals: Goal[];
+  /** Penalty-shootout tally for a knockout tie level after extra time, home/away.
+   *  `homeGoals`/`awayGoals` carry the (drawn) pre-shootout score; this names the
+   *  side that advanced. Null for matches not decided on penalties. */
+  shootout?: { home: number; away: number } | null;
   /** De-vigged market consensus 1X2 probabilities for an upcoming fixture when
    *  betting odds are available (lib/api/sources/oddsapi); absent otherwise. */
   marketProbs?: { home: number; draw: number; away: number } | null;

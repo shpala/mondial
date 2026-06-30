@@ -90,3 +90,44 @@ describe("data facade capability routing + fallback", () => {
     expect((await data.getDataStatus()).usingSample).toBe(true);
   });
 });
+
+describe("resultsSignature (cross-request odds cache key)", () => {
+  function ko(over: Partial<import("@/lib/types").Fixture>): import("@/lib/types").Fixture {
+    const t = (id: number) => ({
+      id,
+      name: `T${id}`,
+      code: `T${id}`,
+      flag: "⚽",
+      group: "A",
+      rating: 1800,
+    });
+    return {
+      id: 73,
+      stage: "Round of 32",
+      group: null,
+      kickoff: "2026-06-29T20:30:00Z",
+      status: "finished",
+      venue: null,
+      home: t(1),
+      away: t(2),
+      homeGoals: 1,
+      awayGoals: 1,
+      minute: null,
+      goals: [],
+      shootout: null,
+      ...over,
+    };
+  }
+
+  it("changes when a level tie gains a shootout result (so cached odds recompute)", async () => {
+    const { resultsSignature } = await import("@/lib/data");
+    const level = [ko({})]; // 1-1, no shootout (winner unknown)
+    const decided = [ko({ shootout: { home: 3, away: 4 } })]; // now decided on pens
+    expect(resultsSignature(level)).not.toBe(resultsSignature(decided));
+  });
+
+  it("is stable for identical fixtures", async () => {
+    const { resultsSignature } = await import("@/lib/data");
+    expect(resultsSignature([ko({})])).toBe(resultsSignature([ko({})]));
+  });
+});

@@ -110,6 +110,18 @@ export default async function MatchPage({
   const scorePrediction = realTeams
     ? predictScoreline(fixture.home, fixture.away, { decisive })
     : null;
+  // A knockout tie level after extra time and decided on penalties: name who
+  // advanced and the tally, so the page agrees with the bracket's "won on
+  // penalties" (the score above stays the drawn on-field result).
+  const shootout = played ? fixture.shootout ?? null : null;
+  const penWinner =
+    shootout != null
+      ? shootout.home > shootout.away
+        ? fixture.home
+        : fixture.away
+      : null;
+  const penHi = shootout ? Math.max(shootout.home, shootout.away) : 0;
+  const penLo = shootout ? Math.min(shootout.home, shootout.away) : 0;
 
   const badge = live
     ? {
@@ -162,12 +174,19 @@ export default async function MatchPage({
           </div>
           <div className="min-w-[96px] text-center">
             {played ? (
-              <div
-                className="font-display text-3xl font-extrabold tabular-nums"
-                aria-label={`${live ? "Live score" : "Final score"}: ${fixture.home.name} ${fixture.homeGoals}, ${fixture.away.name} ${fixture.awayGoals}`}
-              >
-                {fixture.homeGoals}–{fixture.awayGoals}
-              </div>
+              <>
+                <div
+                  className="font-display text-3xl font-extrabold tabular-nums"
+                  aria-label={`${live ? "Live score" : "Final score"}: ${fixture.home.name} ${fixture.homeGoals}, ${fixture.away.name} ${fixture.awayGoals}${penWinner ? `, decided on penalties, ${penWinner.name} win ${penHi}–${penLo}` : ""}`}
+                >
+                  {fixture.homeGoals}–{fixture.awayGoals}
+                </div>
+                {penWinner && (
+                  <div className="mt-0.5 text-[11px] font-semibold text-ink-300">
+                    {penWinner.name} win {penHi}–{penLo} pens
+                  </div>
+                )}
+              </>
             ) : homeProb != null ? (
               <>
                 <div

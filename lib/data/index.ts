@@ -123,13 +123,19 @@ export const getFixtures = cache(async (): Promise<Fixture[]> => {
  *  with the same match count) invalidates the cross-request cache, not just a new
  *  finished score. The simulation is a pure function of these, so same signature ⇒
  *  same odds. */
-function resultsSignature(fixtures: Fixture[]): string {
+export function resultsSignature(fixtures: Fixture[]): string {
   let sig = fixtures.length >>> 0;
   for (const f of fixtures) {
     const rating = Math.round((f.home.rating + f.away.rating) * 4);
     sig = (sig * 33 + f.home.id * 131 + f.away.id * 17) >>> 0;
     sig = (sig * 33 + (f.group?.charCodeAt(0) ?? 0) + f.status.charCodeAt(0)) >>> 0;
     sig = (sig * 33 + rating + (f.homeGoals ?? -1) * 7 + (f.awayGoals ?? -1)) >>> 0;
+    // A penalty shootout decides a tie that's level on the field, so it changes
+    // who advances without changing homeGoals/awayGoals — fold it in so adding or
+    // flipping a shootout result invalidates the cached odds (and tells the two
+    // shootout outcomes apart).
+    sig =
+      (sig * 33 + (f.shootout ? f.shootout.home * 7 + f.shootout.away + 1 : 0)) >>> 0;
   }
   return sig.toString(36);
 }

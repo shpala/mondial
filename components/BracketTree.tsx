@@ -39,6 +39,7 @@ function Slot({
   winnerTone,
   prob,
   score,
+  pens,
   dimmed,
   locked,
   interactive,
@@ -50,6 +51,8 @@ function Slot({
   winnerTone: WinnerTone;
   prob: number | null;
   score: number | null;
+  /** Penalty-shootout tally for this side, when the tie was decided on pens. */
+  pens: number | null;
   dimmed: boolean;
   locked: boolean;
   interactive: boolean;
@@ -64,9 +67,12 @@ function Slot({
     );
   }
   const clickable = interactive && !locked;
+  const wonOnPens = isWinner && winnerTone === "result" && pens != null;
   const stateWord = isWinner
     ? winnerTone === "result"
-      ? "winner, actual result"
+      ? wonOnPens
+        ? "winner, won on penalties"
+        : "winner, actual result"
       : winnerTone === "pick"
         ? "winner, your pick"
         : "projected winner"
@@ -75,7 +81,7 @@ function Slot({
       : "awaiting result";
   const metric =
     score != null
-      ? `, scored ${score}`
+      ? `, scored ${score}${pens != null ? `, ${pens} in the shootout` : ""}`
       : isWinner && winnerTone === "model" && prob != null
         ? `, ${Math.round(prob * 100)} percent model win probability`
         : "";
@@ -107,6 +113,11 @@ function Slot({
           aria-hidden
         >
           {score}
+          {pens != null && (
+            <span className="ml-0.5 align-super text-[9px] font-semibold text-ink-300">
+              ({pens})
+            </span>
+          )}
         </span>
       ) : (
         prob != null && (
@@ -180,6 +191,20 @@ function MatchupCard({
         ? result!.homeGoals
         : result!.awayGoals
       : null;
+  // Penalty tally per side, only when the tie went to a shootout.
+  const shootout = played ? result!.shootout ?? null : null;
+  const topPens =
+    shootout && m.top
+      ? m.top.id === result!.homeId
+        ? shootout.home
+        : shootout.away
+      : null;
+  const bottomPens =
+    shootout && m.bottom
+      ? m.bottom.id === result!.homeId
+        ? shootout.home
+        : shootout.away
+      : null;
 
   const winnerTone: WinnerTone = played
     ? "result"
@@ -237,6 +262,7 @@ function MatchupCard({
         winnerTone={winnerTone}
         prob={m.winnerId === m.top?.id ? displayProb : null}
         score={topScore}
+        pens={topPens}
         dimmed={m.winnerId != null && m.winnerId !== m.top?.id}
         locked={played}
         interactive={interactive}
@@ -258,6 +284,7 @@ function MatchupCard({
         winnerTone={winnerTone}
         prob={m.winnerId === m.bottom?.id ? displayProb : null}
         score={bottomScore}
+        pens={bottomPens}
         dimmed={m.winnerId != null && m.winnerId !== m.bottom?.id}
         locked={played}
         interactive={interactive}
