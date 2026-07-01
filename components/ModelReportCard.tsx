@@ -34,6 +34,7 @@ export function ModelReportCard({
           <strong className="font-display tabular-nums">
             {report.totalHits} of {report.totalN}
           </strong>{" "}
+          ({Math.round((report.totalHits / report.totalN) * 100)}%){" "}
           {sample ? "sample " : ""}results —{" "}
           {/* The raw log-loss is jargon on the dashboard (the most casual touch
               point); keep the legible "blind guess" framing and tuck the number

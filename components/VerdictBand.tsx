@@ -70,7 +70,7 @@ export async function VerdictBand() {
             <span className="font-semibold text-ink-100">
               {hits}/{n}
             </span>{" "}
-            called
+            ({Math.round((hits / n) * 100)}%) called
             <span className="hidden sm:inline">
               {" "}
               · {fmtEdge(group.edge)} group
