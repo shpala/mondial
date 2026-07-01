@@ -82,7 +82,9 @@ export default async function DashboardPage() {
               <p className="mt-3 max-w-xl text-sm text-ink-300">
                 {report.totalN > 0 ? (
                   <>
-                    {report.totalHits} of {report.totalN} calls correct
+                    {report.totalHits} of {report.totalN} (
+                    {Math.round((report.totalHits / report.totalN) * 100)}%) calls
+                    correct
                     {usingSample ? " on sample fixtures" : " so far"} — title
                     odds across {teams.length} nations, simulated thousands of
                     times.
