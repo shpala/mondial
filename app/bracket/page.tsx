@@ -9,6 +9,7 @@ import { BracketTree } from "@/components/BracketTree";
 import { CandidatesPanel } from "@/components/CandidatesPanel";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { TeamFlag } from "@/components/ui/TeamFlag";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,11 @@ export default async function BracketPage() {
   const skeleton = buildOfficialBracket(groupsLive, r32DrawFromFixtures(fixtures));
   const breakdown = qualificationBreakdown(groups);
   const results = buildResultMap(fixtures);
+  // Monte Carlo title favourite (most likely to win the cup over 10k sims). This
+  // can differ from the deterministic tree's finalists, which just advance the
+  // favourite at every tie. Odds are sorted by championship probability, so the
+  // first with a non-zero chance is the favourite.
+  const titleFavourite = odds.find((o) => o.champion > 0) ?? null;
 
   return (
     <div className="animate-fade-up">
@@ -45,6 +51,27 @@ export default async function BracketPage() {
         <span className="rounded-full bg-ink-700/70 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-ink-300">
           Predicted
         </span>
+        {titleFavourite && (
+          <Link
+            href="#title-odds"
+            className="inline-flex items-center gap-1.5 rounded-full border border-accent-gold/30 bg-accent-gold/10 px-2.5 py-0.5 text-[11px] font-semibold text-accent-gold-bright transition hover:border-accent-gold/60"
+            title="The team most likely to win the cup, from the simulation — see title odds"
+          >
+            <span className="font-medium uppercase tracking-wide text-ink-400">
+              Most likely
+            </span>
+            <TeamFlag
+              flag={titleFavourite.team.flag}
+              alt={titleFavourite.team.name}
+              size={13}
+              decorative
+            />
+            {titleFavourite.team.name}
+            <span className="tabular-nums">
+              {Math.round(titleFavourite.champion * 100)}%
+            </span>
+          </Link>
+        )}
       </div>
       <p className="mb-6 max-w-2xl text-sm text-ink-400">
         The model&rsquo;s predicted path to the trophy, Round of 32 to the Final —
@@ -58,7 +85,9 @@ export default async function BracketPage() {
           How these are calculated →
         </Link>
       </p>
-      <TitleOddsTable odds={odds} />
+      <div id="title-odds" className="scroll-mt-24">
+        <TitleOddsTable odds={odds} />
+      </div>
       {/* Phone: bracket first (the centerpiece), candidates below it.
           Desktop: candidates context first, then the tree. */}
       <div className="flex flex-col">
@@ -70,6 +99,27 @@ export default async function BracketPage() {
           />
         </div>
         <div className="order-1 lg:order-2">
+          <p className="mb-3 max-w-2xl text-xs text-ink-400">
+            This tree follows the{" "}
+            <strong className="font-semibold text-ink-300">
+              favourite at every tie
+            </strong>{" "}
+            — one &ldquo;chalk&rdquo; path, not the overall title pick. Because
+            upsets compound, the team most likely to actually <em>win the cup</em>
+            {titleFavourite
+              ? ` (${titleFavourite.team.name}, ${Math.round(
+                  titleFavourite.champion * 100,
+                )}%)`
+              : ""}{" "}
+            can differ from these projected finalists — see the{" "}
+            <Link
+              href="#title-odds"
+              className="font-medium text-accent-gold hover:underline"
+            >
+              title odds
+            </Link>{" "}
+            above.
+          </p>
           <BracketTree skeleton={skeleton} results={results} />
         </div>
       </div>
