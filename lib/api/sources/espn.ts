@@ -30,8 +30,11 @@ export interface EspnLive {
   minute: string | null; // displayClock, e.g. "70'"
   /** ESPN event id — used to fetch the match summary (real line-ups). */
   eventId: string | null;
-  /** running score keyed by canonical team code */
+  /** running score keyed by canonical team code (pre-shootout for pens ties) */
   scores: Record<string, number>;
+  /** penalty-shootout tally keyed by canonical team code, when one is under way
+   *  or decided the tie; null otherwise */
+  shootout: Record<string, number> | null;
   goals: EspnGoal[];
 }
 
@@ -49,6 +52,8 @@ interface EspnTeam {
 interface EspnCompetitor {
   homeAway?: string;
   score?: string;
+  /** penalty-shootout tally, present only for ties that went to pens */
+  shootoutScore?: string | number;
   team?: EspnTeam;
 }
 interface EspnDetail {
@@ -112,6 +117,7 @@ export async function fetchEspnLive(revalidate = 15): Promise<Map<string, EspnLi
     if (!state || competitors.length !== 2) continue;
 
     const scores: Record<string, number> = {};
+    const shootoutScores: Record<string, number> = {};
     const teamIdToCode = new Map<string, string>();
     let ok = true;
     for (const c of competitors) {
@@ -126,9 +132,20 @@ export async function fetchEspnLive(revalidate = 15): Promise<Map<string, EspnLi
         break;
       }
       scores[code] = score;
+      // Pens tally rides alongside the (pre-shootout) score for ties that went
+      // to a shootout. Absent or malformed → no entry for this side.
+      const so = c.shootoutScore;
+      if (so != null && String(so).trim() !== "") {
+        const tally = Number(so);
+        if (Number.isFinite(tally)) shootoutScores[code] = tally;
+      }
       if (c.team?.id != null) teamIdToCode.set(String(c.team.id), code);
     }
     if (!ok) continue;
+    // Only a tally for BOTH sides is a shootout — a single side's number is
+    // malformed data, not a 4-0 shootout.
+    const shootout =
+      Object.keys(shootoutScores).length === 2 ? shootoutScores : null;
 
     const goals: EspnGoal[] = [];
     for (const d of comp?.details ?? []) {
@@ -151,6 +168,7 @@ export async function fetchEspnLive(revalidate = 15): Promise<Map<string, EspnLi
       minute: state === "in" ? (comp?.status?.displayClock ?? null) : null,
       eventId: ev.id != null ? String(ev.id) : null,
       scores,
+      shootout,
       goals,
     });
   }

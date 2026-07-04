@@ -16,7 +16,9 @@ import { MatchCard } from "@/components/MatchCard";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
+import { AutoRefresh } from "@/components/AutoRefresh";
 import { EstimatedNotice } from "@/components/ui/EstimatedData";
+import { requestNow } from "@/lib/serverTime";
 
 export const dynamic = "force-dynamic";
 
@@ -122,9 +124,17 @@ export default async function TeamPage({
     (f) => f.home.id === teamId || f.away.id === teamId,
   );
   const form = teamForm(teamFixtures, teamId);
+  // One fetch-time anchor for every card on the page — per-card clock reads
+  // would give each a slightly different freeze/freshness baseline.
+  const fetchedAt = requestNow();
 
   return (
     <div className="animate-fade-up">
+      {/* Fixtures & results self-update — fast while this team is playing, so a
+          live score (and the freeze logic below it) stays current. */}
+      <AutoRefresh
+        seconds={teamFixtures.some((f) => f.status === "live") ? 20 : 60}
+      />
       <SampleDataBanner />
       <Breadcrumb
         items={[
@@ -190,7 +200,12 @@ export default async function TeamPage({
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {teamFixtures.map((f) => (
-              <MatchCard key={f.id} fixture={f} sample={usingSample} />
+              <MatchCard
+                key={f.id}
+                fixture={f}
+                sample={usingSample}
+                fetchedAt={fetchedAt}
+              />
             ))}
           </div>
         </section>

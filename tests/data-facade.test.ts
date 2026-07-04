@@ -91,6 +91,146 @@ describe("data facade capability routing + fallback", () => {
   });
 });
 
+describe("ESPN shootout overlay", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  const KO_SPINE = {
+    name: "World Cup 2026",
+    matches: [
+      {
+        round: "Round of 32",
+        date: "2026-06-30",
+        team1: "Mexico",
+        team2: "Brazil",
+        // no score yet: the daily spine lags the finished match
+      },
+    ],
+  };
+
+  it("overlays a pens-decided tie (score + shootout) from a post ESPN event", async () => {
+    routeFetch({
+      openfootball: () => ({ ok: true, status: 200, json: async () => KO_SPINE }),
+      espn: () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          events: [
+            {
+              id: "501",
+              competitions: [
+                {
+                  status: { displayClock: "FT-Pens", type: { state: "post" } },
+                  competitors: [
+                    // ESPN's orientation is reversed vs the spine on purpose:
+                    // the overlay must map by canonical code, not position.
+                    { score: "1", shootoutScore: "4", team: { displayName: "Brazil" } },
+                    { score: "1", shootoutScore: "2", team: { displayName: "Mexico" } },
+                  ],
+                },
+              ],
+            },
+          ],
+        }),
+      }),
+    });
+    const data = await import("@/lib/data");
+    const f = (await data.getRawFixtures()).find(
+      (x) => x.home.code === "MEX" && x.away.code === "BRA",
+    );
+    expect(f).toBeDefined();
+    expect(f!.status).toBe("finished");
+    expect(f!.homeGoals).toBe(1);
+    expect(f!.awayGoals).toBe(1);
+    expect(f!.shootout).toEqual({ home: 2, away: 4 });
+  });
+
+  it("grafts ESPN's shootout onto a spine-finished level tie that lacks one", async () => {
+    // The daily spine can publish the finished 1-1 score before its shootout
+    // tally (`p`) lands. ESPN already knows the pens result — without the graft
+    // the tie reads as undecided (bracket unlocked, model ungraded) for hours.
+    routeFetch({
+      openfootball: () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          name: "World Cup 2026",
+          matches: [
+            {
+              round: "Round of 32",
+              date: "2026-06-30",
+              team1: "Mexico",
+              team2: "Brazil",
+              score: { ft: [1, 1] }, // finished per the spine, but no `p` yet
+            },
+          ],
+        }),
+      }),
+      espn: () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          events: [
+            {
+              id: "503",
+              competitions: [
+                {
+                  status: { displayClock: "FT-Pens", type: { state: "post" } },
+                  competitors: [
+                    { score: "1", shootoutScore: "4", team: { displayName: "Mexico" } },
+                    { score: "1", shootoutScore: "2", team: { displayName: "Brazil" } },
+                  ],
+                },
+              ],
+            },
+          ],
+        }),
+      }),
+    });
+    const data = await import("@/lib/data");
+    const f = (await data.getRawFixtures()).find(
+      (x) => x.home.code === "MEX" && x.away.code === "BRA",
+    );
+    expect(f!.status).toBe("finished");
+    expect(f!.homeGoals).toBe(1); // spine's own score stays authoritative
+    expect(f!.shootout).toEqual({ home: 4, away: 2 });
+  });
+
+  it("overlays the running shootout tally on an in-play match", async () => {
+    routeFetch({
+      openfootball: () => ({ ok: true, status: 200, json: async () => KO_SPINE }),
+      espn: () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          events: [
+            {
+              id: "502",
+              competitions: [
+                {
+                  status: { displayClock: "Pens", type: { state: "in" } },
+                  competitors: [
+                    { score: "1", shootoutScore: "3", team: { displayName: "Mexico" } },
+                    { score: "1", shootoutScore: "2", team: { displayName: "Brazil" } },
+                  ],
+                },
+              ],
+            },
+          ],
+        }),
+      }),
+    });
+    const data = await import("@/lib/data");
+    const f = (await data.getRawFixtures()).find(
+      (x) => x.home.code === "MEX" && x.away.code === "BRA",
+    );
+    expect(f!.status).toBe("live");
+    expect(f!.shootout).toEqual({ home: 3, away: 2 });
+  });
+});
+
 describe("resultsSignature (cross-request odds cache key)", () => {
   function ko(over: Partial<import("@/lib/types").Fixture>): import("@/lib/types").Fixture {
     const t = (id: number) => ({

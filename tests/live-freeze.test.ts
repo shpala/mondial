@@ -27,12 +27,32 @@ describe("reconcileLive", () => {
     expect(r.remember).toMatchObject({ homeGoals: 1, awayGoals: 0, minute: "57'", asOf: T0 });
   });
 
+  it("remembers and restores a running shootout tally across a feed drop", () => {
+    // Feed drops mid-shootout: the frozen reconstruction must keep the pens
+    // tally, not just the (drawn) score.
+    const live = fx({
+      status: "live",
+      homeGoals: 1,
+      awayGoals: 1,
+      minute: "Pens",
+      shootout: { home: 3, away: 2 },
+    });
+    const r1 = reconcileLive(live, null, T0);
+    expect(r1.remember).toMatchObject({ shootout: { home: 3, away: 2 } });
+
+    const dropped = fx({ status: "scheduled" });
+    const r2 = reconcileLive(dropped, r1.remember, T0 + 60_000);
+    expect(r2.stale).toBe(true);
+    expect(r2.fixture.shootout).toEqual({ home: 3, away: 2 });
+  });
+
   it("freezes the last-known live score when the overlay drops (reverts to scheduled)", () => {
     const remembered: LiveSnapshot = {
       homeGoals: 1,
       awayGoals: 0,
       minute: "57'",
       goals: [],
+      shootout: null,
       asOf: T0,
     };
     // ESPN dropped → the facade returns the spine fixture: back to scheduled, no score.
@@ -57,6 +77,7 @@ describe("reconcileLive", () => {
       awayGoals: 0,
       minute: "57'",
       goals: [],
+      shootout: null,
       asOf: T0,
     };
     const spineLive = fx({
@@ -96,6 +117,7 @@ describe("reconcileLive", () => {
       awayGoals: 0,
       minute: "57'",
       goals: [],
+      shootout: null,
       asOf: T0,
     };
     const finished = fx({ status: "finished", homeGoals: 2, awayGoals: 1, minute: null });
@@ -121,6 +143,7 @@ describe("reconcileLive", () => {
       awayGoals: 0,
       minute: "57'",
       goals: [],
+      shootout: null,
       asOf: T0,
     };
     const stillLive = fx({ status: "live", homeGoals: 2, awayGoals: 0, minute: "63'" });

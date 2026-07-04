@@ -111,6 +111,21 @@ describe("gradeOutcomes — knockouts (advance calls)", () => {
     expect(r.totalN).toBe(0);
   });
 
+  it("bins knockout reliability once per tie, on the favourite side", () => {
+    // Two decided ties must yield two reliability events — not four mirrored
+    // home/away ones (which would double-count the sample and force the curve
+    // symmetric around 50%) — each binned at the favourite's probability.
+    const r = gradeOutcomes([
+      ko(9, A, B, 1, 0, "2026-07-01T00:00:00Z"), // favourite (A) advances
+      ko(10, A, B, 0, 1, "2026-07-02T00:00:00Z"), // underdog (B) advances
+    ]);
+    const rel = r.knockout.reliability;
+    expect(rel.reduce((s, b) => s + b.count, 0)).toBe(2);
+    for (const b of rel) {
+      expect(b.predicted).toBeGreaterThanOrEqual(0.5); // favourite side only
+    }
+  });
+
   it("combines group + knockout into totalN / totalHits", () => {
     const g = gx(1, A, B, 2, 0, "2026-06-11T00:00:00Z"); // A wins group game
     const k = ko(9, A, B, 1, 0, "2026-07-01T00:00:00Z"); // A advances KO
@@ -272,12 +287,13 @@ describe("gradeQualification", () => {
       ) / 4;
     expect(r.brier).toBeCloseTo(expectedBrier, 9);
 
-    // Notable hit: the strongest advancer the model least expected. P4 (weakest,
-    // lowest escapeGroup) advanced, so it should head the notable hits.
-    expect(r.notableHits[0].team).toBe("T104");
-    expect(r.notableHits[0].advanced).toBe(true);
-    // Notable miss: P1 (strongest, highest escapeGroup) went out.
-    expect(r.notableMisses[0].team).toBe("T101");
-    expect(r.notableMisses[0].advanced).toBe(false);
+    // Surprise qualifier: the advancer the model least expected. P4 (weakest,
+    // lowest escapeGroup) advanced, so it should head the surprise qualifiers.
+    // (These are the model's biggest qualification ERRORS, not its hits.)
+    expect(r.surpriseQualifiers[0].team).toBe("T104");
+    expect(r.surpriseQualifiers[0].advanced).toBe(true);
+    // Surprise exit: P1 (strongest, highest escapeGroup) went out.
+    expect(r.surpriseExits[0].team).toBe("T101");
+    expect(r.surpriseExits[0].advanced).toBe(false);
   });
 });

@@ -67,12 +67,23 @@ const espnLive = cache(() => fetchEspnLive());
 // just per-request — because the pages that read this export `force-dynamic`, which
 // disables a plain fetch's own `revalidate`; without this, normal traffic would burn
 // the 500/month odds quota. Stored as entries (unstable_cache can't serialize a Map).
+// The adapter THROWS on an upstream failure (errors aren't stored by
+// unstable_cache), and the catch below keeps serving the last odds this instance
+// saw — so one bad refresh doesn't blank the market blend for a whole cache period.
 const cachedOddsEntries = unstable_cache(
   async () => [...(await fetchWorldCupOdds()).entries()],
   ["market-odds-h2h"],
-  { revalidate: 3600 },
+  { revalidate: 7200 },
 );
-const marketOdds = cache(async () => new Map(await cachedOddsEntries()));
+let lastGoodOdds: Awaited<ReturnType<typeof cachedOddsEntries>> = [];
+const marketOdds = cache(async () => {
+  try {
+    lastGoodOdds = await cachedOddsEntries();
+  } catch (err) {
+    console.warn("[data] market odds refresh failed, serving last-good:", err);
+  }
+  return new Map(lastGoodOdds);
+});
 
 /** Chronological fixtures with real live scores overlaid, ratings untouched
  *  (pre-tournament seeds). The basis for live-rating computation. Memoized per
@@ -234,6 +245,15 @@ async function overlayLiveScores(fixtures: Fixture[]): Promise<Fixture[]> {
     if (!live) return f;
     const home = live.scores[f.home.code] ?? null;
     const away = live.scores[f.away.code] ?? null;
+    // Pens tally (running or final), mapped to this fixture's sides by code —
+    // the spine only learns a shootout on its daily cadence, so without this a
+    // decided tie reads as a bare draw (bracket stays predicted, Monte Carlo
+    // re-flips it, /model grading lags) until the spine catches up.
+    const sHome = live.shootout?.[f.home.code];
+    const sAway = live.shootout?.[f.away.code];
+    const espnShootout =
+      sHome != null && sAway != null ? { home: sHome, away: sAway } : null;
+    const shootout = espnShootout ?? f.shootout ?? null;
     // Map ESPN goals (keyed by team code) to this fixture's home/away sides.
     const goals = live.goals.map((g) => ({
       side: g.code === f.home.code ? ("home" as const) : ("away" as const),
@@ -251,6 +271,7 @@ async function overlayLiveScores(fixtures: Fixture[]): Promise<Fixture[]> {
         awayGoals: away,
         minute: live.minute,
         goals: goals.length ? goals : f.goals,
+        shootout,
         liveOverlaid: true,
       };
     }
@@ -264,8 +285,15 @@ async function overlayLiveScores(fixtures: Fixture[]): Promise<Fixture[]> {
         awayGoals: away,
         minute: null,
         goals: goals.length ? goals : f.goals,
+        shootout,
         liveOverlaid: true,
       };
+    }
+    // The spine can publish a finished level score before its shootout tally
+    // (`p`) lands. If ESPN has the tally for that lag window, graft it on — the
+    // spine's own score stays authoritative — so the tie reads as decided.
+    if (live.state === "post" && f.status === "finished" && !f.shootout && espnShootout) {
+      return { ...f, shootout: espnShootout };
     }
     return f;
   });
