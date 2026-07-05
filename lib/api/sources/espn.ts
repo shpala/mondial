@@ -75,12 +75,21 @@ interface EspnMoneylineSide {
   open?: { odds?: string | number };
   close?: { odds?: string | number };
 }
+/** Legacy/other-sport variant: a side object with an American moneyLine number
+ *  or a decimal value. */
+interface EspnTeamOddsSide {
+  moneyLine?: number;
+  value?: number;
+}
 interface EspnOddsNode {
   moneyline?: {
     home?: EspnMoneylineSide;
     away?: EspnMoneylineSide;
     draw?: EspnMoneylineSide;
   };
+  homeTeamOdds?: EspnTeamOddsSide;
+  awayTeamOdds?: EspnTeamOddsSide;
+  drawOdds?: EspnTeamOddsSide;
 }
 interface EspnEvent {
   id?: string | number;
@@ -88,7 +97,8 @@ interface EspnEvent {
     status?: { displayClock?: string; type?: { state?: string } };
     competitors?: EspnCompetitor[];
     details?: EspnDetail[];
-    odds?: EspnOddsNode[];
+    /** Finished events carry a literal null entry (verified live). */
+    odds?: (EspnOddsNode | null)[];
   }[];
 }
 
@@ -119,20 +129,54 @@ function sideDecimal(side: EspnMoneylineSide | undefined): number | null {
   return raw == null ? null : americanToDecimal(raw);
 }
 
-/** The event's 3-way market as decimal odds keyed by canonical team code. All
- *  three prices AND both side orientations (competitors' homeAway) must be
- *  present — a 2-way or unoriented market can't be de-vigged into 1X2. */
+/** Legacy side object → decimal: prefer the decimal `value`, else convert the
+ *  American `moneyLine`. */
+function legacyDecimal(side: EspnTeamOddsSide | undefined): number | null {
+  if (side == null) return null;
+  if (side.value != null && Number.isFinite(side.value) && side.value > 1) {
+    return side.value;
+  }
+  return side.moneyLine != null ? americanToDecimal(side.moneyLine) : null;
+}
+
+/** One odds entry's 3-way prices, whatever shape it uses: the fifa.world
+ *  scoreboard's `moneyline.{home,away,draw}` (verified live 2026-07), or the
+ *  legacy `homeTeamOdds`/`awayTeamOdds`/`drawOdds` side objects other ESPN
+ *  payloads carry. Null when the entry has no complete 3-way market. */
+function entryPrices(
+  node: EspnOddsNode,
+): { home: number; away: number; draw: number } | null {
+  const ml = node.moneyline;
+  if (ml) {
+    const home = sideDecimal(ml.home);
+    const away = sideDecimal(ml.away);
+    const draw = sideDecimal(ml.draw);
+    if (home != null && away != null && draw != null) return { home, away, draw };
+  }
+  const home = legacyDecimal(node.homeTeamOdds);
+  const away = legacyDecimal(node.awayTeamOdds);
+  const draw = legacyDecimal(node.drawOdds);
+  if (home != null && away != null && draw != null) return { home, away, draw };
+  return null;
+}
+
+/** The event's 3-way market as decimal odds keyed by canonical team code: the
+ *  first odds entry with complete prices wins (finished events carry a literal
+ *  null entry — verified live). Both side orientations (competitors' homeAway)
+ *  must be known — an unoriented market can't be de-vigged into 1X2. */
 function parseMarketOdds(
-  node: EspnOddsNode | undefined,
+  nodes: (EspnOddsNode | null)[] | undefined,
   sideCode: { home?: string; away?: string },
 ): EspnLive["marketOdds"] {
-  const ml = node?.moneyline;
-  if (!ml || !sideCode.home || !sideCode.away) return null;
-  const home = sideDecimal(ml.home);
-  const away = sideDecimal(ml.away);
-  const draw = sideDecimal(ml.draw);
-  if (home == null || away == null || draw == null) return null;
-  return { byCode: { [sideCode.home]: home, [sideCode.away]: away }, draw };
+  if (!sideCode.home || !sideCode.away) return null;
+  for (const node of nodes ?? []) {
+    if (!node) continue;
+    const p = entryPrices(node);
+    if (p) {
+      return { byCode: { [sideCode.home]: p.home, [sideCode.away]: p.away }, draw: p.draw };
+    }
+  }
+  return null;
 }
 
 /**
@@ -216,7 +260,7 @@ export async function fetchEspnLive(revalidate = 15): Promise<Map<string, EspnLi
       eventId: ev.id != null ? String(ev.id) : null,
       scores,
       shootout,
-      marketOdds: parseMarketOdds(comp?.odds?.[0], sideCode),
+      marketOdds: parseMarketOdds(comp?.odds, sideCode),
       goals,
     });
   }

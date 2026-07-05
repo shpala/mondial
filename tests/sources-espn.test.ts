@@ -279,6 +279,67 @@ describe("fetchEspnLive", () => {
     expect(live!.marketOdds!.byCode.BRA).toBeCloseTo(1 + 100 / 110, 12);
   });
 
+  it("tolerates the null odds entry ESPN emits after full-time", async () => {
+    // Verified live: post events carry odds: [null]. Must not crash, must not
+    // fabricate a market.
+    mockJson({
+      events: [
+        {
+          id: "415",
+          competitions: [
+            {
+              status: { displayClock: "FT", type: { state: "post" } },
+              competitors: [
+                { homeAway: "home", score: "1", team: { displayName: "Brazil" } },
+                { homeAway: "away", score: "0", team: { displayName: "Mexico" } },
+              ],
+              odds: [null],
+            },
+          ],
+        },
+      ],
+    });
+    const live = (await fetchEspnLive()).get(pairCodeKey("BRA", "MEX"));
+    expect(live).toBeDefined();
+    expect(live!.marketOdds).toBeNull();
+  });
+
+  it("parses the legacy homeTeamOdds/awayTeamOdds/drawOdds shape as a fallback", async () => {
+    // ESPN's other-sport/older payloads express the market as side objects with
+    // an American moneyLine number or a decimal value — accept them if the
+    // moneyline node ever disappears, skipping unusable entries (e.g. null).
+    mockJson({
+      events: [
+        {
+          id: "416",
+          competitions: [
+            {
+              status: { type: { state: "pre" } },
+              competitors: [
+                { homeAway: "home", score: "0", team: { displayName: "Brazil" } },
+                { homeAway: "away", score: "0", team: { displayName: "Mexico" } },
+              ],
+              odds: [
+                null, // dead entry first — the parser must move past it
+                {
+                  provider: { name: "DraftKings" },
+                  homeTeamOdds: { moneyLine: -125 },
+                  awayTeamOdds: { value: 4.4 }, // decimal variant
+                  drawOdds: { moneyLine: 275 },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const live = (await fetchEspnLive()).get(pairCodeKey("BRA", "MEX"));
+    expect(live!.marketOdds).toBeDefined();
+    expect(live!.marketOdds!.byCode.BRA).toBeCloseTo(1.8, 12);
+    expect(live!.marketOdds!.byCode.MEX).toBeCloseTo(4.4, 12);
+    expect(live!.marketOdds!.draw).toBeCloseTo(3.75, 12);
+  });
+
   it("reports no market odds when the node is absent, incomplete, or unoriented", async () => {
     mockJson({
       events: [
