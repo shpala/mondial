@@ -573,9 +573,13 @@ P(home) = a/(a+b+d)   P(draw) = d/(a+b+d)   P(away) = b/(a+b+d)`}</Formula>
         <p>
           Fixtures, groups and final results come from the public-domain{" "}
           <strong className="text-ink-100">openfootball</strong> dataset; live
-          in-play scores, the match minute and the goal timeline are overlaid
-          from <strong className="text-ink-100">ESPN</strong>&rsquo;s free API.
-          Squads are enriched from{" "}
+          in-play scores, the match minute, the goal timeline and the bookmaker
+          match odds behind the market blend (a DraftKings 1X2 quote, de-vigged)
+          are overlaid from{" "}
+          <strong className="text-ink-100">ESPN</strong>&rsquo;s free API — with
+          an optional multi-book consensus from The Odds API outranking that
+          single-book quote when an API key is configured. Squads are enriched
+          from{" "}
           <strong className="text-ink-100">TheSportsDB</strong> when the roster
           looks complete; starting line-ups come from ESPN once a match kicks
           off, with TheSportsDB (and, failing that, a generated XI) filling any

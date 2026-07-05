@@ -9,6 +9,7 @@ import type { Lineup, Player, Position, Team } from "@/lib/types";
 import { resolveTeam } from "@/lib/teams/registry";
 import { gridForFormation } from "@/lib/data/generate";
 import { fetchWithTimeout } from "@/lib/api/http";
+import { americanToDecimal } from "@/lib/odds";
 
 const BASE =
   "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
@@ -35,6 +36,11 @@ export interface EspnLive {
   /** penalty-shootout tally keyed by canonical team code, when one is under way
    *  or decided the tie; null otherwise */
   shootout: Record<string, number> | null;
+  /** Pre-match 1X2 market (DraftKings via ESPN) as DECIMAL odds — the two sides
+   *  keyed by canonical team code plus the draw price. Rides in the scoreboard
+   *  payload we already fetch, so it costs no extra request and no API key.
+   *  Null when the event carries no (complete) 3-way market. */
+  marketOdds: { byCode: Record<string, number>; draw: number } | null;
   goals: EspnGoal[];
 }
 
@@ -65,12 +71,34 @@ interface EspnDetail {
   team?: { id?: string | number };
   athletesInvolved?: { displayName?: string }[];
 }
+interface EspnMoneylineSide {
+  open?: { odds?: string | number };
+  close?: { odds?: string | number };
+}
+/** Legacy/other-sport variant: a side object with an American moneyLine number
+ *  or a decimal value. */
+interface EspnTeamOddsSide {
+  moneyLine?: number;
+  value?: number;
+}
+interface EspnOddsNode {
+  moneyline?: {
+    home?: EspnMoneylineSide;
+    away?: EspnMoneylineSide;
+    draw?: EspnMoneylineSide;
+  };
+  homeTeamOdds?: EspnTeamOddsSide;
+  awayTeamOdds?: EspnTeamOddsSide;
+  drawOdds?: EspnTeamOddsSide;
+}
 interface EspnEvent {
   id?: string | number;
   competitions?: {
     status?: { displayClock?: string; type?: { state?: string } };
     competitors?: EspnCompetitor[];
     details?: EspnDetail[];
+    /** Finished events carry a literal null entry (verified live). */
+    odds?: (EspnOddsNode | null)[];
   }[];
 }
 
@@ -92,6 +120,63 @@ function minuteKey(m: string): number {
   const mm = /^(\d+)(?:\+(\d+))?/.exec(m);
   if (!mm) return 999;
   return parseInt(mm[1], 10) + (mm[2] ? parseInt(mm[2], 10) / 100 : 0);
+}
+
+/** One decimal price for a moneyline side: the close (current) quote, falling
+ *  back to the open for events priced only once. Null when absent/garbled. */
+function sideDecimal(side: EspnMoneylineSide | undefined): number | null {
+  const raw = side?.close?.odds ?? side?.open?.odds;
+  return raw == null ? null : americanToDecimal(raw);
+}
+
+/** Legacy side object → decimal: prefer the decimal `value`, else convert the
+ *  American `moneyLine`. */
+function legacyDecimal(side: EspnTeamOddsSide | undefined): number | null {
+  if (side == null) return null;
+  if (side.value != null && Number.isFinite(side.value) && side.value > 1) {
+    return side.value;
+  }
+  return side.moneyLine != null ? americanToDecimal(side.moneyLine) : null;
+}
+
+/** One odds entry's 3-way prices, whatever shape it uses: the fifa.world
+ *  scoreboard's `moneyline.{home,away,draw}` (verified live 2026-07), or the
+ *  legacy `homeTeamOdds`/`awayTeamOdds`/`drawOdds` side objects other ESPN
+ *  payloads carry. Null when the entry has no complete 3-way market. */
+function entryPrices(
+  node: EspnOddsNode,
+): { home: number; away: number; draw: number } | null {
+  const ml = node.moneyline;
+  if (ml) {
+    const home = sideDecimal(ml.home);
+    const away = sideDecimal(ml.away);
+    const draw = sideDecimal(ml.draw);
+    if (home != null && away != null && draw != null) return { home, away, draw };
+  }
+  const home = legacyDecimal(node.homeTeamOdds);
+  const away = legacyDecimal(node.awayTeamOdds);
+  const draw = legacyDecimal(node.drawOdds);
+  if (home != null && away != null && draw != null) return { home, away, draw };
+  return null;
+}
+
+/** The event's 3-way market as decimal odds keyed by canonical team code: the
+ *  first odds entry with complete prices wins (finished events carry a literal
+ *  null entry — verified live). Both side orientations (competitors' homeAway)
+ *  must be known — an unoriented market can't be de-vigged into 1X2. */
+function parseMarketOdds(
+  nodes: (EspnOddsNode | null)[] | undefined,
+  sideCode: { home?: string; away?: string },
+): EspnLive["marketOdds"] {
+  if (!sideCode.home || !sideCode.away) return null;
+  for (const node of nodes ?? []) {
+    if (!node) continue;
+    const p = entryPrices(node);
+    if (p) {
+      return { byCode: { [sideCode.home]: p.home, [sideCode.away]: p.away }, draw: p.draw };
+    }
+  }
+  return null;
 }
 
 /**
@@ -119,6 +204,7 @@ export async function fetchEspnLive(revalidate = 15): Promise<Map<string, EspnLi
     const scores: Record<string, number> = {};
     const shootoutScores: Record<string, number> = {};
     const teamIdToCode = new Map<string, string>();
+    const sideCode: { home?: string; away?: string } = {};
     let ok = true;
     for (const c of competitors) {
       const code = teamCode(c.team);
@@ -126,6 +212,9 @@ export async function fetchEspnLive(revalidate = 15): Promise<Map<string, EspnLi
         ok = false;
         break;
       }
+      // Which canonical code is ESPN's "home"/"away" — the odds node's
+      // moneyline sides are expressed in that orientation.
+      if (c.homeAway === "home" || c.homeAway === "away") sideCode[c.homeAway] = code;
       const score = Number(c.score ?? 0);
       if (!Number.isFinite(score)) {
         ok = false; // malformed score — skip the event rather than invent a 0-0
@@ -171,6 +260,7 @@ export async function fetchEspnLive(revalidate = 15): Promise<Map<string, EspnLi
       eventId: ev.id != null ? String(ev.id) : null,
       scores,
       shootout,
+      marketOdds: parseMarketOdds(comp?.odds, sideCode),
       goals,
     });
   }

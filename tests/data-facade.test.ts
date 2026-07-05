@@ -479,6 +479,70 @@ describe("market-odds resilience", () => {
     expect(p.home + p.draw + p.away).toBeCloseTo(1, 9);
   });
 
+  const ESPN_PRE_WITH_ODDS = {
+    events: [
+      {
+        id: "601",
+        competitions: [
+          {
+            status: { type: { state: "pre" } },
+            competitors: [
+              // Reversed orientation vs the spine (spine: Mexico home) on
+              // purpose: the odds must be mapped by canonical code, not position.
+              { homeAway: "home", score: "0", team: { displayName: "Brazil" } },
+              { homeAway: "away", score: "0", team: { displayName: "Mexico" } },
+            ],
+            odds: [
+              {
+                provider: { name: "DraftKings" },
+                moneyline: {
+                  home: { close: { odds: "-125" } }, // Brazil 1.80
+                  away: { close: { odds: "+340" } }, // Mexico 4.40
+                  draw: { close: { odds: "+275" } }, // 3.75
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  it("falls back to ESPN scoreboard odds when The Odds API is not configured", async () => {
+    delete process.env.ODDS_API_KEY;
+    routeFetch({
+      openfootball: () => ({ ok: true, status: 200, json: async () => KO_SPINE }),
+      espn: () => ({ ok: true, status: 200, json: async () => ESPN_PRE_WITH_ODDS }),
+    });
+    const data = await import("@/lib/data");
+    const f = (await data.getFixtures()).find(
+      (x) => x.home.code === "MEX" && x.away.code === "BRA",
+    );
+    expect(f!.status).toBe("scheduled");
+    expect(f!.marketProbs).toBeDefined();
+    const p = f!.marketProbs!;
+    expect(p.home + p.draw + p.away).toBeCloseTo(1, 9);
+    // Spine home is MEXICO (the +340 underdog): orientation must follow codes.
+    expect(p.home).toBeLessThan(p.away);
+    expect(p.home).toBeCloseTo(1 / 4.4 / (1 / 4.4 + 1 / 3.75 + 1 / 1.8), 9);
+  });
+
+  it("prefers The Odds API consensus over the single-book ESPN quote", async () => {
+    routeFetch({
+      openfootball: () => ({ ok: true, status: 200, json: async () => KO_SPINE }),
+      espn: () => ({ ok: true, status: 200, json: async () => ESPN_PRE_WITH_ODDS }),
+      odds: () => ({ ok: true, status: 200, json: async () => [ODDS_EVENT] }),
+    });
+    const data = await import("@/lib/data");
+    const f = (await data.getFixtures()).find(
+      (x) => x.home.code === "MEX" && x.away.code === "BRA",
+    );
+    // ODDS_EVENT quotes Mexico (spine home) at 2.4 — near even — while the ESPN
+    // node has Mexico at 4.4. The consensus (multi-book) source must win.
+    const p = f!.marketProbs!;
+    expect(p.home).toBeCloseTo(1 / 2.4 / (1 / 2.4 + 1 / 3.4 + 1 / 2.8), 9);
+  });
+
   it("keeps rendering when the odds feed fails (adapter throws, facade catches)", async () => {
     // The adapter now throws on a non-ok response; the facade must catch it,
     // fall back to (empty) last-good odds, and never break the page render.

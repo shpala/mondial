@@ -19,9 +19,11 @@ import {
   fetchEspnLineup,
   fetchEspnLive,
   pairCodeKey,
+  type EspnLive,
 } from "@/lib/api/sources/espn";
 import { fetchSquadTSDB, fetchLineupsTSDB } from "@/lib/api/sources/thesportsdb";
 import { fetchWorldCupOdds } from "@/lib/api/sources/oddsapi";
+import { impliedProbabilities, type OutcomeProbs } from "@/lib/odds";
 import { simulateTournament } from "@/lib/montecarlo";
 import { gradeOutcomes } from "@/lib/modelreport";
 import { generateLineup, generateSquad } from "./generate";
@@ -58,9 +60,16 @@ export const getDataStatus = cache(
   }),
 );
 
-// Per-request memoized ESPN scoreboard (live scores + minute + goal timeline),
-// shared by the score overlay and the line-up lookup.
+// Per-request memoized ESPN scoreboard (live scores + minute + goal timeline +
+// the DraftKings 1X2 market), shared by the score overlay, the market-odds
+// fallback and the line-up lookup.
 const espnLive = cache(() => fetchEspnLive());
+
+// ESPN events are matched by team pair alone (the scoreboard is date-less), so
+// a knockout REMATCH of two teams who already met in the groups would also hit
+// their historical fixture. Only fixtures kicking off near now (the scoreboard
+// spans yesterday..tomorrow) are eligible for any ESPN-derived overlay.
+const OVERLAY_WINDOW_MS = 36 * 3600 * 1000;
 
 // Market odds (empty map unless ODDS_API_KEY is set), overlaid onto upcoming
 // fixtures for sharper win probs. Cached ACROSS requests via unstable_cache — not
@@ -127,23 +136,52 @@ export async function getRawFixtures(): Promise<Fixture[]> {
 export const getFixtures = cache(async (): Promise<Fixture[]> => {
   const fixtures = await rawFixtures();
   // Overlay live Elo so each fixture's win probability reflects results so far,
-  // and de-vigged market odds (when ODDS_API_KEY is set) for upcoming fixtures.
+  // and de-vigged market odds for upcoming fixtures.
   const live = computeLiveRatings(fixtures);
   const odds = await marketOdds();
-  if (!live.size && !odds.size) return fixtures;
+  // The ESPN scoreboard we already fetch carries a single-book (DraftKings) 1X2
+  // market — the keyless, zero-extra-request fallback when The Odds API isn't
+  // configured. Best-effort like the score overlay.
+  let espn: Awaited<ReturnType<typeof fetchEspnLive>> | null = null;
+  try {
+    espn = await espnLive();
+  } catch {
+    espn = null; // overlayLiveScores already warned about the same outage
+  }
+  if (!live.size && !odds.size && !espn?.size) return fixtures;
+  const now = Date.now();
   return fixtures.map((f) => {
     const next: Fixture = live.size
       ? { ...f, home: withLiveRating(f.home, live), away: withLiveRating(f.away, live) }
       : { ...f };
-    // Market consensus only applies to upcoming real-team fixtures; live/finished
-    // games show the actual score, not a prediction.
-    if (odds.size && f.status === "scheduled" && f.home.id !== 0 && f.away.id !== 0) {
-      const m = odds.get(pairCodeKey(f.home.code, f.away.code));
+    // Market odds only apply to upcoming real-team fixtures; live/finished games
+    // show the actual score, not a prediction. The multi-book Odds API consensus
+    // (key-gated) outranks the single-book ESPN quote.
+    if (f.status === "scheduled" && f.home.id !== 0 && f.away.id !== 0) {
+      const key = pairCodeKey(f.home.code, f.away.code);
+      const m = odds.get(key) ?? espnImpliedProbs(espn?.get(key), f, now);
       if (m) next.marketProbs = m;
     }
     return next;
   });
 });
+
+/** De-vigged 1X2 from an ESPN event's market, oriented to the fixture's sides
+ *  by canonical code. The kickoff-window guard mirrors overlayLiveScores:
+ *  pair-key matching would otherwise hit an old meeting of the same teams. */
+function espnImpliedProbs(
+  live: EspnLive | undefined,
+  f: Fixture,
+  now: number,
+): OutcomeProbs | null {
+  const mo = live?.marketOdds;
+  if (!mo) return null;
+  if (Math.abs(now - Date.parse(f.kickoff)) > OVERLAY_WINDOW_MS) return null;
+  const home = mo.byCode[f.home.code];
+  const away = mo.byCode[f.away.code];
+  if (home == null || away == null) return null;
+  return impliedProbabilities(home, mo.draw, away);
+}
 
 /** Signature over every fixture input the Monte Carlo actually consumes — teams,
  *  their (live) ratings, group, status and any result — so ANY upstream change
@@ -256,12 +294,6 @@ async function overlayLiveScores(fixtures: Fixture[]): Promise<Fixture[]> {
   }
   if (!liveMap.size) return fixtures;
 
-  // ESPN events are matched by team pair alone (the scoreboard is date-less),
-  // so a knockout REMATCH of two teams who already met in the groups would also
-  // hit their historical fixture — grafting today's result onto it or flipping
-  // it back to "live". Only fixtures kicking off near now (the scoreboard spans
-  // yesterday..tomorrow) are eligible for the overlay.
-  const OVERLAY_WINDOW_MS = 36 * 3600 * 1000;
   const now = Date.now();
 
   return fixtures.map((f) => {
