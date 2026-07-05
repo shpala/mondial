@@ -15,17 +15,31 @@ import { blendOutcome, decisiveHomeProb, type OutcomeProbs } from "@/lib/odds";
 
 type FixtureProbInput = Pick<Fixture, "home" | "away" | "marketProbs">;
 
-/** 1X2 probabilities to display: market consensus blended with the model when the
- *  fixture carries odds, else the pure model. The pure model's 1X2 is identical to
- *  montecarlo.outcomeProbs (Davidson at the WC prediction scale), computed inline
- *  here to keep this client-safe (no montecarlo import). */
-export function fixtureOutcomeProbs(f: FixtureProbInput): OutcomeProbs {
-  const model = davidsonProbs(
+/** The PURE model's 1X2 — identical to montecarlo.outcomeProbs (Davidson at the
+ *  WC prediction scale), computed inline here to keep this client-safe (no
+ *  montecarlo import). Market odds are ignored: this is what the blend starts
+ *  from, so the UI can mark how far the market moved the shown number. */
+export function fixtureModelOutcomeProbs(
+  f: Pick<Fixture, "home" | "away">,
+): OutcomeProbs {
+  return davidsonProbs(
     effectiveRating(f.home),
     effectiveRating(f.away),
     DRAW_NU,
     WC_PREDICTION_SCALE,
   );
+}
+
+/** Two-outcome pure-model home win probability (draw mass removed) — the
+ *  un-blended counterpart of `fixtureHomeWinProb`, for the market-tick marker. */
+export function fixtureModelHomeWinProb(f: Pick<Fixture, "home" | "away">): number {
+  return decisiveHomeProb(fixtureModelOutcomeProbs(f));
+}
+
+/** 1X2 probabilities to display: market consensus blended with the model when the
+ *  fixture carries odds, else the pure model. */
+export function fixtureOutcomeProbs(f: FixtureProbInput): OutcomeProbs {
+  const model = fixtureModelOutcomeProbs(f);
   return f.marketProbs ? blendOutcome(model, f.marketProbs) : model;
 }
 

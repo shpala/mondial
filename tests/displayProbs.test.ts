@@ -3,6 +3,7 @@ import type { Fixture, Team } from "@/lib/types";
 import { predictWinProbability } from "@/lib/prediction";
 import {
   fixtureHomeWinProb,
+  fixtureModelHomeWinProb,
   fixtureOutcomeProbs,
   isMarketBacked,
 } from "@/lib/displayProbs";
@@ -61,5 +62,31 @@ describe("displayProbs — with market odds (blend)", () => {
     const hp = fixtureHomeWinProb(fx(a, b, market));
     expect(hp).toBeGreaterThan(predictWinProbability(a, b)); // shifted toward market
     expect(hp).toBeLessThan(1);
+  });
+});
+
+describe("fixtureModelHomeWinProb (the un-blended number the market tick marks)", () => {
+  const strong = team(1850), weak = team(1650);
+  const market = { home: 0.3, draw: 0.3, away: 0.4 }; // disagrees with the model
+
+  it("ignores market odds entirely", () => {
+    const withOdds = fx(strong, weak, market);
+    expect(fixtureModelHomeWinProb(withOdds)).toBeCloseTo(
+      predictWinProbability(strong, weak),
+      12,
+    );
+    // …while the displayed (blended) number moved toward the market.
+    expect(fixtureHomeWinProb(withOdds)).not.toBeCloseTo(
+      fixtureModelHomeWinProb(withOdds),
+      3,
+    );
+  });
+
+  it("equals the displayed probability when there are no odds", () => {
+    const noOdds = fx(strong, weak);
+    expect(fixtureModelHomeWinProb(noOdds)).toBeCloseTo(
+      fixtureHomeWinProb(noOdds),
+      12,
+    );
   });
 });

@@ -13,7 +13,11 @@ import {
   isToday,
   visibleShootout,
 } from "@/lib/format";
-import { fixtureHomeWinProb, isMarketBacked } from "@/lib/displayProbs";
+import {
+  fixtureHomeWinProb,
+  fixtureModelHomeWinProb,
+  isMarketBacked,
+} from "@/lib/displayProbs";
 import { isFabricatedResult } from "@/lib/provenance";
 import { useLiveFreeze } from "@/components/useLiveFreeze";
 
@@ -226,6 +230,14 @@ export function MatchCard({
   const marketBacked = realTeams && isMarketBacked(fx);
   const homePct = homeProb != null ? Math.round(homeProb * 100) : 50;
   const awayPct = 100 - homePct;
+  // Where the PURE model would put the split — a tick on the bar marks it, so
+  // the gap between tick and boundary IS the market's adjustment. Hidden when
+  // it would sit on the boundary anyway (no visible adjustment).
+  const modelPct =
+    marketBacked && homeProb != null
+      ? Math.round(fixtureModelHomeWinProb(fx) * 100)
+      : null;
+  const showModelTick = modelPct != null && Math.abs(modelPct - homePct) >= 1;
   const today = isToday(fx.kickoff, tz);
   const live = fx.status === "live";
   // Latest goal for a live card's footer (the timeline is chronological, so the
@@ -342,11 +354,24 @@ export function MatchCard({
               fill = one team's standalone tournament chance (TitleOddsTable). */}
           <div
             role="img"
-            aria-label={`${predicted ? "Predicted" : "Pre-match"} win probability: ${fx.home.name} ${homePct} percent, ${fx.away.name} ${awayPct} percent`}
-            className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-ink-700"
+            aria-label={`${predicted ? "Predicted" : "Pre-match"} win probability: ${fx.home.name} ${homePct} percent, ${fx.away.name} ${awayPct} percent${showModelTick ? `. Market-adjusted — the model alone gives ${fx.home.name} ${modelPct} percent` : ""}`}
+            title={
+              showModelTick
+                ? `Model alone: ${modelPct}% — the market moved it to ${homePct}%`
+                : undefined
+            }
+            className="relative flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-ink-700"
           >
             <div className="bg-pitch-500" style={{ width: `${homePct}%` }} />
             <div className="bg-accent-ember" style={{ width: `${awayPct}%` }} />
+            {/* Tick = the pure model's split; boundary = the market-blended one. */}
+            {showModelTick && (
+              <div
+                aria-hidden
+                className="absolute inset-y-0 w-0.5 -translate-x-1/2 rounded-full bg-ink-50/80"
+                style={{ left: `${modelPct}%` }}
+              />
+            )}
           </div>
           <div className="mt-1.5 flex items-baseline justify-between text-[10px] text-ink-400">
             <span
