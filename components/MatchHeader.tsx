@@ -1,20 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Fixture } from "@/lib/types";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 import { LocalKickoff } from "@/components/LocalKickoff";
 import { LiveUpdatedAt } from "@/components/LiveUpdatedAt";
-import { formatKickoff, visibleShootout } from "@/lib/format";
+import { formatKickoff, formatShootout, visibleShootout } from "@/lib/format";
 import { fixtureHomeWinProb } from "@/lib/displayProbs";
 import { isFabricatedResult } from "@/lib/provenance";
-import {
-  isFreshLive,
-  reconcileLive,
-  snapshotOf,
-  type LiveSnapshot,
-} from "@/lib/liveFreeze";
+import { useLiveFreeze } from "@/components/useLiveFreeze";
 
 /** One side's name, linked to its team page when it's a real team (placeholder
  *  knockout slots — id 0 — have no page). */
@@ -57,16 +51,7 @@ export function MatchHeader({
 }) {
   // Live-freeze: keep the last-known live state visible if the overlay drops
   // (the facade would revert the fixture to "scheduled" / a score-less "live").
-  const [liveSnap, setLiveSnap] = useState<LiveSnapshot | null>(null);
-  const reconciled = reconcileLive(fixture, liveSnap, fetchedAt);
-  useEffect(() => {
-    if (isFreshLive(fixture)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLiveSnap(snapshotOf(fixture, fetchedAt));
-    } else if (fixture.status === "finished") {
-      setLiveSnap(null);
-    }
-  }, [fixture, fetchedAt]);
+  const reconciled = useLiveFreeze(fixture, fetchedAt);
   const fx = reconciled.fixture;
   const stale = reconciled.stale;
 
@@ -159,7 +144,7 @@ export function MatchHeader({
               {/* Mid-shootout: show the running tally, no winner yet. */}
               {shootout && !shootout.decided && (
                 <div className="mt-0.5 text-[11px] font-semibold text-ink-300">
-                  {shootout.tally.home}–{shootout.tally.away} pens
+                  {formatShootout(shootout.tally)}
                 </div>
               )}
             </>

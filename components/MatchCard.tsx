@@ -15,12 +15,7 @@ import {
 } from "@/lib/format";
 import { fixtureHomeWinProb, isMarketBacked } from "@/lib/displayProbs";
 import { isFabricatedResult } from "@/lib/provenance";
-import {
-  isFreshLive,
-  reconcileLive,
-  snapshotOf,
-  type LiveSnapshot,
-} from "@/lib/liveFreeze";
+import { useLiveFreeze } from "@/components/useLiveFreeze";
 
 function StatusPill({
   status,
@@ -208,28 +203,8 @@ export function MatchCard({
 
   // Live-freeze: on a live-aware surface (fetchedAt provided), keep the last-known
   // live score visible if the ESPN overlay drops — the facade reverts the fixture
-  // to "scheduled", which would otherwise snap the card back to "Predicted". The
-  // remembered snapshot is synced from the server-pushed fixture (the external
-  // system) and persists across router.refresh(); the render reconciles the
-  // incoming fixture against it.
-  const [liveSnap, setLiveSnap] = useState<LiveSnapshot | null>(null);
-  const reconciled =
-    fetchedAt != null
-      ? reconcileLive(fixture, liveSnap, fetchedAt)
-      : { fixture, stale: false, asOf: null as number | null, remember: null };
-  useEffect(() => {
-    if (fetchedAt == null) return;
-    // Remember only a *fresh* live (a real overlay), forget on finish. A dropped
-    // feed — a revert to scheduled OR a bare spine "live" row with no score —
-    // keeps the last snapshot so reconcileLive can freeze it (gating on
-    // isFreshLive here, not status, avoids clobbering it with null/null).
-    if (isFreshLive(fixture)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLiveSnap(snapshotOf(fixture, fetchedAt));
-    } else if (fixture.status === "finished") {
-      setLiveSnap(null);
-    }
-  }, [fixture, fetchedAt]);
+  // to "scheduled", which would otherwise snap the card back to "Predicted".
+  const reconciled = useLiveFreeze(fixture, fetchedAt);
   const fx = reconciled.fixture;
   const liveStale = reconciled.stale;
   const liveAsOf = reconciled.asOf;

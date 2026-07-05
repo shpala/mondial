@@ -332,7 +332,9 @@ export function gradeQualification(
 
   // Surprises: advanced despite low odds, or eliminated despite high odds —
   // biggest prediction error first. Both lists showcase where the model was
-  // WRONG; neither is a list of its good calls.
+  // WRONG; neither is a list of its good calls. The 50% threshold keeps the
+  // card copy honest: an advancer the model gave 82% is not a surprise, and in
+  // a chalk tournament the lists are simply empty.
   const surprises = [...marks].sort(
     (a, b) =>
       Math.abs((b.advanced ? 1 : 0) - b.predicted) -
@@ -343,7 +345,9 @@ export function gradeQualification(
     brier,
     groupsComplete: complete.length,
     allGroupsComplete: allComplete,
-    surpriseQualifiers: surprises.filter((m) => m.advanced).slice(0, 3),
-    surpriseExits: surprises.filter((m) => !m.advanced).slice(0, 3),
+    surpriseQualifiers: surprises
+      .filter((m) => m.advanced && m.predicted < 0.5)
+      .slice(0, 3),
+    surpriseExits: surprises.filter((m) => !m.advanced && m.predicted > 0.5).slice(0, 3),
   };
 }

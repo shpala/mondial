@@ -180,6 +180,40 @@ describe("fetchEspnLive", () => {
     expect(live!.shootout).toBeNull();
   });
 
+  it("rejects a negative or fractional shootoutScore (garbage must not decide a tie)", async () => {
+    mockJson({
+      events: [
+        {
+          id: "408",
+          competitions: [
+            {
+              status: { displayClock: "FT-Pens", type: { state: "post" } },
+              competitors: [
+                { score: "1", shootoutScore: "-1", team: { displayName: "Brazil" } },
+                { score: "1", shootoutScore: "2", team: { displayName: "Mexico" } },
+              ],
+            },
+          ],
+        },
+        {
+          id: "409",
+          competitions: [
+            {
+              status: { displayClock: "FT-Pens", type: { state: "post" } },
+              competitors: [
+                { score: "1", shootoutScore: "2.5", team: { displayName: "France" } },
+                { score: "1", shootoutScore: "2", team: { displayName: "Spain" } },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const map = await fetchEspnLive();
+    expect(map.get(pairCodeKey("BRA", "MEX"))!.shootout).toBeNull();
+    expect(map.get(pairCodeKey("FRA", "ESP"))!.shootout).toBeNull();
+  });
+
   it("throws on a non-ok response", async () => {
     mockJson({}, false);
     await expect(fetchEspnLive()).rejects.toThrow(/espn/);

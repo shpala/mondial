@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { ImageResponse } from "next/og";
 import { getFixtures, getDataStatus } from "@/lib/data";
 import { fixtureHomeWinProb } from "@/lib/displayProbs";
+import { formatShootout, visibleShootout } from "@/lib/format";
 import { ogCard } from "@/lib/ogCard";
 
 // Per-match link-preview card: the tie + the real score (if played) or the
@@ -65,6 +66,13 @@ export default async function Image({
           ? Math.round(fixtureHomeWinProb(fixture) * 100)
           : null;
 
+      // A pens-decided (or in-shootout) tie: the drawn score alone reads as
+      // unresolved, so the tally joins the status label. Only ever a real feed's
+      // value — `played` already excludes fabricated sample scores.
+      const pens = visibleShootout(fixture);
+      const statusLabel = `${fixture.status === "live" ? "Live" : "Full-time"}${
+        pens ? ` · ${formatShootout(pens.tally)}` : ""
+      }`;
       const result =
         played ? (
           <div style={{ display: "flex", alignItems: "baseline", marginTop: 14 }}>
@@ -72,7 +80,7 @@ export default async function Image({
               {fixture.homeGoals}&nbsp;–&nbsp;{fixture.awayGoals}
             </div>
             <div style={{ display: "flex", marginLeft: 28, fontSize: 30, color: "#8b93a6" }}>
-              {fixture.status === "live" ? "Live" : "Full-time"}
+              {statusLabel}
             </div>
           </div>
         ) : homePct !== null ? (

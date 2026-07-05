@@ -134,20 +134,27 @@ export function formatShootout(
 
 /**
  * How a fixture's shootout tally may be shown, if at all — the one shared
- * classification for every surface (cards, match header):
+ * classification for every surface (cards, match header, OG images):
  *
+ * - a shootout only exists for a LEVEL on-field score (decidedWinnerId's
+ *   precondition) — a tally next to a decisive or missing score is malformed
+ *   feed data, shown as nothing;
  * - live: a running tally, `decided: false` — even 3–2 is a lead, not a result,
  *   so no winner may be declared from it;
  * - finished + unequal: the tie was decided on pens, `decided: true`;
- * - finished + level: malformed feed data (a real shootout can't end level) —
- *   null, show nothing rather than a fake "3–3 pens" result.
+ * - finished + level tally: malformed (a real shootout can't end level) — null.
  */
 export function visibleShootout(f: {
   status: string;
+  homeGoals?: number | null;
+  awayGoals?: number | null;
   shootout?: { home: number; away: number } | null;
 }): { tally: { home: number; away: number }; decided: boolean } | null {
   const s = f.shootout;
   if (!s) return null;
+  if (f.homeGoals == null || f.awayGoals == null || f.homeGoals !== f.awayGoals) {
+    return null;
+  }
   if (f.status === "finished") {
     return s.home !== s.away ? { tally: s, decided: true } : null;
   }

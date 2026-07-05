@@ -59,28 +59,69 @@ describe("deviceTimeZone", () => {
 });
 
 describe("visibleShootout", () => {
-  it("marks an unequal tally on a finished tie as decided", () => {
+  it("marks an unequal tally on a finished level tie as decided", () => {
     expect(
-      visibleShootout({ status: "finished", shootout: { home: 4, away: 2 } }),
+      visibleShootout({
+        status: "finished",
+        homeGoals: 1,
+        awayGoals: 1,
+        shootout: { home: 4, away: 2 },
+      }),
     ).toEqual({ tally: { home: 4, away: 2 }, decided: true });
   });
 
   it("treats any tally on a live match as running, never decided", () => {
     // 3–2 mid-shootout is a lead, not a result — no winner may be declared.
     expect(
-      visibleShootout({ status: "live", shootout: { home: 3, away: 2 } }),
+      visibleShootout({
+        status: "live",
+        homeGoals: 1,
+        awayGoals: 1,
+        shootout: { home: 3, away: 2 },
+      }),
     ).toEqual({ tally: { home: 3, away: 2 }, decided: false });
   });
 
   it("suppresses a level tally on a finished tie (malformed feed data)", () => {
     expect(
-      visibleShootout({ status: "finished", shootout: { home: 3, away: 3 } }),
+      visibleShootout({
+        status: "finished",
+        homeGoals: 1,
+        awayGoals: 1,
+        shootout: { home: 3, away: 3 },
+      }),
+    ).toBeNull();
+  });
+
+  it("suppresses a tally on a decisive score (shootouts only exist for level ties)", () => {
+    expect(
+      visibleShootout({
+        status: "finished",
+        homeGoals: 2,
+        awayGoals: 0,
+        shootout: { home: 4, away: 2 },
+      }),
+    ).toBeNull();
+  });
+
+  it("suppresses a tally when the score is missing", () => {
+    expect(
+      visibleShootout({
+        status: "live",
+        homeGoals: null,
+        awayGoals: null,
+        shootout: { home: 1, away: 0 },
+      }),
     ).toBeNull();
   });
 
   it("returns null when there is no shootout", () => {
-    expect(visibleShootout({ status: "finished", shootout: null })).toBeNull();
-    expect(visibleShootout({ status: "live", shootout: undefined })).toBeNull();
+    expect(
+      visibleShootout({ status: "finished", homeGoals: 1, awayGoals: 1, shootout: null }),
+    ).toBeNull();
+    expect(
+      visibleShootout({ status: "live", homeGoals: 0, awayGoals: 0, shootout: undefined }),
+    ).toBeNull();
   });
 });
 

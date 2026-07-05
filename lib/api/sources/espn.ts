@@ -133,11 +133,13 @@ export async function fetchEspnLive(revalidate = 15): Promise<Map<string, EspnLi
       }
       scores[code] = score;
       // Pens tally rides alongside the (pre-shootout) score for ties that went
-      // to a shootout. Absent or malformed → no entry for this side.
+      // to a shootout. Absent or malformed → no entry for this side. Only a
+      // non-negative integer is a kick count — a glitched "-1" or "2.5" must
+      // not fabricate a tally that would decide a level tie downstream.
       const so = c.shootoutScore;
       if (so != null && String(so).trim() !== "") {
         const tally = Number(so);
-        if (Number.isFinite(tally)) shootoutScores[code] = tally;
+        if (Number.isInteger(tally) && tally >= 0) shootoutScores[code] = tally;
       }
       if (c.team?.id != null) teamIdToCode.set(String(c.team.id), code);
     }

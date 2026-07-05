@@ -69,20 +69,37 @@ const espnLive = cache(() => fetchEspnLive());
 // the 500/month odds quota. Stored as entries (unstable_cache can't serialize a Map).
 // The adapter THROWS on an upstream failure (errors aren't stored by
 // unstable_cache), and the catch below keeps serving the last odds this instance
-// saw — so one bad refresh doesn't blank the market blend for a whole cache period.
+// saw — so one bad refresh doesn't blank the market blend for a whole cache
+// period. Two bounds keep that fallback honest and cheap:
+//   - a failure BACKS OFF (ODDS_RETRY_MS) instead of re-probing the dead
+//     upstream on every render — marketOdds sits on the getFixtures path that
+//     every force-dynamic page awaits;
+//   - last-good entries EXPIRE (ODDS_LAST_GOOD_TTL_MS): days-old market prices
+//     must not keep wearing the fresh "◆ market" tag — past that we honestly
+//     fall back to the model.
 const cachedOddsEntries = unstable_cache(
   async () => [...(await fetchWorldCupOdds()).entries()],
   ["market-odds-h2h"],
   { revalidate: 7200 },
 );
-let lastGoodOdds: Awaited<ReturnType<typeof cachedOddsEntries>> = [];
+const ODDS_RETRY_MS = 5 * 60 * 1000;
+const ODDS_LAST_GOOD_TTL_MS = 24 * 3600 * 1000;
+let lastGoodOdds: { entries: Awaited<ReturnType<typeof cachedOddsEntries>>; at: number } =
+  { entries: [], at: 0 };
+let oddsFailedAt = 0;
 const marketOdds = cache(async () => {
-  try {
-    lastGoodOdds = await cachedOddsEntries();
-  } catch (err) {
-    console.warn("[data] market odds refresh failed, serving last-good:", err);
+  const now = Date.now();
+  if (now - oddsFailedAt >= ODDS_RETRY_MS) {
+    try {
+      lastGoodOdds = { entries: (await cachedOddsEntries()) ?? [], at: now };
+      oddsFailedAt = 0;
+    } catch (err) {
+      oddsFailedAt = now;
+      console.warn("[data] market odds refresh failed, serving last-good:", err);
+    }
   }
-  return new Map(lastGoodOdds);
+  const fresh = lastGoodOdds.at > 0 && now - lastGoodOdds.at <= ODDS_LAST_GOOD_TTL_MS;
+  return new Map(fresh ? lastGoodOdds.entries : []);
 });
 
 /** Chronological fixtures with real live scores overlaid, ratings untouched
@@ -239,8 +256,17 @@ async function overlayLiveScores(fixtures: Fixture[]): Promise<Fixture[]> {
   }
   if (!liveMap.size) return fixtures;
 
+  // ESPN events are matched by team pair alone (the scoreboard is date-less),
+  // so a knockout REMATCH of two teams who already met in the groups would also
+  // hit their historical fixture — grafting today's result onto it or flipping
+  // it back to "live". Only fixtures kicking off near now (the scoreboard spans
+  // yesterday..tomorrow) are eligible for the overlay.
+  const OVERLAY_WINDOW_MS = 36 * 3600 * 1000;
+  const now = Date.now();
+
   return fixtures.map((f) => {
     if (f.home.id === 0 || f.away.id === 0) return f; // unresolved knockout slot
+    if (Math.abs(now - Date.parse(f.kickoff)) > OVERLAY_WINDOW_MS) return f;
     const live = liveMap.get(pairCodeKey(f.home.code, f.away.code));
     if (!live) return f;
     const home = live.scores[f.home.code] ?? null;
@@ -291,8 +317,15 @@ async function overlayLiveScores(fixtures: Fixture[]): Promise<Fixture[]> {
     }
     // The spine can publish a finished level score before its shootout tally
     // (`p`) lands. If ESPN has the tally for that lag window, graft it on — the
-    // spine's own score stays authoritative — so the tie reads as decided.
-    if (live.state === "post" && f.status === "finished" && !f.shootout && espnShootout) {
+    // spine's own score stays authoritative — so the tie reads as decided. Only
+    // a LEVEL score can have a shootout; a decisive one never takes the graft.
+    if (
+      live.state === "post" &&
+      f.status === "finished" &&
+      f.homeGoals === f.awayGoals &&
+      !f.shootout &&
+      espnShootout
+    ) {
       return { ...f, shootout: espnShootout };
     }
     return f;
