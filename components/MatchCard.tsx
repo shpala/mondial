@@ -233,11 +233,8 @@ export function MatchCard({
   // Where the PURE model would put the split — a tick on the bar marks it, so
   // the gap between tick and boundary IS the market's adjustment. Hidden when
   // it would sit on the boundary anyway (no visible adjustment).
-  const modelPct =
-    marketBacked && homeProb != null
-      ? Math.round(fixtureModelHomeWinProb(fx) * 100)
-      : null;
-  const showModelTick = modelPct != null && Math.abs(modelPct - homePct) >= 1;
+  const modelPct = marketBacked ? Math.round(fixtureModelHomeWinProb(fx) * 100) : null;
+  const showModelTick = modelPct != null && modelPct !== homePct;
   const today = isToday(fx.kickoff, tz);
   const live = fx.status === "live";
   // Latest goal for a live card's footer (the timeline is chronological, so the
