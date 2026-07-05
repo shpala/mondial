@@ -27,6 +27,18 @@ export interface OutcomeProbs {
 export const MARKET_WEIGHT = 0.9;
 
 /**
+ * American moneyline → decimal odds. "-125" (risk 125 to win 100) → 1.80;
+ * "+340" (risk 100 to win 340) → 4.40; "EVEN" → 2.0. Returns null for anything
+ * that isn't a real moneyline (|ML| < 100 is not expressible as American odds).
+ */
+export function americanToDecimal(odds: string | number): number | null {
+  const s = String(odds).trim().toUpperCase();
+  const ml = s === "EVEN" ? 100 : Number(s.replace(/^\+/, ""));
+  if (!Number.isFinite(ml) || Math.abs(ml) < 100) return null;
+  return ml > 0 ? 1 + ml / 100 : 1 + 100 / -ml;
+}
+
+/**
  * De-vig decimal 1X2 odds into a proper probability distribution by proportional
  * normalisation (divide each implied 1/odds by the booksum/overround). Returns
  * null if any odd is missing or ≤ 1 (no information / arbitrage artefact).

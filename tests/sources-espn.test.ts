@@ -214,6 +214,135 @@ describe("fetchEspnLive", () => {
     expect(map.get(pairCodeKey("FRA", "ESP"))!.shootout).toBeNull();
   });
 
+  it("parses the DraftKings 1X2 moneyline into decimal odds keyed by team code", async () => {
+    mockJson({
+      events: [
+        {
+          id: "410",
+          competitions: [
+            {
+              status: { type: { state: "pre" } },
+              competitors: [
+                { homeAway: "home", score: "0", team: { displayName: "Brazil" } },
+                { homeAway: "away", score: "0", team: { displayName: "Mexico" } },
+              ],
+              odds: [
+                {
+                  provider: { name: "DraftKings" },
+                  moneyline: {
+                    // close preferred over open
+                    home: { open: { odds: "-110" }, close: { odds: "-125" } },
+                    away: { open: { odds: "+310" }, close: { odds: "+340" } },
+                    draw: { open: { odds: "+260" }, close: { odds: "+275" } },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const live = (await fetchEspnLive()).get(pairCodeKey("BRA", "MEX"));
+    expect(live!.marketOdds).toBeDefined();
+    expect(live!.marketOdds!.byCode.BRA).toBeCloseTo(1.8, 12); // -125
+    expect(live!.marketOdds!.byCode.MEX).toBeCloseTo(4.4, 12); // +340
+    expect(live!.marketOdds!.draw).toBeCloseTo(3.75, 12); // +275
+  });
+
+  it("falls back to the open quote when close is missing", async () => {
+    mockJson({
+      events: [
+        {
+          id: "411",
+          competitions: [
+            {
+              status: { type: { state: "pre" } },
+              competitors: [
+                { homeAway: "home", score: "0", team: { displayName: "Brazil" } },
+                { homeAway: "away", score: "0", team: { displayName: "Mexico" } },
+              ],
+              odds: [
+                {
+                  moneyline: {
+                    home: { open: { odds: "-110" } },
+                    away: { open: { odds: "+310" } },
+                    draw: { open: { odds: "+260" } },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const live = (await fetchEspnLive()).get(pairCodeKey("BRA", "MEX"));
+    expect(live!.marketOdds!.byCode.BRA).toBeCloseTo(1 + 100 / 110, 12);
+  });
+
+  it("reports no market odds when the node is absent, incomplete, or unoriented", async () => {
+    mockJson({
+      events: [
+        {
+          id: "412", // no odds node at all
+          competitions: [
+            {
+              status: { type: { state: "pre" } },
+              competitors: [
+                { homeAway: "home", score: "0", team: { displayName: "Brazil" } },
+                { homeAway: "away", score: "0", team: { displayName: "Mexico" } },
+              ],
+            },
+          ],
+        },
+        {
+          id: "413", // draw price missing → cannot de-vig a 3-way
+          competitions: [
+            {
+              status: { type: { state: "pre" } },
+              competitors: [
+                { homeAway: "home", score: "0", team: { displayName: "France" } },
+                { homeAway: "away", score: "0", team: { displayName: "Spain" } },
+              ],
+              odds: [
+                {
+                  moneyline: {
+                    home: { close: { odds: "-125" } },
+                    away: { close: { odds: "+340" } },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: "414", // competitors carry no homeAway → sides can't be mapped
+          competitions: [
+            {
+              status: { type: { state: "pre" } },
+              competitors: [
+                { score: "0", team: { displayName: "Germany" } },
+                { score: "0", team: { displayName: "Paraguay" } },
+              ],
+              odds: [
+                {
+                  moneyline: {
+                    home: { close: { odds: "-125" } },
+                    away: { close: { odds: "+340" } },
+                    draw: { close: { odds: "+275" } },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const map = await fetchEspnLive();
+    expect(map.get(pairCodeKey("BRA", "MEX"))!.marketOdds).toBeNull();
+    expect(map.get(pairCodeKey("FRA", "ESP"))!.marketOdds).toBeNull();
+    expect(map.get(pairCodeKey("GER", "PAR"))!.marketOdds).toBeNull();
+  });
+
   it("throws on a non-ok response", async () => {
     mockJson({}, false);
     await expect(fetchEspnLive()).rejects.toThrow(/espn/);

@@ -49,6 +49,19 @@ the blended outcome.
 
 ## To activate
 
+**The blend is ON by default, with no key.** ESPN's scoreboard — the same
+payload the app already polls for live scores — carries a DraftKings 1X2
+moneyline (including the draw) per upcoming match. `lib/api/sources/espn.ts`
+parses it into decimal odds and the facade de-vigs it with
+`impliedProbabilities` — zero extra requests, zero keys, and the same ToS
+posture as the rest of the ESPN usage. Being a single book it carries a normal
+~5% overround that de-vigs cleanly; a July-2026 survey of free odds sources
+(documented free tiers, exchanges, prediction markets, public sports-site
+JSON) found no better keyless, server-fetchable option with a draw price.
+
+Optionally, a **multi-book consensus** from The Odds API can outrank the
+single-book quote:
+
 1. Get a free key at https://the-odds-api.com.
 2. Set `ODDS_API_KEY` (Vercel project env, all environments).
 3. Optional overrides: `ODDS_API_SPORT` (default `soccer_fifa_world_cup`),
@@ -56,8 +69,8 @@ the blended outcome.
    per call, so every extra region multiplies the spend against the 500/month
    free tier).
 
-The response is cached ~2h (12 calls/day ≈ 360 credits/month at one region).
-On an upstream failure the adapter throws and the facade keeps serving the
-last-good odds it saw — bounded by a 24h staleness cap and a 5-minute retry
+The Odds API response is cached ~2h (12 calls/day ≈ 360 credits/month at one
+region). On an upstream failure the adapter throws and the facade keeps serving
+the last-good odds it saw — bounded by a 24h staleness cap and a 5-minute retry
 backoff — instead of caching an empty map for a whole revalidate period
 (`lib/data/index.ts`, `marketOdds`).

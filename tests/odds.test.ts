@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MARKET_WEIGHT,
+  americanToDecimal,
   impliedProbabilities,
   consensusProbabilities,
   blendOutcome,
@@ -88,5 +89,26 @@ describe("decisiveHomeProb / favouredOutcome", () => {
     expect(favouredOutcome({ home: 0.6, draw: 0.1, away: 0.3 })).toBe("home");
     expect(favouredOutcome({ home: 0.2, draw: 0.5, away: 0.3 })).toBe("draw");
     expect(favouredOutcome({ home: 0.2, draw: 0.3, away: 0.5 })).toBe("away");
+  });
+});
+
+describe("americanToDecimal", () => {
+  it("converts positive (underdog) and negative (favourite) moneylines", () => {
+    expect(americanToDecimal("+340")).toBeCloseTo(4.4, 12);
+    expect(americanToDecimal("-125")).toBeCloseTo(1.8, 12);
+    expect(americanToDecimal(275)).toBeCloseTo(3.75, 12);
+    expect(americanToDecimal(-200)).toBeCloseTo(1.5, 12);
+  });
+
+  it("handles the EVEN quote and +100 as 2.0", () => {
+    expect(americanToDecimal("EVEN")).toBe(2);
+    expect(americanToDecimal("+100")).toBe(2);
+  });
+
+  it("rejects malformed or impossible moneylines", () => {
+    expect(americanToDecimal("abc")).toBeNull();
+    expect(americanToDecimal("")).toBeNull();
+    expect(americanToDecimal("-50")).toBeNull(); // |ML| < 100 is not a moneyline
+    expect(americanToDecimal("0")).toBeNull();
   });
 });

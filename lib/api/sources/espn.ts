@@ -9,6 +9,7 @@ import type { Lineup, Player, Position, Team } from "@/lib/types";
 import { resolveTeam } from "@/lib/teams/registry";
 import { gridForFormation } from "@/lib/data/generate";
 import { fetchWithTimeout } from "@/lib/api/http";
+import { americanToDecimal } from "@/lib/odds";
 
 const BASE =
   "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
@@ -35,6 +36,11 @@ export interface EspnLive {
   /** penalty-shootout tally keyed by canonical team code, when one is under way
    *  or decided the tie; null otherwise */
   shootout: Record<string, number> | null;
+  /** Pre-match 1X2 market (DraftKings via ESPN) as DECIMAL odds — the two sides
+   *  keyed by canonical team code plus the draw price. Rides in the scoreboard
+   *  payload we already fetch, so it costs no extra request and no API key.
+   *  Null when the event carries no (complete) 3-way market. */
+  marketOdds: { byCode: Record<string, number>; draw: number } | null;
   goals: EspnGoal[];
 }
 
@@ -65,12 +71,24 @@ interface EspnDetail {
   team?: { id?: string | number };
   athletesInvolved?: { displayName?: string }[];
 }
+interface EspnMoneylineSide {
+  open?: { odds?: string | number };
+  close?: { odds?: string | number };
+}
+interface EspnOddsNode {
+  moneyline?: {
+    home?: EspnMoneylineSide;
+    away?: EspnMoneylineSide;
+    draw?: EspnMoneylineSide;
+  };
+}
 interface EspnEvent {
   id?: string | number;
   competitions?: {
     status?: { displayClock?: string; type?: { state?: string } };
     competitors?: EspnCompetitor[];
     details?: EspnDetail[];
+    odds?: EspnOddsNode[];
   }[];
 }
 
@@ -92,6 +110,29 @@ function minuteKey(m: string): number {
   const mm = /^(\d+)(?:\+(\d+))?/.exec(m);
   if (!mm) return 999;
   return parseInt(mm[1], 10) + (mm[2] ? parseInt(mm[2], 10) / 100 : 0);
+}
+
+/** One decimal price for a moneyline side: the close (current) quote, falling
+ *  back to the open for events priced only once. Null when absent/garbled. */
+function sideDecimal(side: EspnMoneylineSide | undefined): number | null {
+  const raw = side?.close?.odds ?? side?.open?.odds;
+  return raw == null ? null : americanToDecimal(raw);
+}
+
+/** The event's 3-way market as decimal odds keyed by canonical team code. All
+ *  three prices AND both side orientations (competitors' homeAway) must be
+ *  present — a 2-way or unoriented market can't be de-vigged into 1X2. */
+function parseMarketOdds(
+  node: EspnOddsNode | undefined,
+  sideCode: { home?: string; away?: string },
+): EspnLive["marketOdds"] {
+  const ml = node?.moneyline;
+  if (!ml || !sideCode.home || !sideCode.away) return null;
+  const home = sideDecimal(ml.home);
+  const away = sideDecimal(ml.away);
+  const draw = sideDecimal(ml.draw);
+  if (home == null || away == null || draw == null) return null;
+  return { byCode: { [sideCode.home]: home, [sideCode.away]: away }, draw };
 }
 
 /**
@@ -119,6 +160,7 @@ export async function fetchEspnLive(revalidate = 15): Promise<Map<string, EspnLi
     const scores: Record<string, number> = {};
     const shootoutScores: Record<string, number> = {};
     const teamIdToCode = new Map<string, string>();
+    const sideCode: { home?: string; away?: string } = {};
     let ok = true;
     for (const c of competitors) {
       const code = teamCode(c.team);
@@ -126,6 +168,9 @@ export async function fetchEspnLive(revalidate = 15): Promise<Map<string, EspnLi
         ok = false;
         break;
       }
+      // Which canonical code is ESPN's "home"/"away" — the odds node's
+      // moneyline sides are expressed in that orientation.
+      if (c.homeAway === "home" || c.homeAway === "away") sideCode[c.homeAway] = code;
       const score = Number(c.score ?? 0);
       if (!Number.isFinite(score)) {
         ok = false; // malformed score — skip the event rather than invent a 0-0
@@ -171,6 +216,7 @@ export async function fetchEspnLive(revalidate = 15): Promise<Map<string, EspnLi
       eventId: ev.id != null ? String(ev.id) : null,
       scores,
       shootout,
+      marketOdds: parseMarketOdds(comp?.odds?.[0], sideCode),
       goals,
     });
   }

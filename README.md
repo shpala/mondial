@@ -53,6 +53,7 @@ facade (`lib/data/index.ts`):
 | Live score, match minute, goal timeline | **ESPN** free site API (undocumented, no key) | openfootball status |
 | Starting XI — live & finished games | **ESPN** match summary (real XI + formation, no key) | TheSportsDB → generated |
 | Starting XI — upcoming games, full squads | **TheSportsDB** (free key `3`, or Patreon key) | generated / snapshot |
+| Market 1X2 odds (win-prob blend) | **ESPN** scoreboard's DraftKings quote (no key, same fetch as live scores) | The Odds API consensus (optional `ODDS_API_KEY`, outranks when set) → pure model |
 | Everything | — | bundled snapshot (`lib/data/snapshot.ts`) |
 
 - **`lib/teams/registry.ts`** — canonical 48-country registry (code, flag,
