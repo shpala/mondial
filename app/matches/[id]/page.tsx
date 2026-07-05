@@ -4,17 +4,14 @@ import { notFound } from "next/navigation";
 import { getFixtures, getMatchLineups, getDataStatus } from "@/lib/data";
 import { PitchLineup } from "@/components/PitchLineup";
 import { GoalList } from "@/components/GoalList";
+import { MatchHeader } from "@/components/MatchHeader";
 import { ScorelinePrediction } from "@/components/ScorelinePrediction";
-import { TeamFlag } from "@/components/ui/TeamFlag";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { EstimatedNotice, EstimatedTag } from "@/components/ui/EstimatedData";
-import { formatKickoff } from "@/lib/format";
-import { LocalKickoff } from "@/components/LocalKickoff";
 import { predictScoreline } from "@/lib/prediction";
-import { fixtureHomeWinProb } from "@/lib/displayProbs";
-import { isFabricatedResult } from "@/lib/provenance";
+import { requestNow } from "@/lib/serverTime";
 
 export const dynamic = "force-dynamic";
 
@@ -95,44 +92,15 @@ export default async function MatchPage({
   const fixture = fixtures.find((f) => f.id === fixtureId);
   if (!fixture) notFound();
 
-  const played = fixture.homeGoals !== null && fixture.awayGoals !== null;
   const live = fixture.status === "live";
-  const fabricated = isFabricatedResult(fixture, usingSample);
   const predicted = fixture.status === "scheduled";
   const realTeams = fixture.home.id !== 0 && fixture.away.id !== 0;
-  // The pre-match prediction is status-independent (it's from team ratings, not
-  // the running score), so we keep showing it once a game is live or finished —
-  // labelled "pre-match" — alongside the actual score.
-  const homeProb = realTeams ? fixtureHomeWinProb(fixture) : null;
   // Knockout ties (group == null) are settled by ET/penalties — no draw — so we
   // predict a decisive scoreline there; group games keep the three-way model.
   const decisive = fixture.group == null;
   const scorePrediction = realTeams
     ? predictScoreline(fixture.home, fixture.away, { decisive })
     : null;
-  // A knockout tie level after extra time and decided on penalties: name who
-  // advanced and the tally, so the page agrees with the bracket's "won on
-  // penalties" (the score above stays the drawn on-field result).
-  const shootout = played ? fixture.shootout ?? null : null;
-  const penWinner =
-    shootout != null
-      ? shootout.home > shootout.away
-        ? fixture.home
-        : fixture.away
-      : null;
-  const penHi = shootout ? Math.max(shootout.home, shootout.away) : 0;
-  const penLo = shootout ? Math.min(shootout.home, shootout.away) : 0;
-
-  const badge = live
-    ? {
-        text: fixture.minute ? `● Live · ${fixture.minute}` : "● Live",
-        cls: "bg-red-500/15 text-red-300",
-      }
-    : played
-      ? fabricated
-        ? { text: "≈ Full-time · sample", cls: "bg-ink-700/70 text-ink-300" }
-        : { text: "✓ Full-time · result", cls: "bg-emerald-500/15 text-emerald-300" }
-      : { text: "◆ Upcoming · predicted", cls: "bg-accent-gold/15 text-accent-gold-bright" };
 
   return (
     <div className="animate-fade-up">
@@ -149,75 +117,7 @@ export default async function MatchPage({
         ]}
       />
 
-      <header
-        className={`mb-6 rounded-2xl border bg-ink-800/70 p-5 backdrop-blur-sm ${
-          predicted ? "border-dashed border-accent-gold/30" : "border-ink-700"
-        }`}
-      >
-        <div className="mb-3 flex justify-center">
-          <span
-            className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${badge.cls}`}
-          >
-            {badge.text}
-          </span>
-        </div>
-        <div className="mb-3 text-center text-[11px] uppercase tracking-widest text-ink-400">
-          {fixture.group ? `Group ${fixture.group}` : fixture.stage}
-          {fixture.venue ? ` · ${fixture.venue}` : ""}
-        </div>
-        <div className="flex items-center justify-center gap-4 sm:gap-8">
-          <div className="flex flex-1 flex-col items-center gap-2 sm:flex-row sm:justify-end">
-            <span className="text-center font-display text-lg font-bold sm:text-right">
-              {fixture.home.name}
-            </span>
-            <TeamFlag flag={fixture.home.flag} alt={fixture.home.name} size={36} decorative />
-          </div>
-          <div className="min-w-[96px] text-center">
-            {played ? (
-              <>
-                <div
-                  className="font-display text-3xl font-extrabold tabular-nums"
-                  aria-label={`${live ? "Live score" : "Final score"}: ${fixture.home.name} ${fixture.homeGoals}, ${fixture.away.name} ${fixture.awayGoals}${penWinner ? `, decided on penalties, ${penWinner.name} win ${penHi}–${penLo}` : ""}`}
-                >
-                  {fixture.homeGoals}–{fixture.awayGoals}
-                </div>
-                {penWinner && (
-                  <div className="mt-0.5 text-[11px] font-semibold text-ink-300">
-                    {penWinner.name} win {penHi}–{penLo} pens
-                  </div>
-                )}
-              </>
-            ) : homeProb != null ? (
-              <>
-                <div
-                  className="font-display text-xl font-extrabold tabular-nums text-accent-gold-bright"
-                  aria-label={`Predicted win probability if decisive: ${fixture.home.name} ${Math.round(homeProb * 100)} percent, ${fixture.away.name} ${Math.round((1 - homeProb) * 100)} percent`}
-                >
-                  {Math.round(homeProb * 100)}%–{Math.round((1 - homeProb) * 100)}%
-                </div>
-                <div className="text-[10px] uppercase tracking-wide text-ink-400">
-                  win prob if decisive
-                </div>
-              </>
-            ) : (
-              <div className="text-xs text-ink-400">
-                <LocalKickoff
-                  iso={fixture.kickoff}
-                  fallback={formatKickoff(fixture.kickoff)}
-                />
-              </div>
-            )}
-          </div>
-          {/* col-reverse on phones so the away side stacks name-over-flag like
-              the home side; sm:flex-row restores the inner-flag desktop order. */}
-          <div className="flex flex-1 flex-col-reverse items-center gap-2 sm:flex-row sm:justify-start">
-            <TeamFlag flag={fixture.away.flag} alt={fixture.away.name} size={36} decorative />
-            <span className="text-center font-display text-lg font-bold sm:text-left">
-              {fixture.away.name}
-            </span>
-          </div>
-        </div>
-      </header>
+      <MatchHeader fixture={fixture} fetchedAt={requestNow()} sample={usingSample} />
 
       {scorePrediction && (
         <ScorelinePrediction

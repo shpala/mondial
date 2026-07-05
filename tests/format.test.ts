@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   formatKickoff,
+  formatShootout,
+  visibleShootout,
   dateKey,
   isToday,
   deviceTimeZone,
@@ -53,5 +55,84 @@ describe("deviceTimeZone", () => {
   it("returns a non-empty IANA zone string", () => {
     expect(typeof deviceTimeZone()).toBe("string");
     expect(deviceTimeZone().length).toBeGreaterThan(0);
+  });
+});
+
+describe("visibleShootout", () => {
+  it("marks an unequal tally on a finished level tie as decided", () => {
+    expect(
+      visibleShootout({
+        status: "finished",
+        homeGoals: 1,
+        awayGoals: 1,
+        shootout: { home: 4, away: 2 },
+      }),
+    ).toEqual({ tally: { home: 4, away: 2 }, decided: true });
+  });
+
+  it("treats any tally on a live match as running, never decided", () => {
+    // 3–2 mid-shootout is a lead, not a result — no winner may be declared.
+    expect(
+      visibleShootout({
+        status: "live",
+        homeGoals: 1,
+        awayGoals: 1,
+        shootout: { home: 3, away: 2 },
+      }),
+    ).toEqual({ tally: { home: 3, away: 2 }, decided: false });
+  });
+
+  it("suppresses a level tally on a finished tie (malformed feed data)", () => {
+    expect(
+      visibleShootout({
+        status: "finished",
+        homeGoals: 1,
+        awayGoals: 1,
+        shootout: { home: 3, away: 3 },
+      }),
+    ).toBeNull();
+  });
+
+  it("suppresses a tally on a decisive score (shootouts only exist for level ties)", () => {
+    expect(
+      visibleShootout({
+        status: "finished",
+        homeGoals: 2,
+        awayGoals: 0,
+        shootout: { home: 4, away: 2 },
+      }),
+    ).toBeNull();
+  });
+
+  it("suppresses a tally when the score is missing", () => {
+    expect(
+      visibleShootout({
+        status: "live",
+        homeGoals: null,
+        awayGoals: null,
+        shootout: { home: 1, away: 0 },
+      }),
+    ).toBeNull();
+  });
+
+  it("returns null when there is no shootout", () => {
+    expect(
+      visibleShootout({ status: "finished", homeGoals: 1, awayGoals: 1, shootout: null }),
+    ).toBeNull();
+    expect(
+      visibleShootout({ status: "live", homeGoals: 0, awayGoals: 0, shootout: undefined }),
+    ).toBeNull();
+  });
+});
+
+describe("formatShootout", () => {
+  it("labels a decided shootout in home–away orientation", () => {
+    expect(formatShootout({ home: 4, away: 2 })).toBe("4–2 pens");
+    expect(formatShootout({ home: 2, away: 4 })).toBe("2–4 pens");
+  });
+
+  it("returns null when there was no shootout", () => {
+    expect(formatShootout(null)).toBeNull();
+    expect(formatShootout(undefined)).toBeNull();
   });
 });

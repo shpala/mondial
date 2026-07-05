@@ -52,6 +52,12 @@ the blended outcome.
 1. Get a free key at https://the-odds-api.com.
 2. Set `ODDS_API_KEY` (Vercel project env, all environments).
 3. Optional overrides: `ODDS_API_SPORT` (default `soccer_fifa_world_cup`),
-   `ODDS_API_REGIONS` (default `eu,uk,us`).
+   `ODDS_API_REGIONS` (default `eu` — The Odds API bills one credit per region
+   per call, so every extra region multiplies the spend against the 500/month
+   free tier).
 
-The response is cached ~1h to stay within the free request budget.
+The response is cached ~2h (12 calls/day ≈ 360 credits/month at one region).
+On an upstream failure the adapter throws and the facade keeps serving the
+last-good odds it saw — bounded by a 24h staleness cap and a 5-minute retry
+backoff — instead of caching an empty map for a whole revalidate period
+(`lib/data/index.ts`, `marketOdds`).

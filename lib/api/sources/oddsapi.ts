@@ -6,8 +6,10 @@
 // to the model otherwise.
 //
 // OFF by default: with no ODDS_API_KEY set, fetchWorldCupOdds() returns an empty map
-// and the app behaves exactly as before. Best-effort and defensive like the other
-// adapters — any failure yields an empty map, never throws into the render path.
+// and the app behaves exactly as before. Like the other adapters (openfootball,
+// ESPN) an upstream failure THROWS — the facade catches it and keeps serving its
+// last-good odds. Swallowing it into an empty map here would get cached by the
+// facade as "no odds" for a whole revalidate period.
 import "server-only";
 
 import { resolveTeam } from "@/lib/teams/registry";
@@ -21,7 +23,10 @@ import {
 
 const KEY = process.env.ODDS_API_KEY || "";
 const SPORT = process.env.ODDS_API_SPORT || "soccer_fifa_world_cup";
-const REGIONS = process.env.ODDS_API_REGIONS || "eu,uk,us";
+// One region only by default: The Odds API bills one credit per region per call,
+// so "eu,uk,us" costs 3× "eu" for the same de-vigged h2h consensus — enough to
+// blow the 500/month free tier on its own. Override via ODDS_API_REGIONS.
+const REGIONS = process.env.ODDS_API_REGIONS || "eu";
 
 /** Is the market-odds overlay enabled (an API key is configured)? */
 export const oddsEnabled = (): boolean => KEY.length > 0;
@@ -47,27 +52,22 @@ interface ApiEvent {
 /**
  * Fetch current 1X2 odds for the configured sport and return a map of
  * canonical-team-pair key → de-vigged market consensus probabilities. Empty map
- * when no key is set or on any upstream/parse failure (the caller falls back to
- * the model). `revalidate` caches the (rate-limited) response; default 1 hour.
+ * when no key is set; THROWS on an upstream failure so the caller can tell a
+ * dead feed from a genuinely odds-less schedule and keep its last-good data.
+ * `revalidate` caches the (rate-limited) response; default 2 hours.
  */
 export async function fetchWorldCupOdds(
-  revalidate = 3600,
+  revalidate = 7200,
 ): Promise<Map<string, OutcomeProbs>> {
   const map = new Map<string, OutcomeProbs>();
   if (!oddsEnabled()) return map;
 
-  let events: ApiEvent[];
-  try {
-    const url =
-      `https://api.the-odds-api.com/v4/sports/${SPORT}/odds` +
-      `?apiKey=${KEY}&regions=${REGIONS}&markets=h2h&oddsFormat=decimal`;
-    const res = await fetchWithTimeout(url, { next: { revalidate } });
-    if (!res.ok) throw new Error(`odds-api -> ${res.status}`);
-    events = (await res.json()) as ApiEvent[];
-  } catch (err) {
-    console.warn("[data] market odds unavailable:", err);
-    return map;
-  }
+  const url =
+    `https://api.the-odds-api.com/v4/sports/${SPORT}/odds` +
+    `?apiKey=${KEY}&regions=${REGIONS}&markets=h2h&oddsFormat=decimal`;
+  const res = await fetchWithTimeout(url, { next: { revalidate } });
+  if (!res.ok) throw new Error(`odds-api -> ${res.status}`);
+  const events = (await res.json()) as ApiEvent[];
 
   for (const ev of Array.isArray(events) ? events : []) {
     const home = ev.home_team ? resolveTeam(ev.home_team) : null;

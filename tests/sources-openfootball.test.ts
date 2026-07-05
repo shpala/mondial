@@ -146,6 +146,42 @@ describe("fetchOpenfootball", () => {
     expect(data.fixtures[1].shootout).toBeNull();
   });
 
+  it("keeps a knockout tie 'live' through extra time + penalties (~210 min)", async () => {
+    // 170 minutes after kickoff a knockout can still be mid-shootout, but a
+    // group game (no extra time) has long finished. The inferred live window
+    // must be stage-aware or the server reports an ongoing tie as scheduled.
+    vi.useFakeTimers();
+    try {
+      // Kickoffs 170 minutes ago.
+      vi.setSystemTime(new Date("2026-07-04T20:50:00Z"));
+      mockJson({
+        name: "x",
+        matches: [
+          {
+            round: "Round of 16",
+            date: "2026-07-04",
+            time: "18:00 (UTC+0)",
+            team1: "Spain",
+            team2: "Italy",
+          },
+          {
+            round: "Matchday 1",
+            date: "2026-07-04",
+            time: "18:00 (UTC+0)",
+            group: "Group A",
+            team1: "Mexico",
+            team2: "Brazil",
+          },
+        ],
+      });
+      const data = await fetchOpenfootball();
+      expect(data.fixtures[0].status).toBe("live"); // knockout: ET+pens window
+      expect(data.fixtures[1].status).toBe("scheduled"); // group: 150-min window over
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("does not mark a match finished without a full-time score", async () => {
     mockJson({
       name: "x",

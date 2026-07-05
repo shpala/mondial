@@ -111,6 +111,21 @@ describe("gradeOutcomes — knockouts (advance calls)", () => {
     expect(r.totalN).toBe(0);
   });
 
+  it("bins knockout reliability once per tie, on the favourite side", () => {
+    // Two decided ties must yield two reliability events — not four mirrored
+    // home/away ones (which would double-count the sample and force the curve
+    // symmetric around 50%) — each binned at the favourite's probability.
+    const r = gradeOutcomes([
+      ko(9, A, B, 1, 0, "2026-07-01T00:00:00Z"), // favourite (A) advances
+      ko(10, A, B, 0, 1, "2026-07-02T00:00:00Z"), // underdog (B) advances
+    ]);
+    const rel = r.knockout.reliability;
+    expect(rel.reduce((s, b) => s + b.count, 0)).toBe(2);
+    for (const b of rel) {
+      expect(b.predicted).toBeGreaterThanOrEqual(0.5); // favourite side only
+    }
+  });
+
   it("combines group + knockout into totalN / totalHits", () => {
     const g = gx(1, A, B, 2, 0, "2026-06-11T00:00:00Z"); // A wins group game
     const k = ko(9, A, B, 1, 0, "2026-07-01T00:00:00Z"); // A advances KO
@@ -272,12 +287,40 @@ describe("gradeQualification", () => {
       ) / 4;
     expect(r.brier).toBeCloseTo(expectedBrier, 9);
 
-    // Notable hit: the strongest advancer the model least expected. P4 (weakest,
-    // lowest escapeGroup) advanced, so it should head the notable hits.
-    expect(r.notableHits[0].team).toBe("T104");
-    expect(r.notableHits[0].advanced).toBe(true);
-    // Notable miss: P1 (strongest, highest escapeGroup) went out.
-    expect(r.notableMisses[0].team).toBe("T101");
-    expect(r.notableMisses[0].advanced).toBe(false);
+    // In this single-group setup the sim gives every team escapeGroup 1.0, so
+    // no advancer can be a "surprise qualifier" (the card copy says "despite
+    // the model's low odds") — the list must be empty, not showcase a
+    // 100%-predicted qualifier.
+    expect(r.surpriseQualifiers).toEqual([]);
+    // P1 went out despite predicted 1.0 — a genuine surprise exit.
+    expect(r.surpriseExits[0].team).toBe("T101");
+    expect(r.surpriseExits[0].advanced).toBe(false);
+  });
+
+  it("only lists genuine surprises: qualifiers under 50%, exits over 50%", () => {
+    const P1 = team(101, 1950);
+    const P2 = team(102, 1850);
+    const P3 = team(103, 1700);
+    const P4 = team(104, 1550);
+    const fixtures: Fixture[] = [
+      gx(1, P4, P1, 3, 0, "2026-06-11T00:00:00Z"),
+      gx(2, P3, P2, 0, 0, "2026-06-11T03:00:00Z"),
+      gx(3, P4, P2, 2, 0, "2026-06-15T00:00:00Z"),
+      gx(4, P3, P1, 1, 0, "2026-06-15T03:00:00Z"),
+      gx(5, P4, P3, 1, 0, "2026-06-19T00:00:00Z"),
+      gx(6, P2, P1, 1, 0, "2026-06-19T03:00:00Z"),
+    ];
+    const groups = computeGroupStandings([P1, P2, P3, P4], fixtures);
+    // Advancers: P4 (predicted 0.20 — a surprise), P2 (0.80) and P3 (0.55) —
+    // both expected through, so NOT surprises. Out: P1 (0.95 — a surprise exit).
+    const preOdds = [
+      { team: P1, escapeGroup: 0.95 },
+      { team: P2, escapeGroup: 0.8 },
+      { team: P3, escapeGroup: 0.55 },
+      { team: P4, escapeGroup: 0.2 },
+    ] as unknown as Parameters<typeof gradeQualification>[2];
+    const r = gradeQualification(fixtures, groups, preOdds);
+    expect(r.surpriseQualifiers.map((m) => m.team)).toEqual(["T104"]);
+    expect(r.surpriseExits.map((m) => m.team)).toEqual(["T101"]);
   });
 });

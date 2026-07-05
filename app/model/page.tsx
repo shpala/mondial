@@ -300,22 +300,28 @@ export default async function ModelPage() {
               {qual.groupsComplete} group
               {qual.groupsComplete === 1 ? "" : "s"} complete).
             </p>
+            {/* Both cards showcase the model's biggest qualification ERRORS —
+                longshots that went through and favourites that went out — so
+                neither wears the correct-call green (that would read as the
+                model taking credit for its worst calls). */}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="card p-4">
-                <h3 className="mb-3 text-sm font-semibold text-pitch-500">
-                  Notable hits
+                <h3 className="mb-3 text-sm font-semibold text-accent-gold-bright">
+                  Surprise qualifiers
                 </h3>
-                {qual.notableHits.length ? (
+                <p className="mb-3 text-xs text-ink-400">
+                  Through, despite the model&rsquo;s low odds.
+                </p>
+                {qual.surpriseQualifiers.length ? (
                   <ul className="space-y-2 text-sm">
-                    {qual.notableHits.map((m) => (
+                    {qual.surpriseQualifiers.map((m) => (
                       <li
                         key={m.team}
                         className="flex items-center justify-between"
                       >
                         <span className="text-white">{m.team}</span>
                         <span className="tabular-nums text-ink-400">
-                          {pct(m.predicted)} ·{" "}
-                          {m.advanced ? "advanced" : "out"}
+                          model gave {pct(m.predicted)}
                         </span>
                       </li>
                     ))}
@@ -326,19 +332,21 @@ export default async function ModelPage() {
               </div>
               <div className="card p-4">
                 <h3 className="mb-3 text-sm font-semibold text-accent-ember">
-                  Notable misses
+                  Surprise exits
                 </h3>
-                {qual.notableMisses.length ? (
+                <p className="mb-3 text-xs text-ink-400">
+                  Out, despite the model&rsquo;s high odds.
+                </p>
+                {qual.surpriseExits.length ? (
                   <ul className="space-y-2 text-sm">
-                    {qual.notableMisses.map((m) => (
+                    {qual.surpriseExits.map((m) => (
                       <li
                         key={m.team}
                         className="flex items-center justify-between"
                       >
                         <span className="text-white">{m.team}</span>
                         <span className="tabular-nums text-ink-400">
-                          {pct(m.predicted)} ·{" "}
-                          {m.advanced ? "advanced" : "out"}
+                          model gave {pct(m.predicted)}
                         </span>
                       </li>
                     ))}

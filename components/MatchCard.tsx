@@ -6,26 +6,30 @@ import type { Fixture } from "@/lib/types";
 import { TeamFlag } from "@/components/ui/TeamFlag";
 import { Countdown } from "@/components/Countdown";
 import { LiveUpdatedAt } from "@/components/LiveUpdatedAt";
-import { deviceTimeZone, formatKickoff, isToday } from "@/lib/format";
+import {
+  deviceTimeZone,
+  formatKickoff,
+  formatShootout,
+  isToday,
+  visibleShootout,
+} from "@/lib/format";
 import { fixtureHomeWinProb, isMarketBacked } from "@/lib/displayProbs";
 import { isFabricatedResult } from "@/lib/provenance";
-import {
-  isFreshLive,
-  reconcileLive,
-  snapshotOf,
-  type LiveSnapshot,
-} from "@/lib/liveFreeze";
+import { useLiveFreeze } from "@/components/useLiveFreeze";
 
 function StatusPill({
   status,
   minute,
   fabricated,
   stale,
+  pens,
 }: {
   status: Fixture["status"];
   minute?: string | null;
   fabricated?: boolean;
   stale?: boolean;
+  /** Finished tie decided on penalties — the score alone reads as a bare draw. */
+  pens?: boolean;
 }) {
   if (status === "live") {
     // A frozen score (the live overlay dropped — we're showing the last-known
@@ -72,9 +76,12 @@ function StatusPill({
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-300">
+      <span
+        className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-300"
+        title={pens ? "Level after extra time — decided on penalties" : undefined}
+      >
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
-        Full-time
+        {pens ? "Full-time · pens" : "Full-time"}
       </span>
     );
   }
@@ -138,18 +145,30 @@ function Side({
 function ScoreBlock({
   home,
   away,
+  shootout,
   played,
 }: {
   home: number | null;
   away: number | null;
+  shootout?: { home: number; away: number } | null;
   played: boolean;
 }) {
   if (played && home !== null && away !== null) {
+    // A pens-decided (or in-shootout) tie: the drawn score alone reads as
+    // unresolved, so the tally rides under it in the same orientation.
+    const pens = formatShootout(shootout);
     return (
-      <div className="flex shrink-0 items-center gap-1.5 font-display text-lg font-bold tabular-nums">
-        <span>{home}</span>
-        <span className="text-ink-400">–</span>
-        <span>{away}</span>
+      <div className="flex shrink-0 flex-col items-center">
+        <div className="flex items-center gap-1.5 font-display text-lg font-bold tabular-nums">
+          <span>{home}</span>
+          <span className="text-ink-400">–</span>
+          <span>{away}</span>
+        </div>
+        {pens && (
+          <div className="text-[10px] font-semibold leading-tight text-ink-300 tabular-nums">
+            {pens}
+          </div>
+        )}
       </div>
     );
   }
@@ -184,28 +203,8 @@ export function MatchCard({
 
   // Live-freeze: on a live-aware surface (fetchedAt provided), keep the last-known
   // live score visible if the ESPN overlay drops — the facade reverts the fixture
-  // to "scheduled", which would otherwise snap the card back to "Predicted". The
-  // remembered snapshot is synced from the server-pushed fixture (the external
-  // system) and persists across router.refresh(); the render reconciles the
-  // incoming fixture against it.
-  const [liveSnap, setLiveSnap] = useState<LiveSnapshot | null>(null);
-  const reconciled =
-    fetchedAt != null
-      ? reconcileLive(fixture, liveSnap, fetchedAt)
-      : { fixture, stale: false, asOf: null as number | null, remember: null };
-  useEffect(() => {
-    if (fetchedAt == null) return;
-    // Remember only a *fresh* live (a real overlay), forget on finish. A dropped
-    // feed — a revert to scheduled OR a bare spine "live" row with no score —
-    // keeps the last snapshot so reconcileLive can freeze it (gating on
-    // isFreshLive here, not status, avoids clobbering it with null/null).
-    if (isFreshLive(fixture)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLiveSnap(snapshotOf(fixture, fetchedAt));
-    } else if (fixture.status === "finished") {
-      setLiveSnap(null);
-    }
-  }, [fixture, fetchedAt]);
+  // to "scheduled", which would otherwise snap the card back to "Predicted".
+  const reconciled = useLiveFreeze(fixture, fetchedAt);
   const fx = reconciled.fixture;
   const liveStale = reconciled.stale;
   const liveAsOf = reconciled.asOf;
@@ -213,6 +212,10 @@ export function MatchCard({
   const played = fx.status === "finished" || fx.status === "live";
   const predicted = fx.status === "scheduled";
   const fabricated = isFabricatedResult(fx, sample);
+  // Pens tally as it may be SHOWN: a running tally while live, the decided
+  // result when finished — and nothing for a level tally on a finished tie
+  // (malformed feed data, not a real shootout result).
+  const shootout = visibleShootout(fx);
 
   // The model's pre-match prediction. It's derived from team ratings (not the
   // running score), so it's status-independent — we surface it for live and
@@ -273,6 +276,7 @@ export function MatchCard({
           minute={fx.minute}
           fabricated={fabricated}
           stale={liveStale}
+          pens={shootout?.decided ?? false}
         />
       </div>
 
@@ -287,6 +291,7 @@ export function MatchCard({
         <ScoreBlock
           home={fx.homeGoals}
           away={fx.awayGoals}
+          shootout={shootout?.tally ?? null}
           played={played}
         />
         <Side

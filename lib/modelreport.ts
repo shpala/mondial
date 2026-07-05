@@ -211,12 +211,17 @@ export function gradeOutcomes(fixtures: Fixture[]): OutcomeReport {
         kLogLoss += -Math.log(Math.max(pActual, 1e-15));
         for (const [key, pk] of [["home", pHome], ["away", pAway]] as const) {
           const y = actual === key ? 1 : 0;
-          kBrier += (pk - y) ** 2;
-          const b = Math.min(9, Math.floor(pk * 10));
-          kRelP[b] += pk; kRelH[b] += y; kRelN[b] += 1;
+          kBrier += (pk - y) ** 2; // multiclass Brier: sum both sides, like the 3-way group scoring
         }
         const correct = (pHome >= pAway ? "home" : "away") === actual;
         if (correct) kHits++;
+        // Reliability: ONE event per tie, binned on the favourite side. Binning
+        // both sides would add two mirrored, perfectly anti-correlated events per
+        // tie — doubling the apparent sample (tripping reliabilityIsAdequate at
+        // half the real count) and forcing the curve symmetric around 50%.
+        const pFav = Math.max(pHome, pAway);
+        const b = Math.min(9, Math.floor(pFav * 10));
+        kRelP[b] += pFav; kRelH[b] += correct ? 1 : 0; kRelN[b] += 1;
         kPerMatch.push({
           date: f.kickoff.slice(0, 10),
           home: f.home.name, away: f.away.name,
@@ -270,8 +275,11 @@ export interface QualificationReport {
   brier: number;
   groupsComplete: number;
   allGroupsComplete: boolean;
-  notableHits: QualMark[]; // advanced & model gave low odds, or out & high odds
-  notableMisses: QualMark[];
+  /** Advanced despite the model's low odds — the model's biggest qualification
+   *  errors on the advancing side. (Formerly mislabelled "notable hits".) */
+  surpriseQualifiers: QualMark[];
+  /** Eliminated despite the model's high odds — the busted favourites. */
+  surpriseExits: QualMark[];
 }
 
 const groupComplete = (g: Group) => g.rows.every((r) => r.played >= 3);
@@ -322,7 +330,11 @@ export function gradeQualification(
     ? marks.reduce((s, m) => s + (m.predicted - (m.advanced ? 1 : 0)) ** 2, 0) / n
     : 0;
 
-  // Notable: advanced despite low odds, or eliminated despite high odds.
+  // Surprises: advanced despite low odds, or eliminated despite high odds —
+  // biggest prediction error first. Both lists showcase where the model was
+  // WRONG; neither is a list of its good calls. The 50% threshold keeps the
+  // card copy honest: an advancer the model gave 82% is not a surprise, and in
+  // a chalk tournament the lists are simply empty.
   const surprises = [...marks].sort(
     (a, b) =>
       Math.abs((b.advanced ? 1 : 0) - b.predicted) -
@@ -333,7 +345,9 @@ export function gradeQualification(
     brier,
     groupsComplete: complete.length,
     allGroupsComplete: allComplete,
-    notableHits: surprises.filter((m) => m.advanced).slice(0, 3),
-    notableMisses: surprises.filter((m) => !m.advanced).slice(0, 3),
+    surpriseQualifiers: surprises
+      .filter((m) => m.advanced && m.predicted < 0.5)
+      .slice(0, 3),
+    surpriseExits: surprises.filter((m) => !m.advanced && m.predicted > 0.5).slice(0, 3),
   };
 }

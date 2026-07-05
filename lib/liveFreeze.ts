@@ -7,6 +7,8 @@ export interface LiveSnapshot {
   awayGoals: number | null;
   minute: string | null;
   goals: Goal[];
+  /** Running penalty-shootout tally, when the drop happened mid-shootout. */
+  shootout: { home: number; away: number } | null;
   /** The fetch time when this fixture was last seen live (for the "updated …" anchor). */
   asOf: number;
 }
@@ -45,6 +47,7 @@ export function snapshotOf(f: Fixture, fetchedAt: number): LiveSnapshot {
     awayGoals: f.awayGoals,
     minute: f.minute,
     goals: f.goals,
+    shootout: f.shootout ?? null,
     asOf: fetchedAt,
   };
 }
@@ -94,6 +97,7 @@ export function reconcileLive(
         awayGoals: remembered.awayGoals,
         minute: remembered.minute,
         goals: remembered.goals,
+        shootout: remembered.shootout,
         liveOverlaid: false, // frozen snapshot, not a fresh real overlay
       },
       stale: true,

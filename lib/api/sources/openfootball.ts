@@ -120,9 +120,10 @@ function mapMatch(m: OfMatch, index: number): Fixture {
   const kickoff = kickoffIso(m.date, m.time);
 
   // openfootball has no live field, so we infer "in play": kickoff has passed,
-  // no final score yet, and we're inside a ~2.5h match window.
+  // no final score yet, and we're inside the match window — ~2.5h for a group
+  // game, ~3.5h for a knockout tie that can run to extra time + a shootout.
   const startMs = Date.parse(kickoff);
-  const LIVE_WINDOW = 150 * 60 * 1000;
+  const LIVE_WINDOW = (isGroup ? 150 : 210) * 60 * 1000;
   const now = Date.now();
   let status: Fixture["status"] = "scheduled";
   if (finished) status = "finished";
